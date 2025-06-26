@@ -15,6 +15,7 @@ export class GameManager {
   private _lastDiscardPlayerIndex: number | null
   private _renchan: boolean = false // 上がり連荘設定
   private _kyotaku: number = 0 // 供託の本数
+  private _ippatsuFlags: boolean[] = [false, false, false, false] // 各プレイヤーの一発フラグ
 
   constructor() {
     this._players = [
@@ -93,6 +94,27 @@ export class GameManager {
 
   get kyotaku(): number {
     return this._kyotaku
+  }
+
+  isIppatsu(playerIndex: number): boolean {
+    const result = this._ippatsuFlags[playerIndex]
+    return result
+  }
+
+  private updateIppatsuFlags(currentPlayerIndex: number, isRiichiDeclaration: boolean): void {
+    // リーチ宣言の場合は一発フラグの更新はスキップ
+    if (isRiichiDeclaration) {
+      return
+    }
+
+    // リーチ宣言後の通常の捨て牌の場合、そのプレイヤーの一発フラグを無効化
+    if (this._ippatsuFlags[currentPlayerIndex]) {
+      this._ippatsuFlags[currentPlayerIndex] = false
+    } else {
+    }
+
+    // 鳴きがあった場合は全プレイヤーの一発を無効化
+    // TODO: 鳴きの検出ロジックが必要
   }
 
   generateWall(): void {
@@ -189,6 +211,9 @@ export class GameManager {
       this._lastDiscardedTile = tile
       this._lastDiscardPlayerIndex = playerIndex
 
+      // 一発フラグの管理
+      this.updateIppatsuFlags(playerIndex, isRiichiDeclaration)
+
       return true
     }
 
@@ -211,6 +236,9 @@ export class GameManager {
     this._lastDiscardedTile = tile
     this._lastDiscardPlayerIndex = playerIndex
 
+    // 一発フラグの管理
+    this.updateIppatsuFlags(playerIndex, isRiichiDeclaration)
+
     return true
   }
 
@@ -225,11 +253,9 @@ export class GameManager {
   }
 
   advanceToNextRound(): void {
-    console.log('advanceToNextRound called - current dealer:', this._dealer)
     // 親を次のプレイヤーに移動
     this._dealer = (this._dealer + 1) % 4
     this._round++
-    console.log('New dealer:', this._dealer, 'round:', this._round)
 
     // プレイヤーの風を更新（親のローテーション）
     this.updatePlayerWinds()
@@ -248,13 +274,12 @@ export class GameManager {
     this._lastDiscardedTile = null
     this._lastDiscardPlayerIndex = null
     this._discardOrder = 0
-    console.log('Set currentPlayerIndex to dealer:', this._currentPlayerIndex)
+    this._ippatsuFlags = [false, false, false, false]
 
     this.generateWall()
     this.dealInitialHands()
 
     this._gamePhase = 'playing'
-    console.log('advanceToNextRound completed - gamePhase:', this._gamePhase)
   }
 
   private updatePlayerWinds(): void {
@@ -296,6 +321,7 @@ export class GameManager {
     this._lastDiscardedTile = null
     this._lastDiscardPlayerIndex = null
     this._kyotaku = 0
+    this._ippatsuFlags = [false, false, false, false]
 
     this._players.forEach(player => {
       player.tiles = []
@@ -328,19 +354,17 @@ export class GameManager {
 
   declareRiichi(playerIndex: number): boolean {
     const player = this._players[playerIndex]
-    console.log('GameManager declareRiichi called for player:', playerIndex, 'canRiichi:', this.canPlayerRiichi(playerIndex))
     if (this.canPlayerRiichi(playerIndex)) {
       player.riichi = true
       player.score -= 1000
       this._kyotaku++
-      console.log('Riichi declared successfully for player:', playerIndex, 'new riichi state:', player.riichi, 'kyotaku:', this._kyotaku)
+      this._ippatsuFlags[playerIndex] = true // 一発フラグを設定
       return true
     }
-    console.log('Cannot declare riichi for player:', playerIndex)
     return false
   }
 
-  checkWinConditionForPlayer(playerIndex: number, winTile: Tile, isTsumo: boolean): {
+  checkWinConditionForPlayer(playerIndex: number, winTile: Tile, isTsumo: boolean, shouldResetFlags: boolean = false): {
     isWin: boolean
     result?: ReturnType<typeof checkWinCondition>
   } {
@@ -348,24 +372,14 @@ export class GameManager {
 
     // ツモの場合は手牌13枚+勝利牌1枚=14枚、ロンの場合も14枚で判定
     const allTiles = [...player.tiles, winTile]
-    console.log(`checkWinConditionForPlayer: player ${playerIndex}, tiles ${player.tiles.length}, allTiles ${allTiles.length}`)
-    
-    // まず簡単なシャンテン数チェックで和了可能性を確認
-    const convertedTiles = allTiles.map(t => ({ id: t.id, suit: t.suit, rank: t.rank, isRed: t.isRed }))
-    const shanten = calculateShanten(convertedTiles)
-    console.log(`checkWinConditionForPlayer: shanten = ${shanten}`)
-    
-    // 一時的にシャンテン数チェックをコメントアウト
-    // if (shanten !== -1) {
-    //   return { isWin: false }
-    // }
+
 
     // 裏ドラ指示牌は山の後方から2番目の牌（ドラ指示牌の下）
     const uradoraIndicators = player.riichi && this._wall.length >= 2 ? [this._wall[this._wall.length - 2]] : []
-    console.log('checkWinConditionForPlayer - player riichi:', player.riichi, 'wall length:', this._wall.length, 'uradoraIndicators:', uradoraIndicators, 'doraIndicators:', this._doraIndicators)
 
     try {
       const isDealer = playerIndex === this._dealer
+
       const winResult = checkWinCondition(
         allTiles,                  // 14枚の完全な手牌
         winTile,                   // 勝利牌の情報
@@ -373,14 +387,21 @@ export class GameManager {
         player.riichi,
         this._doraIndicators,
         uradoraIndicators,
-        isDealer                   // Pass dealer status for accurate scoring
+        isDealer,                  // Pass dealer status for accurate scoring
+        this._ippatsuFlags[playerIndex] // 一発フラグ
       )
 
       if (winResult.isWin) {
-        // 人間プレイヤーの場合はゲーム状態を変更せず、ボタン選択を可能にする
-        if (player.type !== 'human') {
-          this._gamePhase = 'finished'
+        if (shouldResetFlags) {
+          // 実際の上がり確定時のみ一発フラグをリセット
+          this._ippatsuFlags.fill(false)
+          
+          // 人間プレイヤーの場合はゲーム状態を変更せず、ボタン選択を可能にする
+          if (player.type !== 'human') {
+            this._gamePhase = 'finished'
+          }
         }
+        
         return { isWin: true, result: winResult }
       }
 
@@ -396,7 +417,6 @@ export class GameManager {
     const kyotakuPoints = this._kyotaku * 1000
     if (kyotakuPoints > 0) {
       this._players[playerIndex].score += kyotakuPoints
-      console.log(`Player ${playerIndex} received kyotaku bonus: ${kyotakuPoints} points, new score: ${this._players[playerIndex].score}`)
       this._kyotaku = 0
     }
     return kyotakuPoints
@@ -456,7 +476,7 @@ export class GameManager {
     const allTiles = [...this.humanPlayer.tiles, this._lastDiscardedTile]
     const convertedTiles = allTiles.map(t => ({ id: t.id, suit: t.suit, rank: t.rank, isRed: t.isRed }))
     const shanten = calculateShanten(convertedTiles)
-    
+
     // シャンテン数が-1でない場合は和了不可
     if (shanten !== -1) {
       return false
@@ -472,7 +492,8 @@ export class GameManager {
         this.humanPlayer.riichi,
         this._doraIndicators,
         this.humanPlayer.riichi && this._wall.length >= 2 ? [this._wall[this._wall.length - 2]] : [],
-        isDealer                   // Pass dealer status for accurate scoring
+        isDealer,                  // Pass dealer status for accurate scoring
+        this._ippatsuFlags[0]      // 人間プレイヤーの一発フラグ
       )
       return winResult.isWin
     } catch (error) {

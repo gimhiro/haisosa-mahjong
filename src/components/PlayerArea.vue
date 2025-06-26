@@ -244,13 +244,10 @@ function getTileSize() {
 }
 
 function onTileClick(tile: Tile) {
-  console.log('PlayerArea onTileClick:', tile.id, 'player riichi:', props.player.riichi, 'isCurrent:', props.isCurrent, 'isRiichiPreviewMode:', props.isRiichiPreviewMode)
   if (props.isCurrent && props.showTiles) {
     if (props.isRiichiPreviewMode) {
-      console.log('Emitting riichiConfirmed for tile:', tile.id)
       emit('riichiConfirmed', tile.id)
     } else {
-      console.log('Emitting tileDiscarded for tile:', tile.id)
       emit('tileDiscarded', tile.id)
     }
   } 

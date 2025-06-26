@@ -20,7 +20,7 @@ export class EnhancedDraw {
       seed: options.seed || Math.random().toString(),
       enableDebugLog: options.enableDebugLog || false
     }
-    
+
     this.rng = seedrandom(this.options.seed)
   }
 
@@ -31,11 +31,6 @@ export class EnhancedDraw {
     if (availableTiles.length === 0) return null
 
     const usefulTileIndices = getUsefulTiles(hand)
-    
-    if (this.options.enableDebugLog) {
-      console.log('Current hand:', hand.map(t => `${t.suit}${t.rank}`).join(' '))
-      console.log('Useful tile indices:', usefulTileIndices)
-    }
 
     // 有効牌が存在し、かつブースト確率に当選した場合
     if (usefulTileIndices.length > 0 && this.rng() < this.options.boostProbability) {
@@ -71,7 +66,6 @@ export class EnhancedDraw {
     const selectedTile = availableUsefulTiles.find(t => t.id === selectedId)!
 
     if (this.options.enableDebugLog) {
-      console.log('Drew useful tile:', `${selectedTile.suit}${selectedTile.rank}`)
     }
 
     return selectedTile
@@ -87,7 +81,6 @@ export class EnhancedDraw {
     const selectedTile = availableTiles[randomIndex]
 
     if (this.options.enableDebugLog) {
-      console.log('Drew random tile:', `${selectedTile.suit}${selectedTile.rank}`)
     }
 
     return selectedTile
@@ -118,7 +111,7 @@ export class EnhancedDraw {
   } {
     const totalDraws = drawHistory.length
     const usefulDraws = drawHistory.filter(d => d.wasUseful).length
-    
+
     return {
       totalDraws,
       usefulDraws,

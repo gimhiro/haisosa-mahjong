@@ -73,7 +73,6 @@ function getDiscardRowFixed(rowIndex: number): Tile[] {
   // リーチ宣言牌をログ出力
   rowTiles.forEach(tile => {
     if (tile.isRiichiDeclaration) {
-      console.log('Found riichi declaration tile in discard area:', tile.suit + tile.rank, tile)
     }
   })
   

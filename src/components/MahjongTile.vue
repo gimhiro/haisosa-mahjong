@@ -109,9 +109,7 @@ function handleImageLoad() {
 }
 
 function handleClick() {
-  console.log('MahjongTile handleClick called for tile:', props.tile)
   if (props.disabled) {
-    console.log('MahjongTile click ignored - tile is disabled')
     return
   }
   emit('click', props.tile)
@@ -140,7 +138,6 @@ function handleDragEnd() {
 }
 
 function logDoraRender() {
-  console.log(`MahjongTile: Rendering dora mask for ${props.tile.suit}${props.tile.rank}`)
   return ''
 }
 </script>

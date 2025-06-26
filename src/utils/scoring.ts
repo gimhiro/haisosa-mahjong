@@ -9,6 +9,7 @@ export interface ScoringInput {
   doraIndicators: Tile[]
   uradoraIndicators: Tile[]
   isDealer: boolean
+  isIppatsu?: boolean
 }
 
 export interface ScoringResult {
@@ -73,11 +74,47 @@ function convertTileToNumber(tile: Tile): number {
 
 // Convert array of tiles to riichi-rs-bundlers numeric format
 function convertTilesToNumbers(tiles: Tile[]): number[] {
-  return tiles.map(convertTileToNumber).sort((a, b) => a - b)
+  return tiles.map(convertTileToNumber)
+}
+
+// Convert dora indicator to actual dora tile number
+function convertDoraIndicatorToDora(indicator: Tile): number {
+  if (indicator.suit === 'honor') {
+    // Honor tiles: 東→南→西→北→東, 白→發→中→白
+    if (indicator.rank <= 4) {
+      // Wind tiles: 東(1)→南(2)→西(3)→北(4)→東(1)
+      const nextRank = indicator.rank === 4 ? 1 : indicator.rank + 1
+      const honorMap = [RsTile.East, RsTile.South, RsTile.West, RsTile.North]
+      return honorMap[nextRank - 1]
+    } else {
+      // Dragon tiles: 白(5)→發(6)→中(7)→白(5)
+      const nextRank = indicator.rank === 7 ? 5 : indicator.rank + 1
+      const dragonMap = [RsTile.Haku, RsTile.Hatsu, RsTile.Chun]
+      return dragonMap[nextRank - 5]
+    }
+  } else {
+    // Number tiles: 9→1
+    const nextRank = indicator.rank === 9 ? 1 : indicator.rank + 1
+    if (indicator.suit === 'man') {
+      return RsTile.M1 + nextRank - 1
+    } else if (indicator.suit === 'pin') {
+      return RsTile.P1 + nextRank - 1
+    } else if (indicator.suit === 'sou') {
+      return RsTile.S1 + nextRank - 1
+    }
+  }
+  throw new Error(`Invalid dora indicator: ${indicator.suit}${indicator.rank}`)
+}
+
+// Convert dora indicators to actual dora numbers
+function convertDoraIndicatorsToDora(indicators: Tile[]): number[] {
+  return indicators.map(convertDoraIndicatorToDora).sort((a, b) => a - b)
 }
 
 // Convert yaku ID to Japanese name
 function getYakuName(yakuId: number): string {
+  // 実際のriichi-rs-bundlersの定数値でデバッグ
+
   const yakuNames: Record<number, string> = {
     [RsYaku.Kokushimusou13Sides]: '国士無双十三面',
     [RsYaku.Kokushimusou]: '国士無双',
@@ -136,62 +173,107 @@ function getYakuName(yakuId: number): string {
     [RsYaku.Uradora]: '裏ドラ',
     [RsYaku.Akadora]: '赤ドラ'
   }
-  return yakuNames[yakuId] || `役${yakuId}`
+
+  const result = yakuNames[yakuId] || `役${yakuId}`
+  return result
 }
 
 export function calculateScore(input: ScoringInput): ScoringResult | null {
   try {
-    // riichi-rs-bundlersは13枚のclosed_partと上がり牌を分離して受け取る
-    // input.handは14枚（13枚の手牌+上がり牌）なので、上がり牌を除外する
-    const handWithoutWinTile = [...input.hand]
-    
-    // 上がり牌を1枚除外する（まずIDで検索、なければ同種の牌を除外）
-    let removed = false
-    for (let i = 0; i < handWithoutWinTile.length; i++) {
-      const tile = handWithoutWinTile[i]
-      if (tile.id === input.winningTile.id || 
+    // ツモとロンで処理を分ける
+    let closedPart: number[]
+
+    if (input.isTsumo) {
+      // ツモ牌を除いた13枚の手牌
+      const handWithoutWinTile = [...input.hand]
+      let removed = false
+      for (let i = 0; i < handWithoutWinTile.length; i++) {
+        const tile = handWithoutWinTile[i]
+        if (tile.id === input.winningTile.id ||
           (!removed && tile.suit === input.winningTile.suit && tile.rank === input.winningTile.rank)) {
-        handWithoutWinTile.splice(i, 1)
-        removed = true
-        break
+          handWithoutWinTile.splice(i, 1)
+          removed = true
+          break
+        }
       }
+
+      // 13枚の手牌を変換
+      const handNumbers = convertTilesToNumbers(handWithoutWinTile)
+      // ツモ牌を最後に追加
+      const winTileNumber = convertTileToNumber(input.winningTile)
+      closedPart = [...handNumbers, winTileNumber].sort((a, b) => a - b)
+
+    } else {
+      // ロンの場合：13枚のclosed_partと上がり牌を分離
+      const handWithoutWinTile = [...input.hand]
+
+      // 上がり牌を1枚除外する（まずIDで検索、なければ同種の牌を除外）
+      let removed = false
+      for (let i = 0; i < handWithoutWinTile.length; i++) {
+        const tile = handWithoutWinTile[i]
+        if (tile.id === input.winningTile.id ||
+          (!removed && tile.suit === input.winningTile.suit && tile.rank === input.winningTile.rank)) {
+          handWithoutWinTile.splice(i, 1)
+          removed = true
+          break
+        }
+      }
+
+      // 13枚でない場合は先頭から13枚を取る
+      if (handWithoutWinTile.length !== 13) {
+        console.warn(`Expected 13 tiles after removing win tile, got ${handWithoutWinTile.length}`)
+        handWithoutWinTile.splice(13)
+      }
+
+      closedPart = convertTilesToNumbers(handWithoutWinTile) as number[]
     }
-    
-    // 13枚でない場合は先頭から13枚を取る
-    if (handWithoutWinTile.length !== 13) {
-      console.warn(`Expected 13 tiles after removing win tile, got ${handWithoutWinTile.length}`)
-      handWithoutWinTile.splice(13)
-    }
-    
-    const closedPart = convertTilesToNumbers(handWithoutWinTile) as number[]
-    const doraNumbers = convertTilesToNumbers(input.doraIndicators) as number[]
-    const uradoraNumbers = convertTilesToNumbers(input.uradoraIndicators) as number[]
+    // ドラ指示牌から実際のドラ牌に変換
+    const doraNumbers = convertDoraIndicatorsToDora(input.doraIndicators) as number[]
+    const uradoraNumbers = convertDoraIndicatorsToDora(input.uradoraIndicators) as number[]
 
     // Determine tile discarded by someone (for ron)
     const winTileNumber = convertTileToNumber(input.winningTile)
-    const tileDiscardedBy = input.isTsumo ? -1 : winTileNumber
+    // For tsumo, we should not specify tile_discarded_by_someone
+    // For ron, we specify the winning tile number
+    const tileDiscardedBy = input.isTsumo ? undefined : winTileNumber
 
     // Determine winds
     const bakaze = RsTile.East // 場風: 東場
     const jikaze = input.isDealer ? RsTile.East : RsTile.South // 自風: 親=東、子=南
 
     // Create RiichiInput for riichi-rs-bundlers
-    const riichiInput = {
-      closed_part: closedPart as any, // 13枚の手牌
-      open_part: [], // No open melds for now
-      options: {
-        dora: doraNumbers as any,
-        riichi: input.isRiichi,
-        tile_discarded_by_someone: tileDiscardedBy as any,
-        bakaze,
-        jikaze,
-        allow_kuitan: true,
-        allow_aka: false
-      }
+    const riichiOptions: any = {
+      dora: doraNumbers as any,
+      riichi: input.isRiichi,
+      ippatsu: input.isIppatsu || false,
+      bakaze,
+      jikaze,
+      allow_kuitan: true,
+      allow_aka: false
     }
 
+    // リーチの場合は裏ドラも追加
+    if (input.isRiichi && uradoraNumbers.length > 0) {
+      riichiOptions.uradora = uradoraNumbers as any
+    }
+
+    // ツモとロンで上がり牌の指定方法を変える
+    if (input.isTsumo) {
+      // ツモの場合: tile_discarded_by_someone = -1
+      riichiOptions.tile_discarded_by_someone = -1
+    } else {
+      // ロンの場合: tile_discarded_by_someoneで指定
+      riichiOptions.tile_discarded_by_someone = tileDiscardedBy as any
+    }
+
+    const riichiInput = {
+      closed_part: closedPart as any, // ツモ=14枚、ロン=13枚
+      open_part: [], // No open melds for now
+      options: riichiOptions
+    }
     // Call riichi-rs-bundlers calc function
     const result = calc(riichiInput)
+
 
     if (!result.is_agari) {
       return null
@@ -200,10 +282,13 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
     // Convert result to our format
     const yaku = Object.entries(result.yaku)
       .filter(([_, han]) => han > 0)
-      .map(([yakuId, han]) => ({
-        name: getYakuName(parseInt(yakuId)),
-        han: han
-      }))
+      .map(([yakuId, han]) => {
+        const yakuName = getYakuName(parseInt(yakuId))
+        return {
+          name: yakuName,
+          han: han
+        }
+      })
 
     // 支払い形式と合計点数を計算
     const payment = calculatePaymentInfo(result.ten, input.isDealer, input.isTsumo)

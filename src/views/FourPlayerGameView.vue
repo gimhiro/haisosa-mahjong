@@ -382,17 +382,16 @@ const canTsumo = computed(() => {
   const isMyTurn = isHumanTurn.value
   const drawnTile = currentDrawnTile.value
   
+
+  
   if (!isMyTurn || !drawnTile) {
-    console.log('canTsumo: false - isMyTurn:', isMyTurn, 'drawnTile:', drawnTile)
     return false
   }
   
   try {
     const winResult = gameManager.value.checkWinConditionForPlayer(0, drawnTile, true)
-    console.log('canTsumo: winResult.isWin =', winResult.isWin)
     return winResult.isWin
   } catch (error) {
-    console.error('Error in canTsumo:', error)
     return false
   }
 })
@@ -487,62 +486,47 @@ function findUsefulTileInWall(hand: any[]): any | null {
 }
 
 async function onHumanTileDiscard(tileId: string) {
-  console.log('onHumanTileDiscard called with tileId:', tileId, 'riichi:', humanPlayer.value.riichi, 'currentDrawnTile:', currentDrawnTile.value?.id)
   
   if (!isHumanTurn.value) {
-    console.log('Not human turn, aborting')
     return
   }
   
   const success = gameManager.value.discardTile(0, tileId)
-  console.log('Normal discard success:', success)
   
   if (success) {
     // 人間プレイヤーが牌を捨てた場合はそのまま次のターンに進む
     // （他の人間プレイヤーがロンすることは想定しない）
     gameManager.value.nextTurn()
-  } else {
-    console.log('Could not discard tile')
-  }
+  } 
 }
 
 async function processCpuTurn() {
-  console.log('processCpuTurn called - gamePhase:', gamePhase.value, 'currentPlayer type:', currentPlayer.value?.type, 'currentIndex:', currentPlayerIndex.value, 'processing:', processingCpuTurn.value)
-  
   // 重複処理を防ぐ
   if (processingCpuTurn.value) {
-    console.log('CPU turn already processing, aborting')
     return
   }
   
   if (gamePhase.value !== 'playing' || currentPlayer.value.type === 'human') {
-    console.log('Aborting processCpuTurn - invalid conditions')
     return
   }
   
   processingCpuTurn.value = true
-  console.log('Set processing flag to true')
   
   try {
     const currentIndex = currentPlayerIndex.value
     const player = currentPlayer.value
     
-    console.log('CPU turn for player:', currentIndex, 'tiles count:', player.tiles.length, 'drawnTile:', currentDrawnTile.value?.id)
     
     if (currentDrawnTile.value && checkWinConditionForPlayer(currentIndex, currentDrawnTile.value, true)) {
-      console.log('CPU can win with tsumo, returning early')
       return
     }
     
     const ai = cpuAIs[currentIndex as 1 | 2 | 3]
-    console.log('AI found for player:', currentIndex, ':', !!ai)
     
     if (ai) {
       const allTiles = currentDrawnTile.value ? [...player.tiles, currentDrawnTile.value] : player.tiles
-      console.log('Making AI decision with', allTiles.length, 'tiles')
       
       const decision = await ai.makeDecision({ ...player, tiles: allTiles }, currentDrawnTile.value)
-      console.log('AI decision:', decision)
     
     if (decision.action === 'riichi') {
       // リーチ宣言
@@ -581,26 +565,23 @@ async function processCpuTurn() {
   }
   } finally {
     processingCpuTurn.value = false
-    console.log('Set processing flag to false')
   }
 }
 
 function declareRiichi() {
   if (canDeclareRiichi.value) {
-    gameManager.value.declareRiichi(0)
+    const success = gameManager.value.declareRiichi(0)
+  } else {
   }
 }
 
 // リーチプレビューモードの切り替え
 function toggleRiichiPreview() {
-  console.log('toggleRiichiPreview called, current riichi:', humanPlayer.value.riichi, 'preview mode:', riichiPreviewMode.value)
   // すでにリーチしている場合は何もしない
   if (humanPlayer.value.riichi) {
-    console.log('Already riichi, cannot toggle preview')
     return
   }
   riichiPreviewMode.value = !riichiPreviewMode.value
-  console.log('Preview mode toggled to:', riichiPreviewMode.value)
 }
 
 // リーチ時に有効な牌IDのリストを取得
@@ -655,41 +636,32 @@ function getPostRiichiDisabledTiles(): string[] {
     return []
   }
 
-  console.log('Getting post-riichi disabled tiles')
-  
   // リーチ後は手牌の全ての牌をdisabledにする（ツモ牌のみ捨てられる）
   return humanPlayer.value.tiles.map(tile => tile.id)
 }
 
 // リーチ確定と牌捨て
 function confirmRiichiAndDiscard(tileId: string) {
-  console.log('confirmRiichiAndDiscard called with tileId:', tileId, 'previewMode:', riichiPreviewMode.value)
-  
   if (!riichiPreviewMode.value) {
-    console.log('Not in preview mode, aborting')
     return
   }
 
   const validTiles = getRiichiValidTiles()
   if (!validTiles.includes(tileId)) {
     // 無効な牌をクリックした場合は何もしない
-    console.log('Invalid tile for riichi, aborting')
     return
   }
 
   // リーチを宣言
   if (canDeclareRiichi.value) {
-    console.log('Declaring riichi')
     gameManager.value.declareRiichi(0)
   }
 
   // プレビューモードを解除
   riichiPreviewMode.value = false
-  console.log('Preview mode disabled, riichi state:', humanPlayer.value.riichi)
 
   // 牌を捨てる（リーチ宣言牌としてマーク）
   const success = gameManager.value.discardTile(0, tileId, true)
-  console.log('Riichi discard success:', success)
   if (success) {
     gameManager.value.nextTurn()
   }
@@ -697,13 +669,10 @@ function confirmRiichiAndDiscard(tileId: string) {
 
 function declareTsumo() {
   if (canTsumo.value && currentDrawnTile.value) {
-    const winResult = gameManager.value.checkWinConditionForPlayer(0, currentDrawnTile.value, true)
+    const winResult = gameManager.value.checkWinConditionForPlayer(0, currentDrawnTile.value, true, true)
     
     if (winResult.isWin && winResult.result) {
       const player = humanPlayer.value
-      
-      console.log('Tsumo win - doraIndicators:', doraIndicators.value, 'doraCount:', winResult.result.doraCount, 'uradoraCount:', winResult.result.uradoraCount, 'player riichi:', player.riichi)
-      console.log('Tsumo win - uradoraIndicators:', winResult.result.uradoraCount > 0 && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [])
       
       winModalData.value = {
         winner: player,
@@ -736,13 +705,10 @@ function declareRon() {
   if (canRon.value && gameManager.value.lastDiscardedTile) {
     const player = humanPlayer.value
     
-    const winResult = gameManager.value.checkWinConditionForPlayer(0, gameManager.value.lastDiscardedTile, false)
+    const winResult = gameManager.value.checkWinConditionForPlayer(0, gameManager.value.lastDiscardedTile, false, true)
     
     if (winResult.isWin && winResult.result) {
       const player = humanPlayer.value
-      
-      console.log('Ron win - doraIndicators:', doraIndicators.value, 'doraCount:', winResult.result.doraCount, 'uradoraCount:', winResult.result.uradoraCount, 'player riichi:', player.riichi)
-      console.log('Ron win - uradoraIndicators:', winResult.result.uradoraCount > 0 && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [])
       
       winModalData.value = {
         winner: player,
@@ -818,22 +784,16 @@ function checkWinConditionForPlayer(playerIndex: number, winTile: any, isTsumo: 
 }
 
 function onContinueGame() {
-  console.log('onContinueGame called')
   showWinModal.value = false
   gameManager.value.advanceToNextRound()
-  
-  console.log('After advanceToNextRound - currentPlayerIndex:', currentPlayerIndex.value, 'dealer:', gameManager.value.dealer)
   
   // 次局開始後、最初のプレイヤーにツモ牌を配る
   setTimeout(() => {
     if (gameManager.value.gamePhase === 'playing') {
-      console.log('Drawing first tile for player:', currentPlayerIndex.value, 'type:', players.value[currentPlayerIndex.value]?.type)
       const firstTile = gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
-      console.log('Drew first tile:', firstTile?.id)
       
       // CPUプレイヤーの場合は自動的にターンを開始
       if (players.value[currentPlayerIndex.value].type === 'cpu') {
-        console.log('Starting CPU turn for new round')
         setTimeout(() => {
           processCpuTurn()
         }, 500)

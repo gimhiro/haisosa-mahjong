@@ -146,7 +146,7 @@ export function calculateScore(yaku: string[], han: number, fu: number): number 
 import { calculateScore as calculateRiichiScore } from './scoring'
 
 // 麻雀の上がり判定（詳細版）
-export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTile, isTsumo: boolean, riichi: boolean, doraIndicators: FourPlayerTile[], uradoraIndicators: FourPlayerTile[] = [], isDealer: boolean = false): {
+export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTile, isTsumo: boolean, riichi: boolean, doraIndicators: FourPlayerTile[], uradoraIndicators: FourPlayerTile[] = [], isDealer: boolean = false, isIppatsu: boolean = false): {
   isWin: boolean
   yaku: Array<{ name: string; han: number }>
   totalHan: number
@@ -166,7 +166,8 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
       isRiichi: riichi,
       doraIndicators,
       uradoraIndicators,
-      isDealer
+      isDealer,
+      isIppatsu
     })
 
     if (!scoringResult) {
@@ -228,6 +229,10 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
     
     if (riichi) {
       yaku.push({ name: 'リーチ', han: 1 })
+    }
+    
+    if (isIppatsu && riichi) {
+      yaku.push({ name: '一発', han: 1 })
     }
     
     if (hasAllSimples(tiles)) {
