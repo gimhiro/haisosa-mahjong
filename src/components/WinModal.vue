@@ -112,13 +112,13 @@
         >
           次の局へ
         </v-btn>
-        <v-btn 
+        <!-- <v-btn 
           color="secondary" 
           size="large"
           @click="$emit('newGame')"
         >
           新ゲーム
-        </v-btn>
+        </v-btn> -->
       </v-card-actions>
     </v-card>
   </v-dialog>

@@ -37,7 +37,6 @@
           {{ shantenInfo.text }}
         </v-chip>
       </div>
-      <div class="player-score">{{ player.score.toLocaleString() }}点</div>
     </div>
 
     <!-- 手牌エリア -->
@@ -293,22 +292,18 @@ function onTileClick(tile: Tile) {
 }
 
 .cpu-toggle-btn {
-  font-size: 10px !important;
-  min-width: 30px !important;
-  height: 18px !important;
-  padding: 0 4px !important;
+  font-size: 12px !important;
+  min-width: 50px !important;
+  height: 28px !important;
+  padding: 0 8px !important;
 }
 
-.player-score {
-  font-size: 0.8rem;
-  color: #666;
-  font-weight: 500;
-}
 
 /* 位置別レイアウト */
 .position-bottom {
   flex-direction: column;
 }
+
 
 .position-top {
   flex-direction: column;
@@ -317,7 +312,7 @@ function onTileClick(tile: Tile) {
 
 .position-left {
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .position-left .player-info {
@@ -328,13 +323,48 @@ function onTileClick(tile: Tile) {
 
 .position-right {
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .position-right .player-info {
   flex-direction: column;
   margin-bottom: 8px;
   text-align: center;
+}
+
+/* 上側プレイヤー: 手牌エリアを下面に合わせ、player-infoをその真上に */
+
+.position-top .player-info {
+  order: 2; /* player-infoを後に配置 */
+  margin-bottom: 0;
+  margin-top: 4px;
+}
+
+.position-top .hand-area,
+.position-top .cpu-hand {
+  order: 1; /* 手牌エリアを先に配置（下面） */
+  transform: translateY(10%);
+}
+
+/* 左右プレイヤー: player-infoを上面に合わせる */
+.position-left,
+.position-right {
+  justify-content: flex-start;
+}
+
+.position-left .player-info,
+.position-right .player-info {
+  order: 1; /* player-infoを最初に配置（上面） */
+  margin-bottom: 4px;
+  margin-top: 0;
+}
+
+.position-left .hand-area,
+.position-left .cpu-hand,
+.position-right .hand-area,
+.position-right .cpu-hand {
+  order: 2; /* 手牌エリアを後に配置 */
+  transform: translateY(10%);
 }
 
 /* 手牌エリア */

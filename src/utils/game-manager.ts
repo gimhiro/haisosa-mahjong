@@ -14,6 +14,7 @@ export class GameManager {
   private _lastDiscardedTile: Tile | null
   private _lastDiscardPlayerIndex: number | null
   private _renchan: boolean = false // 上がり連荘設定
+  private _kyotaku: number = 0 // 供託の本数
 
   constructor() {
     this._players = [
@@ -88,6 +89,10 @@ export class GameManager {
 
   get wallRemaining(): number {
     return this._wall.length
+  }
+
+  get kyotaku(): number {
+    return this._kyotaku
   }
 
   generateWall(): void {
@@ -290,6 +295,7 @@ export class GameManager {
     this._discardOrder = 0
     this._lastDiscardedTile = null
     this._lastDiscardPlayerIndex = null
+    this._kyotaku = 0
 
     this._players.forEach(player => {
       player.tiles = []
@@ -326,7 +332,8 @@ export class GameManager {
     if (this.canPlayerRiichi(playerIndex)) {
       player.riichi = true
       player.score -= 1000
-      console.log('Riichi declared successfully for player:', playerIndex, 'new riichi state:', player.riichi)
+      this._kyotaku++
+      console.log('Riichi declared successfully for player:', playerIndex, 'new riichi state:', player.riichi, 'kyotaku:', this._kyotaku)
       return true
     }
     console.log('Cannot declare riichi for player:', playerIndex)
@@ -363,6 +370,17 @@ export class GameManager {
     }
 
     return { isWin: false }
+  }
+
+  // 上がり時に供託分を得点に加算し、供託をリセット
+  applyKyotakuToWinner(playerIndex: number): number {
+    const kyotakuPoints = this._kyotaku * 1000
+    if (kyotakuPoints > 0) {
+      this._players[playerIndex].score += kyotakuPoints
+      console.log(`Player ${playerIndex} received kyotaku bonus: ${kyotakuPoints} points, new score: ${this._players[playerIndex].score}`)
+      this._kyotaku = 0
+    }
+    return kyotakuPoints
   }
 
   getPlayerDiscardRow(playerIndex: number, rowIndex: number): Tile[] {
@@ -475,7 +493,8 @@ export class GameManager {
       currentPlayer: this.currentPlayer,
       doraIndicators: this._doraIndicators,
       dealer: this._dealer,
-      discardOrder: this._discardOrder
+      discardOrder: this._discardOrder,
+      kyotaku: this._kyotaku
     }
   }
 }

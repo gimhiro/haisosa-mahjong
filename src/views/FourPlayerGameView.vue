@@ -91,6 +91,27 @@
             <div class="center-info">
               <div class="center-label">河</div>
             </div>
+            
+            <!-- プレイヤー点数表示 -->
+            <!-- 下側プレイヤー（人間）の点数 -->
+            <div class="score-bottom">
+              {{ players[0].score.toLocaleString() }}点
+            </div>
+            
+            <!-- 右側プレイヤーの点数 -->
+            <div class="score-right">
+              {{ players[1].score.toLocaleString() }}点
+            </div>
+            
+            <!-- 上側プレイヤーの点数 -->
+            <div class="score-top">
+              {{ players[2].score.toLocaleString() }}点
+            </div>
+            
+            <!-- 左側プレイヤーの点数 -->
+            <div class="score-left">
+              {{ players[3].score.toLocaleString() }}点
+            </div>
           </div>
         </div>
 
@@ -105,7 +126,7 @@
           <v-card-text class="text-caption">
             <div class="info-row">
               <span class="info-label">局:</span>
-              <span class="info-value">{{ round }}局 {{ getDealerText() }}</span>
+              <span class="info-value">{{ getDealerText() }}</span>
             </div>
             <div class="info-row">
               <span class="info-label">残り牌:</span>
@@ -120,7 +141,11 @@
             <div class="info-row">
               <span class="info-label">現在:</span>
               <span class="info-value">{{ currentPlayer.name }}</span>
-              <span class="info-value">{{ isHumanTurn ? '(あなたのターン)' : '(CPUのターン)' }}</span>
+              <!-- <span class="info-value">{{ isHumanTurn ? '(あなたのターン)' : '(CPUのターン)' }}</span> -->
+            </div>
+            <div class="info-row">
+              <span class="info-label">供託:</span>
+              <span class="info-value">{{ gameManager.kyotaku }}本</span>
             </div>
             <div class="game-controls">
               <v-btn
@@ -687,6 +712,9 @@ function declareTsumo() {
         uradoraCount: winResult.result.uradoraCount
       }
       
+      // 供託分を加算
+      gameManager.value.applyKyotakuToWinner(0)
+      
       // ゲーム状態を終了に変更
       gameManager.value.gamePhase = 'finished'
       showWinModal.value = true
@@ -721,6 +749,9 @@ function declareRon() {
         uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
         uradoraCount: winResult.result.uradoraCount
       }
+      
+      // 供託分を加算
+      gameManager.value.applyKyotakuToWinner(0)
       
       // ゲーム状態を終了に変更
       gameManager.value.gamePhase = 'finished'
@@ -759,6 +790,9 @@ function checkWinConditionForPlayer(playerIndex: number, winTile: any, isTsumo: 
         uradoraIndicators: winResult.uradoraCount > 0 ? [gameManager.value.wall[gameManager.value.wall.length - 1]] : [],
         uradoraCount: winResult.uradoraCount
       }
+      
+      // 供託分を加算
+      gameManager.value.applyKyotakuToWinner(playerIndex)
       
       showWinModal.value = true
       return true
@@ -982,6 +1016,49 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
   font-size: 1.5rem;
   font-weight: bold;
   color: rgba(0, 0, 0, 0.3);
+}
+
+/* プレイヤー点数表示 */
+.score-bottom,
+.score-top,
+.score-left,
+.score-right {
+  position: absolute;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #333;
+  /* background: rgba(255, 255, 255, 0.9); */
+  padding: 4px 8px;
+  /* border-radius: 4px; */
+  /* border: 1px solid #ddd; */
+}
+
+.score-bottom {
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.score-top {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.score-left {
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+}
+
+.score-right {
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
 }
 
 /* 捨牌エリアの配置 */
