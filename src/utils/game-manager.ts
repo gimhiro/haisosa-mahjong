@@ -1,5 +1,5 @@
 import type { Tile, Player, GamePhase } from '../stores/fourPlayerMahjong'
-import { calculateShanten, checkWinCondition } from './mahjong-logic'
+import { calculateShanten, canRiichi, checkWinCondition } from './mahjong-logic'
 
 export class GameManager {
   private _players: Player[]
@@ -11,13 +11,15 @@ export class GameManager {
   private _round: number
   private _dealer: number
   private _discardOrder: number
+  private _lastDiscardedTile: Tile | null
+  private _lastDiscardPlayerIndex: number | null
 
   constructor() {
     this._players = [
       { id: 0, name: 'あなた', type: 'human', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'east' },
-      { id: 1, name: 'CPU1', type: 'cpu', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'south' },
-      { id: 2, name: 'CPU2', type: 'cpu', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'west' },
-      { id: 3, name: 'CPU3', type: 'cpu', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'north' }
+      { id: 1, name: 'CPU1 (簡単)', type: 'cpu', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'south' },
+      { id: 2, name: 'CPU2 (普通)', type: 'cpu', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'west' },
+      { id: 3, name: 'CPU3 (難しい)', type: 'cpu', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'north' }
     ]
     this._gamePhase = 'waiting'
     this._currentPlayerIndex = 0
@@ -27,6 +29,8 @@ export class GameManager {
     this._round = 1
     this._dealer = 0
     this._discardOrder = 0
+    this._lastDiscardedTile = null
+    this._lastDiscardPlayerIndex = null
   }
 
   get players(): Player[] {
@@ -173,6 +177,11 @@ export class GameManager {
       tile.isTsumoDiscard = true // ツモ切りフラグを設定
       player.discards.push(tile)
       this._currentDrawnTile = null
+      
+      // 最後の捨て牌を記録
+      this._lastDiscardedTile = tile
+      this._lastDiscardPlayerIndex = playerIndex
+      
       return true
     }
     
@@ -189,6 +198,10 @@ export class GameManager {
       this.sortPlayerHand(player)
       this._currentDrawnTile = null
     }
+    
+    // 最後の捨て牌を記録
+    this._lastDiscardedTile = tile
+    this._lastDiscardPlayerIndex = playerIndex
     
     return true
   }
@@ -230,6 +243,8 @@ export class GameManager {
     this._round = 1
     this._dealer = 0
     this._discardOrder = 0
+    this._lastDiscardedTile = null
+    this._lastDiscardPlayerIndex = null
     
     this._players.forEach(player => {
       player.tiles = []
@@ -246,14 +261,15 @@ export class GameManager {
     // リーチ条件：
     // 1. まだリーチしていない
     // 2. 1000点以上持っている
-    // 3. テンパイ状態（手牌13枚の時）
+    // 3. 14枚でリーチ可能（手牌13枚+ツモ牌1枚）
     if (player.riichi || player.score < 1000) {
       return false
     }
     
-    // 手牌が13枚の時のみテンパイ判定
-    if (player.tiles.length === 13) {
-      return calculateShanten(player.tiles) === 0
+    // 手牌13枚+ツモ牌1枚=14枚の時のみリーチ判定
+    if (player.tiles.length === 13 && this._currentDrawnTile) {
+      const allTiles = [...player.tiles, this._currentDrawnTile]
+      return canRiichi(allTiles)
     }
     
     return false
@@ -321,6 +337,43 @@ export class GameManager {
 
   canHumanDraw(): boolean {
     return this.wallRemaining > 0 && this.humanPlayer.tiles.length === 13
+  }
+
+  get lastDiscardedTile(): Tile | null {
+    return this._lastDiscardedTile
+  }
+
+  get lastDiscardPlayerIndex(): number | null {
+    return this._lastDiscardPlayerIndex
+  }
+
+  canHumanRon(): boolean {
+    // 人間プレイヤーがロン可能かチェック
+    if (!this._lastDiscardedTile || this._lastDiscardPlayerIndex === 0 || this._gamePhase !== 'playing') {
+      return false
+    }
+    
+    // 人間プレイヤーの手牌が13枚でない場合はロン不可（ロンは13枚+1枚の捨て牌）
+    if (this.humanPlayer.tiles.length !== 13) {
+      return false
+    }
+    
+    // 最後の捨て牌でアガリ可能かチェック（13枚の手牌 + 1枚の捨て牌 = 14枚）
+    const allTiles = [...this.humanPlayer.tiles, this._lastDiscardedTile]
+    const winResult = checkWinCondition(
+      allTiles,
+      this._lastDiscardedTile,
+      false,
+      this.humanPlayer.riichi,
+      this._doraIndicators,
+      this.humanPlayer.riichi && this._wall.length > 0 ? [this._wall[this._wall.length - 1]] : []
+    )
+    return winResult.isWin
+  }
+
+  clearLastDiscard(): void {
+    this._lastDiscardedTile = null
+    this._lastDiscardPlayerIndex = null
   }
 
   // ドラ判定

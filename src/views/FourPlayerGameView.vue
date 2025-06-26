@@ -3,6 +3,24 @@
 
     <!-- メインゲーム画面 -->
     <div class="game-table">
+      <!-- ドラ表示エリア -->
+      <div class="dora-area">
+        <v-card class="dora-panel">
+          <v-card-title class="text-subtitle-2">ドラ表示牌</v-card-title>
+          <v-card-text class="dora-content">
+            <div class="dora-tiles">
+              <MahjongTile
+                v-for="dora in doraIndicators"
+                :key="dora.id"
+                :tile="dora"
+                size="small"
+                :is-draggable="false"
+              />
+            </div>
+          </v-card-text>
+        </v-card>
+      </div>
+
       <!-- 上側プレイヤー（プレイヤー2） -->
       <div class="player-area player-top">
         <PlayerArea
@@ -78,21 +96,6 @@
 
 
 
-        <!-- プレイヤーアクション（人間プレイヤーのみ） -->
-        <div v-if="isHumanTurn && gamePhase === 'playing'" class="human-actions">
-          <v-btn
-            v-if="canDeclareRiichi && humanPlayer.tiles.length === 14"
-            color="warning"
-            size="small"
-            @click="declareRiichi"
-          >
-            リーチ
-          </v-btn>
-          
-          <div v-if="humanPlayer.tiles.length === 14" class="discard-hint">
-            不要な牌をクリックして捨ててください
-          </div>
-        </div>
       </div>
 
       <!-- ゲーム情報エリア -->
@@ -118,18 +121,6 @@
               <span class="info-label">現在:</span>
               <span class="info-value">{{ currentPlayer.name }}</span>
               <span class="info-value">{{ isHumanTurn ? '(あなたのターン)' : '(CPUのターン)' }}</span>
-            </div>
-            <div class="info-row dora-row">
-              <span class="info-label">ドラ表示牌:</span>
-              <div class="dora-tiles">
-                <MahjongTile
-                  v-for="dora in doraIndicators"
-                  :key="dora.id"
-                  :tile="dora"
-                  size="small"
-                  :is-draggable="false"
-                />
-              </div>
             </div>
             <div class="game-controls">
               <v-btn
@@ -184,6 +175,74 @@
         <!-- Debug: GameManager info -->
         {{ console.log('FourPlayerGameView passing gameManager:', gameManager, 'value:', gameManager.value) }}
       </div>
+
+      <!-- アクションボタンエリア -->
+      <div class="action-area">
+        <v-card class="action-panel">
+          <v-card-title class="text-subtitle-2">アクション</v-card-title>
+          <v-card-text class="action-content">
+            <!-- ツモボタン -->
+            <v-btn
+              v-if="canTsumo"
+              color="success"
+              size="small"
+              block
+              class="action-btn"
+              @click="declareTsumo"
+            >
+              ツモ
+            </v-btn>
+
+            <!-- ロンボタン -->
+            <v-btn
+              v-if="canRon"
+              color="error"
+              size="small"
+              block
+              class="action-btn"
+              @click="declareRon"
+            >
+              ロン
+            </v-btn>
+
+            <!-- リーチボタン -->
+            <v-btn
+              v-if="canDeclareRiichi && isHumanTurn && humanPlayer.tiles.length === 13 && currentDrawnTile"
+              :color="riichiPreviewMode ? 'error' : 'warning'"
+              size="small"
+              block
+              class="action-btn"
+              @click="toggleRiichiPreview"
+            >
+              {{ riichiButtonText }}
+            </v-btn>
+
+            <!-- キャンセルボタン（ロン表示時のみ） -->
+            <v-btn
+              v-if="canRon"
+              color="grey"
+              size="small"
+              block
+              class="action-btn"
+              @click="cancelRon"
+            >
+              キャンセル
+            </v-btn>
+
+            <!-- デバッグ情報 -->
+            <div v-if="isHumanTurn" class="debug-info" style="font-size: 0.7rem; color: #666; margin-top: 8px;">
+              デバッグ: 手牌{{ humanPlayer.tiles.length }}枚, ツモ牌: {{ currentDrawnTile ? 'あり' : 'なし' }}, リーチ可能: {{ canDeclareRiichi }}, シャンテン: {{ humanShanten }}<br>
+              リーチ済み: {{ humanPlayer.riichi }}, 点数: {{ humanPlayer.score }}, ゲーム状態: {{ gamePhase }}<br>
+              手牌内容: {{ humanPlayer.tiles.map(t => t.suit + t.rank).join(' ') }}{{ currentDrawnTile ? ' + ' + currentDrawnTile.suit + currentDrawnTile.rank : '' }}
+            </div>
+
+            <!-- 捨牌のヒント -->
+            <div v-if="isHumanTurn && humanPlayer.tiles.length === 14 && !canTsumo && !canRon" class="discard-hint">
+              不要な牌をクリックして捨ててください
+            </div>
+          </v-card-text>
+        </v-card>
+      </div>
     </div>
 
     <!-- 勝利モーダル -->
@@ -215,6 +274,9 @@ const cpuTilesVisible = ref({
   2: false, // CPU2 (上)
   3: false  // CPU3 (左)
 })
+
+// リーチプレビューモード状態
+const riichiPreviewMode = ref(false)
 
 // Win modal state
 const showWinModal = ref(false)
@@ -275,7 +337,23 @@ const canDraw = computed(() => {
 })
 
 const canDeclareRiichi = computed(() => {
-  return gameManager.value.canPlayerRiichi(0)
+  console.log('canDeclareRiichi computed 実行中')
+  const result = gameManager.value.canPlayerRiichi(0)
+  console.log('canDeclareRiichi computed 結果:', result)
+  return result
+})
+
+const canTsumo = computed(() => {
+  if (!isHumanTurn.value || !currentDrawnTile.value) return false
+  
+  const winResult = gameManager.value.checkWinConditionForPlayer(0, currentDrawnTile.value, true)
+  return winResult.isWin
+})
+
+const canRon = computed(() => {
+  if (isHumanTurn.value) return false // 自分のターンではロンできない
+  
+  return gameManager.value.canHumanRon()
 })
 
 // シャンテン数計算
@@ -305,6 +383,11 @@ const shantenText = computed(() => {
   if (humanShanten.value === 0) return 'テンパイ'
   if (humanShanten.value >= 8) return '計算不可'
   return `${humanShanten.value}シャンテン`
+})
+
+// リーチボタンのテキスト
+const riichiButtonText = computed(() => {
+  return riichiPreviewMode.value ? 'キャンセル' : 'リーチ'
 })
 
 
@@ -356,6 +439,8 @@ async function onHumanTileDiscard(tileId: string) {
   console.log('Discard success:', success)
   
   if (success) {
+    // 人間プレイヤーが牌を捨てた場合はそのまま次のターンに進む
+    // （他の人間プレイヤーがロンすることは想定しない）
     gameManager.value.nextTurn()
   } else {
     console.log('Could not discard tile')
@@ -395,14 +480,44 @@ async function processCpuTurn() {
     console.log('AI decision:', decision)
     
     if (decision.action === 'riichi') {
-      gameManager.value.declareRiichi(currentIndex)
-    }
-    
-    if (decision.tileId) {
+      // リーチ宣言
+      const riichiSuccess = gameManager.value.declareRiichi(currentIndex)
+      console.log(`CPU${currentIndex}: リーチ宣言 ${riichiSuccess ? '成功' : '失敗'}`)
+      
+      if (riichiSuccess) {
+        // リーチ後は最適な捨て牌を決定する
+        const tileToDiscard = ai.decideTileToDiscard(player, currentDrawnTile.value)
+        console.log(`CPU${currentIndex}: リーチ後の捨て牌 ${tileToDiscard}`)
+        
+        if (tileToDiscard) {
+          const discardSuccess = gameManager.value.discardTile(currentIndex, tileToDiscard)
+          console.log('Riichi discard success:', discardSuccess)
+          
+          if (discardSuccess) {
+            // CPUが牌を捨てた後、人間プレイヤーがロン可能かチェック
+            if (gameManager.value.canHumanRon()) {
+              console.log('Human player can Ron after CPU riichi!')
+              return
+            }
+            
+            console.log('Moving to next turn after riichi')
+            gameManager.value.nextTurn()
+          }
+        }
+      }
+    } else if (decision.tileId) {
+      // 通常の捨て牌
       console.log('Attempting to discard tile:', decision.tileId)
       const success = gameManager.value.discardTile(currentIndex, decision.tileId)
       console.log('Discard success:', success)
       if (success) {
+        // CPUが牌を捨てた後、人間プレイヤーがロン可能かチェック
+        if (gameManager.value.canHumanRon()) {
+          console.log('Human player can Ron!')
+          // ロンボタンが表示されるので、ここでは次のターンに進まない
+          return
+        }
+        
         console.log('Moving to next turn')
         gameManager.value.nextTurn()
       }
@@ -418,6 +533,123 @@ function declareRiichi() {
   if (canDeclareRiichi.value) {
     gameManager.value.declareRiichi(0)
   }
+}
+
+// リーチプレビューモードの切り替え
+function toggleRiichiPreview() {
+  riichiPreviewMode.value = !riichiPreviewMode.value
+}
+
+// リーチ時に有効な牌IDのリストを取得
+function getRiichiValidTiles(): string[] {
+  if (!canDeclareRiichi.value || !currentDrawnTile.value) {
+    return []
+  }
+
+  const player = humanPlayer.value
+  const allTiles = [...player.tiles, currentDrawnTile.value]
+  const validTileIds: string[] = []
+
+  // 各牌を捨てた場合にテンパイを維持するかチェック
+  for (const tile of allTiles) {
+    const remainingTiles = allTiles.filter(t => t.id !== tile.id)
+    const shanten = calculateShanten(remainingTiles)
+    
+    if (shanten === 0) { // テンパイを維持
+      validTileIds.push(tile.id)
+    }
+  }
+
+  return validTileIds
+}
+
+// リーチ確定と牌捨て
+function confirmRiichiAndDiscard(tileId: string) {
+  if (!riichiPreviewMode.value) {
+    return
+  }
+
+  const validTiles = getRiichiValidTiles()
+  if (!validTiles.includes(tileId)) {
+    // 無効な牌をクリックした場合は何もしない
+    return
+  }
+
+  // リーチを宣言
+  if (canDeclareRiichi.value) {
+    gameManager.value.declareRiichi(0)
+  }
+
+  // プレビューモードを解除
+  riichiPreviewMode.value = false
+
+  // 牌を捨てる
+  const success = gameManager.value.discardTile(0, tileId)
+  if (success) {
+    gameManager.value.nextTurn()
+  }
+}
+
+function declareTsumo() {
+  if (canTsumo.value && currentDrawnTile.value) {
+    const winResult = gameManager.value.checkWinConditionForPlayer(0, currentDrawnTile.value, true)
+    
+    if (winResult.isWin && winResult.result) {
+      const player = humanPlayer.value
+      
+      winModalData.value = {
+        winner: player,
+        winningHand: [...player.tiles, currentDrawnTile.value],
+        winningTile: currentDrawnTile.value,
+        isTsumo: true,
+        basePoints: winResult.result.basePoints,
+        totalPoints: winResult.result.totalPoints,
+        yaku: winResult.result.yaku,
+        totalHan: winResult.result.totalHan,
+        fu: winResult.result.fu,
+        doraIndicators: doraIndicators.value,
+        doraCount: winResult.result.doraCount,
+        uradoraIndicators: winResult.result.uradoraCount > 0 ? [gameManager.value.wall[gameManager.value.wall.length - 1]] : [],
+        uradoraCount: winResult.result.uradoraCount
+      }
+      
+      showWinModal.value = true
+    }
+  }
+}
+
+function declareRon() {
+  if (canRon.value && gameManager.value.lastDiscardedTile) {
+    const winResult = gameManager.value.checkWinConditionForPlayer(0, gameManager.value.lastDiscardedTile, false)
+    
+    if (winResult.isWin && winResult.result) {
+      const player = humanPlayer.value
+      
+      winModalData.value = {
+        winner: player,
+        winningHand: player.tiles,
+        winningTile: gameManager.value.lastDiscardedTile,
+        isTsumo: false,
+        basePoints: winResult.result.basePoints,
+        totalPoints: winResult.result.totalPoints,
+        yaku: winResult.result.yaku,
+        totalHan: winResult.result.totalHan,
+        fu: winResult.result.fu,
+        doraIndicators: doraIndicators.value,
+        doraCount: winResult.result.doraCount,
+        uradoraIndicators: winResult.result.uradoraCount > 0 ? [gameManager.value.wall[gameManager.value.wall.length - 1]] : [],
+        uradoraCount: winResult.result.uradoraCount
+      }
+      
+      showWinModal.value = true
+    }
+  }
+}
+
+function cancelRon() {
+  // ロンをキャンセルして次のプレイヤーのターンに進む
+  gameManager.value.clearLastDiscard()
+  gameManager.value.nextTurn()
 }
 
 function checkWinConditionForPlayer(playerIndex: number, winTile: any, isTsumo: boolean): boolean {
@@ -551,9 +783,9 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
   position: relative;
   display: grid;
   grid-template-areas: 
-    ". top info"
+    "dora top info"
     "left center right"
-    ". bottom .";
+    ". bottom actions";
   grid-template-rows: 20% 60% 20%;
   grid-template-columns: 20% 60% 20%;
   gap: 4px;
@@ -579,8 +811,26 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
   grid-area: bottom;
 }
 
+.dora-area {
+  grid-area: dora;
+  padding: 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+}
+
 .game-info-area {
   grid-area: info;
+  padding: 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.action-area {
+  grid-area: actions;
   padding: 8px;
   display: flex;
   align-items: flex-start;
@@ -682,12 +932,40 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
 }
 
 
+.dora-panel {
+  width: 100%;
+  max-width: 280px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #4caf50;
+  font-size: 0.85rem;
+}
+
+.dora-content {
+  padding: 8px !important;
+}
+
 .game-info-panel {
   width: 100%;
   max-width: 280px;
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid #1976d2;
   font-size: 0.85rem;
+}
+
+.action-panel {
+  width: 100%;
+  max-width: 280px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ff9800;
+  font-size: 0.85rem;
+}
+
+.action-content {
+  padding: 8px !important;
+}
+
+.action-btn {
+  margin-bottom: 8px;
 }
 
 .info-row {
@@ -708,11 +986,6 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
 
 .game-controls {
   margin-top: 12px;
-}
-
-.dora-row {
-  flex-direction: column !important;
-  align-items: flex-start !important;
 }
 
 .dora-tiles {

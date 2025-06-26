@@ -2,7 +2,7 @@ import type { Tile } from '../stores/mahjong'
 import type { Tile as FourPlayerTile } from '../stores/fourPlayerMahjong'
 import { syanten } from 'syanten'
 
-export function convertTilesToSyantenFormat(tiles: Tile[]): [number[], number[], number[], number[]] {
+export function convertTilesToSyantenFormat(tiles: Tile[] | FourPlayerTile[]): [number[], number[], number[], number[]] {
   const man = new Array(9).fill(0)
   const pin = new Array(9).fill(0) 
   const sou = new Array(9).fill(0)
@@ -23,7 +23,7 @@ export function convertTilesToSyantenFormat(tiles: Tile[]): [number[], number[],
   return [man, pin, sou, honor]
 }
 
-export function calculateShanten(tiles: Tile[]): number {
+export function calculateShanten(tiles: Tile[] | FourPlayerTile[]): number {
   // 手牌枚数のチェック（13枚または14枚でない場合は計算不可）
   if (tiles.length !== 13 && tiles.length !== 14) {
     return 8 // 不正な手牌サイズの場合は最大シャンテン数を返す
@@ -79,18 +79,36 @@ export function createTileFromIndex(index: number, id: string): Tile {
   }
 }
 
-export function isWinningHand(tiles: Tile[]): boolean {
+export function isWinningHand(tiles: Tile[] | FourPlayerTile[]): boolean {
   return calculateShanten(tiles) === -1
 }
 
-export function canRiichi(tiles: Tile[], discards?: Tile[]): boolean {
-  // リーチ条件：
-  // 1. テンパイ (シャンテン = 0)
-  // 2. まだリーチしていない
-  // 3. 鳴いていない (melds が空)
-  // 4. 1000点以上持っている (ここでは省略)
+export function canRiichi(tiles: Tile[] | FourPlayerTile[], discards?: Tile[] | FourPlayerTile[]): boolean {
+  // リーチ条件：14枚の手牌でテンパイ判定を行う
+  // 1. 14枚の手牌でなければならない
+  // 2. どれか1枚を捨てることでテンパイになる
+  // 3. まだリーチしていない (GameManagerで判定)
+  // 4. 鳴いていない (melds が空) (GameManagerで判定)
+  // 5. 1000点以上持っている (GameManagerで判定)
   
-  return calculateShanten(tiles) === 0
+  if (tiles.length !== 14) {
+    return false
+  }
+  
+  // 各牌を1枚ずつ取り除いて、残り13枚でテンパイ（シャンテン0）になるかチェック
+  for (let i = 0; i < tiles.length; i++) {
+    const testTiles = [...tiles]
+    testTiles.splice(i, 1) // i番目の牌を除去
+    
+    if (testTiles.length === 13) {
+      const shanten = calculateShanten(testTiles)
+      if (shanten === 0) {
+        return true // 1枚捨てることでテンパイになる
+      }
+    }
+  }
+  
+  return false
 }
 
 // 役判定の基本的な実装 (簡易版)
