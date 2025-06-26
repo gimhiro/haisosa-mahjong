@@ -1,5 +1,5 @@
 import type { Tile, Player, GamePhase } from '../stores/fourPlayerMahjong'
-import { canRiichi, checkWinCondition } from './mahjong-logic'
+import { canRiichi, checkWinCondition, calculateShanten } from './mahjong-logic'
 
 export class GameManager {
   private _players: Player[]
@@ -346,32 +346,47 @@ export class GameManager {
   } {
     const player = this._players[playerIndex]
 
+    // ツモの場合は手牌13枚+勝利牌1枚=14枚、ロンの場合も14枚で判定
+    const allTiles = [...player.tiles, winTile]
+    
+    // まず簡単なシャンテン数チェックで和了可能性を確認
+    const convertedTiles = allTiles.map(t => ({ id: t.id, suit: t.suit, rank: t.rank, isRed: t.isRed }))
+    const shanten = calculateShanten(convertedTiles)
+    
+    // シャンテン数が-1でない場合は和了不可
+    if (shanten !== -1) {
+      return { isWin: false }
+    }
+
     // 裏ドラ指示牌は山の後方から2番目の牌（ドラ指示牌の下）
     const uradoraIndicators = player.riichi && this._wall.length >= 2 ? [this._wall[this._wall.length - 2]] : []
     console.log('checkWinConditionForPlayer - player riichi:', player.riichi, 'wall length:', this._wall.length, 'uradoraIndicators:', uradoraIndicators, 'doraIndicators:', this._doraIndicators)
 
-    // ツモの場合は手牌13枚+勝利牌1枚=14枚、ロンの場合も14枚で判定
-    const allTiles = [...player.tiles, winTile]
-    const isDealer = playerIndex === this._dealer
-    const winResult = checkWinCondition(
-      allTiles,                  // 14枚の完全な手牌
-      winTile,                   // 勝利牌の情報
-      isTsumo,
-      player.riichi,
-      this._doraIndicators,
-      uradoraIndicators,
-      isDealer                   // Pass dealer status for accurate scoring
-    )
+    try {
+      const isDealer = playerIndex === this._dealer
+      const winResult = checkWinCondition(
+        allTiles,                  // 14枚の完全な手牌
+        winTile,                   // 勝利牌の情報
+        isTsumo,
+        player.riichi,
+        this._doraIndicators,
+        uradoraIndicators,
+        isDealer                   // Pass dealer status for accurate scoring
+      )
 
-    if (winResult.isWin) {
-      // 人間プレイヤーの場合はゲーム状態を変更せず、ボタン選択を可能にする
-      if (player.type !== 'human') {
-        this._gamePhase = 'finished'
+      if (winResult.isWin) {
+        // 人間プレイヤーの場合はゲーム状態を変更せず、ボタン選択を可能にする
+        if (player.type !== 'human') {
+          this._gamePhase = 'finished'
+        }
+        return { isWin: true, result: winResult }
       }
-      return { isWin: true, result: winResult }
-    }
 
-    return { isWin: false }
+      return { isWin: false }
+    } catch (error) {
+      console.error('Error in checkWinConditionForPlayer scoring check:', error)
+      return { isWin: false }
+    }
   }
 
   // 上がり時に供託分を得点に加算し、供託をリセット
@@ -435,19 +450,33 @@ export class GameManager {
       return false
     }
 
-    // 最後の捨て牌でアガリ可能かチェック（13枚の手牌 + 1枚の捨て牌 = 14枚）
+    // まず簡単なシャンテン数チェックで和了可能性を確認
     const allTiles = [...this.humanPlayer.tiles, this._lastDiscardedTile]
-    const isDealer = 0 === this._dealer // Human player is always index 0
-    const winResult = checkWinCondition(
-      allTiles,                  // 14枚の完全な手牌
-      this._lastDiscardedTile,   // 勝利牌の情報
-      false,                     // ロンなのでfalse
-      this.humanPlayer.riichi,
-      this._doraIndicators,
-      this.humanPlayer.riichi && this._wall.length >= 2 ? [this._wall[this._wall.length - 2]] : [],
-      isDealer                   // Pass dealer status for accurate scoring
-    )
-    return winResult.isWin
+    const convertedTiles = allTiles.map(t => ({ id: t.id, suit: t.suit, rank: t.rank, isRed: t.isRed }))
+    const shanten = calculateShanten(convertedTiles)
+    
+    // シャンテン数が-1でない場合は和了不可
+    if (shanten !== -1) {
+      return false
+    }
+
+    // シャンテン数が-1の場合のみ詳細な役・点数チェック
+    try {
+      const isDealer = 0 === this._dealer // Human player is always index 0
+      const winResult = checkWinCondition(
+        allTiles,                  // 14枚の完全な手牌
+        this._lastDiscardedTile,   // 勝利牌の情報
+        false,                     // ロンなのでfalse
+        this.humanPlayer.riichi,
+        this._doraIndicators,
+        this.humanPlayer.riichi && this._wall.length >= 2 ? [this._wall[this._wall.length - 2]] : [],
+        isDealer                   // Pass dealer status for accurate scoring
+      )
+      return winResult.isWin
+    } catch (error) {
+      console.error('Error in canHumanRon scoring check:', error)
+      return false
+    }
   }
 
   clearLastDiscard(): void {
