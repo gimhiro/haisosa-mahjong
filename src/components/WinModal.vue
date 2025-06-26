@@ -1,7 +1,7 @@
 <template>
   <v-dialog 
     v-model="isOpen" 
-    max-width="600" 
+    max-width="900" 
     persistent
     :scrim="false"
   >
@@ -74,7 +74,7 @@
         </div>
         
         <!-- ドラ情報 -->
-        <div v-if="winData.doraCount > 0" class="dora-info">
+        <div class="dora-info">
           <h4>ドラ</h4>
           <div class="dora-tiles">
             <MahjongTile
@@ -201,12 +201,13 @@ const isOpen = computed({
 
 .tiles-display {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-wrap: nowrap;
+  gap: 2px;
   justify-content: center;
   padding: 12px;
   background: #f5f5f5;
   border-radius: 8px;
+  overflow-x: auto;
 }
 
 .score-info {

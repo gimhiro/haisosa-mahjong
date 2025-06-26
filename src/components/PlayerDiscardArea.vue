@@ -10,6 +10,7 @@
           :is-draggable="false"
           :is-dora="checkIsDora(tile)"
           :is-tsumo-discard="tile.isTsumoDiscard || false"
+          :is-riichi-declaration="!!tile.isRiichiDeclaration"
           class="discard-tile"
         />
       </div>
@@ -56,12 +57,10 @@ const maxRows = computed(() => {
 
 function checkIsDora(tile: Tile): boolean {
   if (!props.gameManager) {
-    console.warn('PlayerDiscardArea: GameManager not available for dora check', props.gameManager)
     return false
   }
   
   const isDora = props.gameManager.isDoraTile(tile)
-  console.log(`PlayerDiscardArea: Checking tile ${tile.suit}${tile.rank}, isDora: ${isDora}`)
   
   return isDora
 }
@@ -69,16 +68,16 @@ function checkIsDora(tile: Tile): boolean {
 // 固定レイアウトで行を取得
 function getDiscardRowFixed(rowIndex: number): Tile[] {
   const tiles = allDiscards.value
+  const rowTiles = tiles.slice(rowIndex * 6, (rowIndex + 1) * 6)
   
-  if (rowIndex === 0) {
-    // 1段目: 最初の6枚
-    return tiles.slice(0, 6)
-  } else {
-    // 2段目以降: 6枚ずつ
-    const startIndex = 6 + (rowIndex - 1) * 6
-    const endIndex = startIndex + 6
-    return tiles.slice(startIndex, endIndex)
-  }
+  // リーチ宣言牌をログ出力
+  rowTiles.forEach(tile => {
+    if (tile.isRiichiDeclaration) {
+      console.log('Found riichi declaration tile in discard area:', tile.suit + tile.rank, tile)
+    }
+  })
+  
+  return rowTiles
 }
 </script>
 

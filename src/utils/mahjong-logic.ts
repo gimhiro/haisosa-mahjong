@@ -181,13 +181,22 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
     yaku.push({ name: 'リーチ', han: 1 })
   }
   
-  // 簡易的な役判定（実際にはもっと複雑）
+  // 基本的な役判定（複数の役を同時にチェック）
   if (isAllSameSuit(tiles)) {
     yaku.push({ name: '清一色', han: 6 })
-  } else if (isAllTerminalsAndHonors(tiles)) {
+  }
+  
+  if (isAllTerminalsAndHonors(tiles)) {
     yaku.push({ name: '混老頭', han: 2 })
-  } else if (hasAllSimples(tiles)) {
+  }
+  
+  if (hasAllSimples(tiles)) {
     yaku.push({ name: '断ヤオ九', han: 1 })
+  }
+  
+  // ツモの場合の役
+  if (isTsumo) {
+    yaku.push({ name: '門前清自摸和', han: 1 })
   }
   
   // ドラ計算

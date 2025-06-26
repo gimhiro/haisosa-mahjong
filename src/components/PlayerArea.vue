@@ -50,18 +50,29 @@
           :size="tileSize"
           :is-draggable="isCurrent && showTiles && position === 'bottom'"
           :is-dora="checkIsDora(tile)"
+          :disabled="(isRiichiPreviewMode || player.riichi) && riichiDisabledTiles.includes(tile.id)"
           @click="onTileClick"
         />
         
-        <!-- ツモ牌 -->
-        <div v-if="drawnTile" :class="drawnTileClasses">
+        <!-- ツモ牌エリア（常に表示） -->
+        <div :class="drawnTileClasses">
           <MahjongTile
+            v-if="drawnTile"
             :tile="drawnTile"
             :size="tileSize"
             :is-draggable="isCurrent && showTiles && position === 'bottom'"
             :is-dora="checkIsDora(drawnTile)"
+            :disabled="(isRiichiPreviewMode || player.riichi) && riichiDisabledTiles.includes(drawnTile.id)"
             @click="onTileClick"
           />
+          <div
+            v-else
+            class="empty-drawn-tile"
+            :style="{ 
+              width: getTileSize().width, 
+              height: getTileSize().height
+            }"
+          ></div>
         </div>
       </div>
       
@@ -124,6 +135,8 @@ interface Props {
   }
   gameManager?: GameManager
   cpuTilesVisible?: boolean
+  isRiichiPreviewMode?: boolean
+  riichiDisabledTiles?: string[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -132,11 +145,14 @@ const props = withDefaults(defineProps<Props>(), {
   isDealer: false,
   shantenInfo: undefined,
   gameManager: undefined,
-  cpuTilesVisible: false
+  cpuTilesVisible: false,
+  isRiichiPreviewMode: false,
+  riichiDisabledTiles: () => []
 })
 
 const emit = defineEmits<{
   tileDiscarded: [tileId: string]
+  riichiConfirmed: [tileId: string]
   toggleCpuTiles: []
 }>()
 
@@ -193,32 +209,41 @@ const isCpuPlayer = computed(() => props.player.type === 'cpu')
 
 function checkIsDora(tile: Tile): boolean {
   if (!props.gameManager) {
-    console.warn('PlayerArea: GameManager not available for dora check', props.gameManager)
     return false
   }
   
   const isDora = props.gameManager.isDoraTile(tile)
   if (isDora) {
-    console.log(`PlayerArea: Dora tile found: ${tile.suit}${tile.rank}`)
   }
   
   return isDora
 }
 
-function onTileClick(tile: Tile) {
-  console.log('PlayerArea onTileClick called:', {
-    tile: tile,
-    isCurrent: props.isCurrent,
-    showTiles: props.showTiles,
-    position: props.position
-  })
-  
-  if (props.isCurrent && props.showTiles) {
-    console.log('Emitting tileDiscarded event with tileId:', tile.id)
-    emit('tileDiscarded', tile.id)
-  } else {
-    console.log('Tile click ignored - conditions not met')
+function getTileSize() {
+  // タイルサイズをposition に応じて決定
+  switch (props.position) {
+    case 'bottom':
+      return { width: '48px', height: '64px' }
+    case 'top':
+    case 'left':
+    case 'right':
+      return { width: '36px', height: '48px' }
+    default:
+      return { width: '48px', height: '64px' }
   }
+}
+
+function onTileClick(tile: Tile) {
+  console.log('PlayerArea onTileClick:', tile.id, 'player riichi:', props.player.riichi, 'isCurrent:', props.isCurrent, 'isRiichiPreviewMode:', props.isRiichiPreviewMode)
+  if (props.isCurrent && props.showTiles) {
+    if (props.isRiichiPreviewMode) {
+      console.log('Emitting riichiConfirmed for tile:', tile.id)
+      emit('riichiConfirmed', tile.id)
+    } else {
+      console.log('Emitting tileDiscarded for tile:', tile.id)
+      emit('tileDiscarded', tile.id)
+    }
+  } 
 }
 </script>
 
@@ -421,6 +446,13 @@ function onTileClick(tile: Tile) {
   height: clamp(33px, 4.2vw, 49px);
 }
 
+
+/* 空のツモ牌エリア */
+.empty-drawn-tile {
+  opacity: 0;
+  pointer-events: none;
+  background: transparent;
+}
 
 /* 鳴きエリア */
 .melds-area {

@@ -26,11 +26,7 @@
       
       <!-- ドラマスク -->
       <div v-if="isDora" class="dora-mask" @click.stop>
-        <!-- デバッグ用：コンソールにログ出力 -->
-        {{ logDoraRender() }}
       </div>
-      <!-- デバッグ用：isDoraの値を確認 -->
-      {{ console.log(`MahjongTile ${props.tile.suit}${props.tile.rank}: isDora=${props.isDora}`) }}
       
       <!-- ツモ切りマスク -->
       <div v-if="isTsumoDiscard" class="tsumo-discard-mask" @click.stop></div>
@@ -54,6 +50,8 @@ interface Props {
   isWinningTile?: boolean
   isDora?: boolean
   isTsumoDiscard?: boolean
+  isRiichiDeclaration?: boolean
+  disabled?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -64,7 +62,9 @@ const props = withDefaults(defineProps<Props>(), {
   isBack: false,
   isWinningTile: false,
   isDora: false,
-  isTsumoDiscard: false
+  isTsumoDiscard: false,
+  isRiichiDeclaration: false,
+  disabled: false
 })
 
 const emit = defineEmits<{
@@ -82,10 +82,12 @@ const tileClasses = computed(() => [
   `tile-${props.size}`,
   {
     'tile-selected': props.isSelected,
-    'tile-draggable': props.isDraggable,
+    'tile-draggable': props.isDraggable && !props.disabled,
     'tile-discarded': props.isDiscarded,
     'tile-red': props.tile.isRed,
-    'tile-winning': props.isWinningTile
+    'tile-winning': props.isWinningTile,
+    'tile-riichi-declaration': props.isRiichiDeclaration,
+    'tile-disabled': props.disabled
   }
 ])
 
@@ -108,6 +110,10 @@ function handleImageLoad() {
 
 function handleClick() {
   console.log('MahjongTile handleClick called for tile:', props.tile)
+  if (props.disabled) {
+    console.log('MahjongTile click ignored - tile is disabled')
+    return
+  }
   emit('click', props.tile)
 }
 
@@ -116,6 +122,9 @@ function handleTouchStart() {
 }
 
 function handleTouchEnd() {
+  if (props.disabled) {
+    return
+  }
   const touchDuration = Date.now() - touchStartTime.value
   if (touchDuration < 200) { // タップ判定
     emit('click', props.tile)
@@ -268,6 +277,31 @@ function logDoraRender() {
   border-radius: 2px;
   pointer-events: none;
   z-index: 9;
+}
+
+/* リーチ宣言牌（90度回転） */
+.tile-riichi-declaration {
+  transform: rotate(90deg) !important;
+  transform-origin: center center !important;
+  /* border: 2px solid #ff4444 !important; */
+  /* box-shadow: 0 0 8px rgba(255, 68, 68, 0.6) !important; */
+}
+
+/* .tile-riichi-declaration .tile-face {
+  border: 2px solid #ff4444 !important;
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.6) !important;
+} */
+
+/* 無効化された牌のスタイル */
+.tile-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(50%);
+}
+
+.tile-disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* レスポンシブ対応 */

@@ -8,6 +8,7 @@ export type Tile = {
   isRed?: boolean
   discardOrder?: number // 捨牌された順序
   isTsumoDiscard?: boolean // ツモ切りかどうか
+  isRiichiDeclaration?: boolean // リーチ宣言牌かどうか
 }
 
 export type PlayerType = 'human' | 'cpu'

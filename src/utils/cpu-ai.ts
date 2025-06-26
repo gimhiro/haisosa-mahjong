@@ -79,7 +79,6 @@ export class CpuAI {
 
     // 候補がない場合（すべての牌を捨てるとシャンテン数が悪化する場合）
     if (candidates.length === 0) {
-      console.log('CPU: シャンテン数を維持できる捨て牌がないため、ランダムに選択')
       return tiles[Math.floor(Math.random() * tiles.length)].id
     }
 
@@ -128,9 +127,8 @@ export class CpuAI {
       }
     }
 
-    // 候補がない場合
+    // 候補がない場合次局
     if (candidates.length === 0) {
-      console.log('CPU上級: シャンテン数を維持できる捨て牌がないため、最小ダメージを選択')
       // 最もダメージの少ない牌を選択
       let minDamage = Infinity
       let bestTileId = ''
@@ -225,13 +223,11 @@ export class CpuAI {
 
     // リーチ判定（ツモ牌を含めて判定）
     if (this.shouldDeclareRiichi(player, drawnTile)) {
-      console.log(`CPU${player.id}: リーチ可能状態を検出、リーチを宣言します`)
       return { action: 'riichi' }
     }
 
     // 捨て牌決定
     const tileId = this.decideTileToDiscard(player, drawnTile)
-    console.log(`CPU${player.id}: ${tileId} を捨てます`)
     return { action: 'discard', tileId }
   }
 }
