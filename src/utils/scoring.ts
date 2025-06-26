@@ -15,10 +15,41 @@ export interface ScoringResult {
   han: number
   fu: number
   points: number
+  paymentInfo: string  // 支払い形式 (例: "400-700", "1000 all")
+  totalPoints: number  // 合計獲得点数
   yaku: Array<{
     name: string
     han: number
   }>
+}
+
+// 点数から支払い形式を計算
+function calculatePaymentInfo(points: number, isDealer: boolean, isTsumo: boolean): { paymentInfo: string, totalPoints: number } {
+  if (isTsumo) {
+    if (isDealer) {
+      // 親のツモ: 全員から同額
+      const eachPayment = Math.ceil(points / 3 / 100) * 100
+      return {
+        paymentInfo: `${eachPayment} all`,
+        totalPoints: eachPayment * 3
+      }
+    } else {
+      // 子のツモ: 親は2倍、子は1倍
+      const koPayment = Math.ceil(points / 4 / 100) * 100
+      const oyaPayment = koPayment * 2
+      return {
+        paymentInfo: `${koPayment}-${oyaPayment}`,
+        totalPoints: koPayment * 2 + oyaPayment
+      }
+    }
+  } else {
+    // ロン: 放銃者が全額支払い
+    const actualPoints = isDealer ? Math.ceil(points * 1.5 / 100) * 100 : points
+    return {
+      paymentInfo: `${actualPoints}`,
+      totalPoints: actualPoints
+    }
+  }
 }
 
 // Convert our Tile format to riichi-rs-bundlers numeric format
@@ -110,8 +141,29 @@ function getYakuName(yakuId: number): string {
 
 export function calculateScore(input: ScoringInput): ScoringResult | null {
   try {
-    // Convert tiles to riichi-rs-bundlers format
-    const closedPart = convertTilesToNumbers(input.hand) as number[] // Type assertion for riichi-rs-bundlers
+    // riichi-rs-bundlersは13枚のclosed_partと上がり牌を分離して受け取る
+    // input.handは14枚（13枚の手牌+上がり牌）なので、上がり牌を除外する
+    const handWithoutWinTile = [...input.hand]
+    
+    // 上がり牌を1枚除外する（まずIDで検索、なければ同種の牌を除外）
+    let removed = false
+    for (let i = 0; i < handWithoutWinTile.length; i++) {
+      const tile = handWithoutWinTile[i]
+      if (tile.id === input.winningTile.id || 
+          (!removed && tile.suit === input.winningTile.suit && tile.rank === input.winningTile.rank)) {
+        handWithoutWinTile.splice(i, 1)
+        removed = true
+        break
+      }
+    }
+    
+    // 13枚でない場合は先頭から13枚を取る
+    if (handWithoutWinTile.length !== 13) {
+      console.warn(`Expected 13 tiles after removing win tile, got ${handWithoutWinTile.length}`)
+      handWithoutWinTile.splice(13)
+    }
+    
+    const closedPart = convertTilesToNumbers(handWithoutWinTile) as number[]
     const doraNumbers = convertTilesToNumbers(input.doraIndicators) as number[]
     const uradoraNumbers = convertTilesToNumbers(input.uradoraIndicators) as number[]
 
@@ -125,7 +177,7 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
 
     // Create RiichiInput for riichi-rs-bundlers
     const riichiInput = {
-      closed_part: closedPart as any, // Type assertion for WebAssembly compatibility
+      closed_part: closedPart as any, // 13枚の手牌
       open_part: [], // No open melds for now
       options: {
         dora: doraNumbers as any,
@@ -153,10 +205,15 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
         han: han
       }))
 
+    // 支払い形式と合計点数を計算
+    const payment = calculatePaymentInfo(result.ten, input.isDealer, input.isTsumo)
+
     return {
       han: result.han,
       fu: result.fu,
       points: result.ten,
+      paymentInfo: payment.paymentInfo,
+      totalPoints: payment.totalPoints,
       yaku
     }
   } catch (error) {

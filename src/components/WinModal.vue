@@ -37,15 +37,15 @@
             <v-col cols="6">
               <v-card variant="outlined">
                 <v-card-text class="text-center">
-                  <div class="score-label">基本点</div>
-                  <div class="score-value">{{ winData.basePoints }}点</div>
+                  <div class="score-label">支払い</div>
+                  <div class="score-value">{{ winData.paymentInfo }}</div>
                 </v-card-text>
               </v-card>
             </v-col>
             <v-col cols="6">
               <v-card variant="outlined">
                 <v-card-text class="text-center">
-                  <div class="score-label">{{ winData.winner.wind === 'east' ? '親' : '子' }}の獲得点</div>
+                  <div class="score-label">合計</div>
                   <div class="score-value">{{ winData.totalPoints }}点</div>
                 </v-card-text>
               </v-card>
@@ -75,7 +75,7 @@
         
         <!-- ドラ情報 -->
         <div class="dora-info">
-          <h4>ドラ</h4>
+          <h4>ドラ表示</h4>
           <div class="dora-tiles">
             <MahjongTile
               v-for="dora in winData.doraIndicators"
@@ -90,7 +90,7 @@
         
         <!-- 裏ドラ情報（リーチ時のみ） -->
         <div v-if="winData.winner.riichi" class="uradora-info">
-          <h4>裏ドラ</h4>
+          <h4>裏ドラ表示</h4>
           <div class="uradora-tiles">
             <MahjongTile
               v-for="uradora in winData.uradoraIndicators"
@@ -136,6 +136,7 @@ export interface WinData {
   isTsumo: boolean
   basePoints: number
   totalPoints: number
+  paymentInfo: string
   yaku: Array<{ name: string; han: number }>
   totalHan: number
   fu: number

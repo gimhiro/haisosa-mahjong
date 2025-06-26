@@ -153,6 +153,7 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
   fu: number
   basePoints: number
   totalPoints: number
+  paymentInfo: string
   doraCount: number
   uradoraCount: number
 } {
@@ -176,6 +177,7 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
         fu: 0,
         basePoints: 0,
         totalPoints: 0,
+        paymentInfo: '',
         doraCount: 0,
         uradoraCount: 0
       }
@@ -191,7 +193,8 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
       totalHan: scoringResult.han,
       fu: scoringResult.fu,
       basePoints: scoringResult.points,
-      totalPoints: scoringResult.points,
+      totalPoints: scoringResult.totalPoints,
+      paymentInfo: scoringResult.paymentInfo,
       doraCount,
       uradoraCount
     }
@@ -210,6 +213,7 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
         fu: 0,
         basePoints: 0,
         totalPoints: 0,
+        paymentInfo: '',
         doraCount: 0,
         uradoraCount: 0
       }
@@ -249,6 +253,7 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
         fu: 0,
         basePoints: 0,
         totalPoints: 0,
+        paymentInfo: '',
         doraCount,
         uradoraCount
       }
@@ -258,6 +263,11 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
     const fu = calculateFu(tiles, winTile, isTsumo)
     const basePoints = calculateScore(yaku.map(y => y.name), totalHan, fu)
     
+    // フォールバック時も支払い形式を計算
+    const paymentInfo = isTsumo 
+      ? (isDealer ? `${Math.ceil(basePoints / 3 / 100) * 100} all` : `${Math.ceil(basePoints / 4 / 100) * 100}-${Math.ceil(basePoints / 2 / 100) * 100}`)
+      : `${isDealer ? Math.ceil(basePoints * 1.5 / 100) * 100 : basePoints}`
+    
     return {
       isWin: true,
       yaku,
@@ -265,6 +275,7 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
       fu,
       basePoints,
       totalPoints: basePoints,
+      paymentInfo,
       doraCount,
       uradoraCount
     }

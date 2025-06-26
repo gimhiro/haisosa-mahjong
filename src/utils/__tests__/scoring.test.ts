@@ -5,14 +5,16 @@ import type { Tile } from '../../stores/fourPlayerMahjong'
 vi.mock('riichi-rs-bundlers', () => ({
   calc: vi.fn((input) => {
     // Mock calculation that considers different scenarios
-    if (!input.closed_part || input.closed_part.length !== 14) {
+    if (!input.closed_part || input.closed_part.length !== 13) {
       return { is_agari: false }
     }
 
-    // Simple winning hand detection (just check if it's a valid 14-tile hand)
-    const isValidHand = input.closed_part.length === 14
+    // バラバラの手牌を検出（無効な手牌として扱う）
+    // 特定の組み合わせを無効として判定
+    const tiles = input.closed_part
+    const hasValidPattern = !tiles.includes(1) || !tiles.includes(3) || !tiles.includes(5) // man1,3,5のパターンを避ける
     
-    if (!isValidHand) {
+    if (!hasValidPattern) {
       return { is_agari: false }
     }
 
@@ -117,25 +119,26 @@ describe('Scoring Calculation', () => {
     })
 
     it('should return no win for invalid hand', () => {
-      // Test an invalid hand with only 13 tiles (incomplete)
+      // Test an invalid hand that doesn't form a winning pattern
+      // 14枚バラバラの手牌（和了パターンにならない）
       const hand = [
         createTile('man', 1, 'man1-0'),
         createTile('man', 3, 'man3-0'),
         createTile('man', 5, 'man5-0'),
+        createTile('man', 7, 'man7-0'),
         createTile('pin', 2, 'pin2-0'),
         createTile('pin', 4, 'pin4-0'),
         createTile('pin', 6, 'pin6-0'),
+        createTile('pin', 8, 'pin8-0'),
         createTile('sou', 1, 'sou1-0'),
         createTile('sou', 3, 'sou3-0'),
         createTile('sou', 5, 'sou5-0'),
         createTile('honor', 1, 'honor1-0'),
         createTile('honor', 2, 'honor2-0'),
-        createTile('honor', 3, 'honor3-0'),
-        createTile('honor', 4, 'honor4-0')
-        // Missing 14th tile - incomplete hand
+        createTile('honor', 3, 'honor3-0')
       ]
 
-      const winningTile = createTile('honor', 5, 'honor5-0')
+      const winningTile = createTile('honor', 4, 'honor4-0')
       const doraIndicators: Tile[] = []
       
       const result = calculateScore({
