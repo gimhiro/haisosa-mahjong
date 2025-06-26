@@ -12,6 +12,10 @@ export default defineConfig({
     vueDevTools(),
     // wasmPack([]),
   ],
+  test: {
+    environment: 'jsdom',
+    globals: true,
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

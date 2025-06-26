@@ -37,33 +37,37 @@
         <div class="discards-area">
           <div class="central-square">
             <!-- 各プレイヤーの捨牌エリア -->
-            <PlayerDiscardArea
-              :player-index="0"
-              :get-player-discard-row="getPlayerDiscardRow"
-              :game-manager="gameManager"
-              style="bottom: -40px; left: 50%; transform: translateX(-50%) rotate(0deg);"
-            />
+            <div class="discard-area-bottom">
+              <PlayerDiscardArea
+                :player-index="0"
+                :get-player-discard-row="getPlayerDiscardRow"
+                :game-manager="gameManager"
+              />
+            </div>
             
-            <PlayerDiscardArea
-              :player-index="1"
-              :get-player-discard-row="getPlayerDiscardRow"
-              :game-manager="gameManager"
-              style="right: -40px; top: 50%; transform: translateY(-50%) rotate(270deg);"
-            />
+            <div class="discard-area-right">
+              <PlayerDiscardArea
+                :player-index="1"
+                :get-player-discard-row="getPlayerDiscardRow"
+                :game-manager="gameManager"
+              />
+            </div>
             
-            <PlayerDiscardArea
-              :player-index="2"
-              :get-player-discard-row="getPlayerDiscardRow"
-              :game-manager="gameManager"
-              style="top: -40px; left: 50%; transform: translateX(-50%) rotate(180deg);"
-            />
+            <div class="discard-area-top">
+              <PlayerDiscardArea
+                :player-index="2"
+                :get-player-discard-row="getPlayerDiscardRow"
+                :game-manager="gameManager"
+              />
+            </div>
             
-            <PlayerDiscardArea
-              :player-index="3"
-              :get-player-discard-row="getPlayerDiscardRow"
-              :game-manager="gameManager"
-              style="left: -40px; top: 50%; transform: translateY(-50%) rotate(90deg);"
-            />
+            <div class="discard-area-left">
+              <PlayerDiscardArea
+                :player-index="3"
+                :get-player-discard-row="getPlayerDiscardRow"
+                :game-manager="gameManager"
+              />
+            </div>
 
             <!-- 中央エリア（ドラ表示など） -->
             <div class="center-info">
@@ -89,6 +93,66 @@
             不要な牌をクリックして捨ててください
           </div>
         </div>
+      </div>
+
+      <!-- ゲーム情報エリア -->
+      <div class="game-info-area">
+        <v-card class="game-info-panel">
+          <v-card-title class="text-subtitle-2">ゲーム情報</v-card-title>
+          <v-card-text class="text-caption">
+            <div class="info-row">
+              <span class="info-label">局:</span>
+              <span class="info-value">{{ round }}局 {{ getDealerText() }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">残り牌:</span>
+              <span class="info-value">{{ wallRemaining }}枚</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">状態:</span>
+              <v-chip :color="gamePhaseColor" size="x-small">
+                {{ gamePhaseText }}
+              </v-chip>
+            </div>
+            <div class="info-row">
+              <span class="info-label">現在:</span>
+              <span class="info-value">{{ currentPlayer.name }}</span>
+              <span class="info-value">{{ isHumanTurn ? '(あなたのターン)' : '(CPUのターン)' }}</span>
+            </div>
+            <div class="info-row dora-row">
+              <span class="info-label">ドラ:</span>
+              <div class="dora-tiles">
+                <MahjongTile
+                  v-for="dora in doraIndicators"
+                  :key="dora.id"
+                  :tile="dora"
+                  size="small"
+                  :is-draggable="false"
+                />
+              </div>
+            </div>
+            <div class="game-controls">
+              <v-btn
+                v-if="gamePhase === 'waiting'"
+                color="success"
+                size="small"
+                block
+                @click="startGame"
+              >
+                ゲーム開始
+              </v-btn>
+              <v-btn
+                v-else
+                color="error"
+                size="small"
+                block
+                @click="resetGame"
+              >
+                リセット
+              </v-btn>
+            </div>
+          </v-card-text>
+        </v-card>
       </div>
 
       <!-- 右側プレイヤー（プレイヤー1） -->
@@ -119,65 +183,6 @@
         />
       </div>
     </div>
-
-
-    <!-- ゲーム情報パネル -->
-    <v-card class="game-info-panel">
-      <v-card-title class="text-subtitle-2">ゲーム情報</v-card-title>
-      <v-card-text class="text-caption">
-        <div class="info-row">
-          <span class="info-label">局:</span>
-          <span class="info-value">{{ round }}局 {{ getDealerText() }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">残り牌:</span>
-          <span class="info-value">{{ wallRemaining }}枚</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">状態:</span>
-          <v-chip :color="gamePhaseColor" size="x-small">
-            {{ gamePhaseText }}
-          </v-chip>
-        </div>
-        <div class="info-row">
-          <span class="info-label">現在:</span>
-          <span class="info-value">{{ currentPlayer.name }}</span>
-          <span class="info-value">{{ isHumanTurn ? '(あなたのターン)' : '(CPUのターン)' }}</span>
-        </div>
-        <div class="info-row dora-row">
-          <span class="info-label">ドラ:</span>
-          <div class="dora-tiles">
-            <MahjongTile
-              v-for="dora in doraIndicators"
-              :key="dora.id"
-              :tile="dora"
-              size="small"
-              :is-draggable="false"
-            />
-          </div>
-        </div>
-        <div class="game-controls">
-          <v-btn
-            v-if="gamePhase === 'waiting'"
-            color="success"
-            size="small"
-            block
-            @click="startGame"
-          >
-            ゲーム開始
-          </v-btn>
-          <v-btn
-            v-else
-            color="error"
-            size="small"
-            block
-            @click="resetGame"
-          >
-            リセット
-          </v-btn>
-        </div>
-      </v-card-text>
-    </v-card>
 
     <!-- 勝利モーダル -->
     <WinModal
@@ -529,8 +534,8 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
 
 <style scoped>
 .four-player-game {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: calc(100vh - 64px);
   margin: 0;
   padding: 0;
   display: flex;
@@ -544,16 +549,16 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
   position: relative;
   display: grid;
   grid-template-areas: 
-    ". top ."
+    ". top info"
     "left center right"
     ". bottom .";
-  grid-template-rows: 60px 1fr 80px;
-  grid-template-columns: 100px 1fr 100px;
+  grid-template-rows: 20% 60% 20%;
+  grid-template-columns: 20% 60% 20%;
   gap: 4px;
   padding: 4px;
-  height: calc(100vh - 64px);
-  width: 100vw;
-  max-height: calc(100vh - 64px);
+  height: 100%;
+  width: 100%;
+  max-height: 100%;
 }
 
 .player-top {
@@ -570,6 +575,15 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
 
 .player-bottom {
   grid-area: bottom;
+}
+
+.game-info-area {
+  grid-area: info;
+  padding: 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .center-area {
@@ -593,11 +607,12 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
 
 .central-square {
   position: relative;
-  width: min(350px, 50vh);
-  height: min(350px, 50vh);
+  width: min(240px, 36vh, 36vw);
+  height: min(240px, 36vh, 36vw);
   background: rgba(255, 255, 255, 0.1);
   border: 2px dashed rgba(0, 0, 0, 0.2);
   border-radius: 8px;
+  aspect-ratio: 1;
 }
 
 
@@ -614,6 +629,35 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
   font-size: 1.5rem;
   font-weight: bold;
   color: rgba(0, 0, 0, 0.3);
+}
+
+/* 捨牌エリアの配置 */
+.discard-area-bottom {
+  position: absolute;
+  bottom: -10%;
+  left: 0%;
+  transform: translate(-50%, 50%);
+}
+
+.discard-area-right {
+  position: absolute;
+  right: -10%;
+  top: 100%;
+  transform: translate(50%, -50%) rotate(270deg);
+}
+
+.discard-area-top {
+  position: absolute;
+  top: -10%;
+  left: 100%;
+  transform: translate(-50%, -50%) rotate(180deg);
+}
+
+.discard-area-left {
+  position: absolute;
+  left: -10%;
+  top: 0%;
+  transform: translate(-50%, -50%) rotate(90deg);
 }
 
 
@@ -637,12 +681,9 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
 
 
 .game-info-panel {
-  position: fixed;
-  top: 70px;
-  right: 8px;
-  width: 180px;
+  width: 100%;
+  max-width: 280px;
   background: rgba(255, 255, 255, 0.95);
-  z-index: 1000;
   border: 1px solid #1976d2;
   font-size: 0.85rem;
 }
@@ -683,27 +724,39 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
 /* レスポンシブ対応 */
 @media (max-width: 1024px) {
   .game-table {
-    grid-template-rows: 55px 1fr 75px;
-    grid-template-columns: 80px 1fr 80px;
+    grid-template-rows: 20% 60% 20%;
+    grid-template-columns: 20% 60% 20%;
     gap: 2px;
     padding: 2px;
   }
   
   .game-info-panel {
-    width: 160px;
+    max-width: 200px;
     font-size: 0.75rem;
   }
   
   .central-square {
-    width: min(300px, 45vh);
-    height: min(300px, 45vh);
+    width: min(210px, 30vh, 30vw);
+    height: min(210px, 30vh, 30vw);
+  }
+  
+  .discard-area-bottom,
+  .discard-area-top {
+    bottom: -25px;
+    top: -25px;
+  }
+  
+  .discard-area-left,
+  .discard-area-right {
+    left: -25px;
+    right: -25px;
   }
 }
 
 @media (max-width: 768px) {
   .game-table {
-    grid-template-rows: 45px 1fr 65px;
-    grid-template-columns: 60px 1fr 60px;
+    grid-template-rows: 20% 60% 20%;
+    grid-template-columns: 20% 60% 20%;
   }
   
   .center-area {
@@ -712,14 +765,25 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
   }
   
   .central-square {
-    width: min(250px, 35vh);
-    height: min(250px, 35vh);
+    width: min(168px, 24vh, 42vw);
+    height: min(168px, 24vh, 42vw);
+  }
+  
+  .discard-area-bottom,
+  .discard-area-top {
+    bottom: -20px;
+    top: -20px;
+  }
+  
+  .discard-area-left,
+  .discard-area-right {
+    left: -20px;
+    right: -20px;
   }
   
   .game-info-panel {
-    width: 140px;
+    max-width: 160px;
     font-size: 0.7rem;
-    top: 60px;
   }
 }
 
@@ -730,14 +794,13 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
   }
   
   .central-square {
-    width: min(200px, 30vh);
-    height: min(200px, 30vh);
+    width: min(120px, 18vh);
+    height: min(120px, 18vh);
   }
   
   .game-info-panel {
-    width: 120px;
+    max-width: 120px;
     font-size: 0.65rem;
-    top: 50px;
   }
 }
 </style>

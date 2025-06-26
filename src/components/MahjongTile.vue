@@ -4,6 +4,13 @@
     @click="handleClick"
     @touchstart="handleTouchStart"
     @touchend="handleTouchEnd"
+    @dragstart="handleDragStart"
+    @dragend="handleDragEnd"
+    :aria-label="tileText"
+    :aria-selected="props.isSelected"
+    role="button"
+    tabindex="0"
+    :draggable="props.isDraggable"
   >
     <div class="tile-face">
       <img 
@@ -108,6 +115,14 @@ function handleTouchEnd() {
   if (touchDuration < 200) { // タップ判定
     emit('click', props.tile)
   }
+}
+
+function handleDragStart() {
+  emit('dragStart', props.tile)
+}
+
+function handleDragEnd() {
+  emit('dragEnd', props.tile)
 }
 </script>
 

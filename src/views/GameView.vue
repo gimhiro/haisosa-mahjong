@@ -264,7 +264,7 @@ onMounted(() => {
 <style scoped>
 .game-view {
   width: 100vw;
-  min-height: calc(100vh - 64px);
+  min-height: 100vh;
   margin: 0;
   padding: 1rem 0;
   background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);

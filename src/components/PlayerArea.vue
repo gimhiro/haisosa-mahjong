@@ -268,29 +268,30 @@ function onTileClick(tile: Tile) {
 }
 
 .position-top {
-  flex-direction: column-reverse;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .position-left {
-  flex-direction: row;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .position-left .player-info {
   flex-direction: column;
-  margin-right: 8px;
-  margin-bottom: 0;
-  min-width: 80px;
+  margin-bottom: 8px;
+  text-align: center;
 }
 
 .position-right {
-  flex-direction: row-reverse;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .position-right .player-info {
   flex-direction: column;
-  margin-left: 8px;
-  margin-bottom: 0;
-  min-width: 80px;
+  margin-bottom: 8px;
+  text-align: center;
 }
 
 /* 手牌エリア */
@@ -319,18 +320,35 @@ function onTileClick(tile: Tile) {
 .hand-tiles-top {
   flex-direction: row;
   transform: rotate(180deg);
+  margin-bottom: -15%;
 }
 
 .hand-tiles-left {
   flex-direction: column;
+  height: 100%;
+  align-items: center;
+  gap: 0;
+  margin-top: -15%;
+}
+
+.hand-tiles-left .mahjong-tile,
+.hand-tiles-left .tile-back {
   transform: rotate(90deg);
-  writing-mode: vertical-lr;
+  margin: -2.5% 0;
 }
 
 .hand-tiles-right {
   flex-direction: column;
+  height: 100%;
+  align-items: center;
+  gap: 0;
+  margin-top: -15%;
+}
+
+.hand-tiles-right .mahjong-tile,
+.hand-tiles-right .tile-back {
   transform: rotate(-90deg);
-  writing-mode: vertical-rl;
+  margin: -2.5% 0;
 }
 
 /* ツモ牌スタイル */
@@ -345,7 +363,6 @@ function onTileClick(tile: Tile) {
 }
 
 .drawn-tile-left {
-  transform: rotate(90deg);
   margin-top: 8px;
   margin-left: 0;
   padding-top: 8px;
@@ -355,7 +372,6 @@ function onTileClick(tile: Tile) {
 }
 
 .drawn-tile-right {
-  transform: rotate(-90deg);
   margin-top: 8px;
   margin-left: 0;
   padding-top: 8px;
