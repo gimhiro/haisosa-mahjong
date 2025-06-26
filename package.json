@@ -16,9 +16,9 @@
   },
   "dependencies": {
     "pinia": "^3.0.1",
+    "riichi-rs-bundlers": "^2.1.0",
     "seedrandom": "^3.0.5",
     "syanten": "^1.6.0",
-    "vite-plugin-wasm": "^3.4.1",
     "vue": "^3.5.13",
     "vue-draggable-next": "^2.2.1",
     "vue-router": "^4.5.0",
@@ -40,7 +40,9 @@
     "npm-run-all2": "^7.0.2",
     "typescript": "~5.8.0",
     "vite": "^6.2.4",
+    "vite-plugin-top-level-await": "^1.5.0",
     "vite-plugin-vue-devtools": "^7.7.2",
+    "vite-plugin-wasm": "^3.4.1",
     "vitest": "^3.2.4",
     "vue-tsc": "^2.2.8"
   }

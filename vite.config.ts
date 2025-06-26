@@ -3,19 +3,19 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
-// import wasmPack from 'vite-plugin-wasm-pack'
+import wasm from 'vite-plugin-wasm'
+import topLevelAwait from 'vite-plugin-top-level-await'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
     vueDevTools(),
-    // wasmPack([]),
+    wasm(),
+    topLevelAwait(),
   ],
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./vitest.setup.ts'],
+  optimizeDeps: {
+    exclude: ['riichi-rs-bundlers']
   },
   resolve: {
     alias: {

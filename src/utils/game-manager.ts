@@ -352,13 +352,15 @@ export class GameManager {
 
     // ツモの場合は手牌13枚+勝利牌1枚=14枚、ロンの場合も14枚で判定
     const allTiles = [...player.tiles, winTile]
+    const isDealer = playerIndex === this._dealer
     const winResult = checkWinCondition(
       allTiles,                  // 14枚の完全な手牌
       winTile,                   // 勝利牌の情報
       isTsumo,
       player.riichi,
       this._doraIndicators,
-      uradoraIndicators
+      uradoraIndicators,
+      isDealer                   // Pass dealer status for accurate scoring
     )
 
     if (winResult.isWin) {
@@ -435,13 +437,15 @@ export class GameManager {
 
     // 最後の捨て牌でアガリ可能かチェック（13枚の手牌 + 1枚の捨て牌 = 14枚）
     const allTiles = [...this.humanPlayer.tiles, this._lastDiscardedTile]
+    const isDealer = 0 === this._dealer // Human player is always index 0
     const winResult = checkWinCondition(
       allTiles,                  // 14枚の完全な手牌
       this._lastDiscardedTile,   // 勝利牌の情報
       false,                     // ロンなのでfalse
       this.humanPlayer.riichi,
       this._doraIndicators,
-      this.humanPlayer.riichi && this._wall.length >= 2 ? [this._wall[this._wall.length - 2]] : []
+      this.humanPlayer.riichi && this._wall.length >= 2 ? [this._wall[this._wall.length - 2]] : [],
+      isDealer                   // Pass dealer status for accurate scoring
     )
     return winResult.isWin
   }

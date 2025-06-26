@@ -33,7 +33,7 @@ export function calculateShanten(tiles: Tile[] | FourPlayerTile[]): number {
   
   try {
     // syantenライブラリは配列の配列形式を要求する
-    const result = syanten([man, pin, sou, honor])
+    const result = syanten([man as any, pin as any, sou as any, honor as any])
     
     // syantenライブラリは-1で和了、0以上でシャンテン数を返す
     return result
@@ -142,8 +142,11 @@ export function calculateScore(yaku: string[], han: number, fu: number): number 
   return Math.ceil(baseScore / 100) * 100
 }
 
+// Import the new scoring function
+import { calculateScore as calculateRiichiScore } from './scoring'
+
 // 麻雀の上がり判定（詳細版）
-export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTile, isTsumo: boolean, riichi: boolean, doraIndicators: FourPlayerTile[], uradoraIndicators: FourPlayerTile[] = []): {
+export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTile, isTsumo: boolean, riichi: boolean, doraIndicators: FourPlayerTile[], uradoraIndicators: FourPlayerTile[] = [], isDealer: boolean = false): {
   isWin: boolean
   yaku: Array<{ name: string; han: number }>
   totalHan: number
@@ -153,92 +156,118 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
   doraCount: number
   uradoraCount: number
 } {
-  // 上がり判定（型変換して計算）
-  const convertedTiles = tiles.map(t => ({ id: t.id, suit: t.suit, rank: t.rank, isRed: t.isRed })) as Tile[]
-  const isWin = calculateShanten(convertedTiles) === -1
-  
-  if (!isWin) {
-    return {
-      isWin: false,
-      yaku: [],
-      totalHan: 0,
-      fu: 0,
-      basePoints: 0,
-      totalPoints: 0,
-      doraCount: 0,
-      uradoraCount: 0
+  try {
+    // Use riichi-rs-bundlers for accurate scoring calculation
+    const scoringResult = calculateRiichiScore({
+      hand: tiles,
+      winningTile: winTile,
+      isTsumo,
+      isRiichi: riichi,
+      doraIndicators,
+      uradoraIndicators,
+      isDealer
+    })
+
+    if (!scoringResult) {
+      return {
+        isWin: false,
+        yaku: [],
+        totalHan: 0,
+        fu: 0,
+        basePoints: 0,
+        totalPoints: 0,
+        doraCount: 0,
+        uradoraCount: 0
+      }
     }
-  }
-  
-  const yaku: Array<{ name: string; han: number }> = []
-  
-  // 基本役の判定
-  if (isTsumo) {
-    yaku.push({ name: '門前清自摸和', han: 1 })
-  }
-  
-  if (riichi) {
-    yaku.push({ name: 'リーチ', han: 1 })
-  }
-  
-  // 基本的な役判定（複数の役を同時にチェック）
-  if (isAllSameSuit(tiles)) {
-    yaku.push({ name: '清一色', han: 6 })
-  }
-  
-  if (isAllTerminalsAndHonors(tiles)) {
-    yaku.push({ name: '混老頭', han: 2 })
-  }
-  
-  if (hasAllSimples(tiles)) {
-    yaku.push({ name: '断ヤオ九', han: 1 })
-  }
-  
-  // ツモの場合の役
-  if (isTsumo) {
-    yaku.push({ name: '門前清自摸和', han: 1 })
-  }
-  
-  // ドラ計算
-  const doraCount = countDora(tiles, doraIndicators)
-  const uradoraCount = riichi ? countDora(tiles, uradoraIndicators) : 0
-  
-  if (doraCount > 0) {
-    yaku.push({ name: 'ドラ', han: doraCount })
-  }
-  
-  if (uradoraCount > 0) {
-    yaku.push({ name: '裏ドラ', han: uradoraCount })
-  }
-  
-  // 役なしの場合は無効
-  if (yaku.length === 0) {
+
+    // Extract dora counts from yaku
+    const doraCount = scoringResult.yaku.filter(y => y.name === 'ドラ').reduce((sum, y) => sum + y.han, 0)
+    const uradoraCount = scoringResult.yaku.filter(y => y.name === '裏ドラ').reduce((sum, y) => sum + y.han, 0)
+
     return {
-      isWin: false,
-      yaku: [],
-      totalHan: 0,
-      fu: 0,
-      basePoints: 0,
-      totalPoints: 0,
+      isWin: true,
+      yaku: scoringResult.yaku,
+      totalHan: scoringResult.han,
+      fu: scoringResult.fu,
+      basePoints: scoringResult.points,
+      totalPoints: scoringResult.points,
       doraCount,
       uradoraCount
     }
-  }
-  
-  const totalHan = yaku.reduce((sum, y) => sum + y.han, 0)
-  const fu = calculateFu(tiles, winTile, isTsumo)
-  const basePoints = calculateScore(yaku.map(y => y.name), totalHan, fu)
-  const totalPoints = basePoints // 簡易版：親子の区別なし
-  
-  return {
-    isWin: true,
-    yaku,
-    totalHan,
-    fu,
-    basePoints,
-    totalPoints,
-    doraCount,
-    uradoraCount
+  } catch (error) {
+    console.error('Error in checkWinCondition:', error)
+    
+    // Fallback to simple logic if riichi-rs-bundlers fails
+    const convertedTiles = tiles.map(t => ({ id: t.id, suit: t.suit, rank: t.rank, isRed: t.isRed })) as Tile[]
+    const isWin = calculateShanten(convertedTiles) === -1
+    
+    if (!isWin) {
+      return {
+        isWin: false,
+        yaku: [],
+        totalHan: 0,
+        fu: 0,
+        basePoints: 0,
+        totalPoints: 0,
+        doraCount: 0,
+        uradoraCount: 0
+      }
+    }
+    
+    // Basic fallback scoring
+    const yaku: Array<{ name: string; han: number }> = []
+    
+    if (isTsumo) {
+      yaku.push({ name: '門前清自摸和', han: 1 })
+    }
+    
+    if (riichi) {
+      yaku.push({ name: 'リーチ', han: 1 })
+    }
+    
+    if (hasAllSimples(tiles)) {
+      yaku.push({ name: '断ヤオ九', han: 1 })
+    }
+    
+    const doraCount = countDora(tiles, doraIndicators)
+    const uradoraCount = riichi ? countDora(tiles, uradoraIndicators) : 0
+    
+    if (doraCount > 0) {
+      yaku.push({ name: 'ドラ', han: doraCount })
+    }
+    
+    if (uradoraCount > 0) {
+      yaku.push({ name: '裏ドラ', han: uradoraCount })
+    }
+    
+    if (yaku.length === 0) {
+      return {
+        isWin: false,
+        yaku: [],
+        totalHan: 0,
+        fu: 0,
+        basePoints: 0,
+        totalPoints: 0,
+        doraCount,
+        uradoraCount
+      }
+    }
+    
+    const totalHan = yaku.reduce((sum, y) => sum + y.han, 0)
+    const fu = calculateFu(tiles, winTile, isTsumo)
+    const basePoints = calculateScore(yaku.map(y => y.name), totalHan, fu)
+    
+    return {
+      isWin: true,
+      yaku,
+      totalHan,
+      fu,
+      basePoints,
+      totalPoints: basePoints,
+      doraCount,
+      uradoraCount
+    }
   }
 }
 
