@@ -668,7 +668,8 @@ function declareTsumo() {
     if (winResult.isWin && winResult.result) {
       const player = humanPlayer.value
       
-      console.log('Tsumo win - doraIndicators:', doraIndicators.value, 'doraCount:', winResult.result.doraCount, 'uradoraCount:', winResult.result.uradoraCount)
+      console.log('Tsumo win - doraIndicators:', doraIndicators.value, 'doraCount:', winResult.result.doraCount, 'uradoraCount:', winResult.result.uradoraCount, 'player riichi:', player.riichi)
+      console.log('Tsumo win - uradoraIndicators:', winResult.result.uradoraCount > 0 && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [])
       
       winModalData.value = {
         winner: player,
@@ -682,7 +683,7 @@ function declareTsumo() {
         fu: winResult.result.fu,
         doraIndicators: doraIndicators.value,
         doraCount: winResult.result.doraCount,
-        uradoraIndicators: winResult.result.uradoraCount > 0 && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
+        uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
         uradoraCount: winResult.result.uradoraCount
       }
       
@@ -702,7 +703,8 @@ function declareRon() {
     if (winResult.isWin && winResult.result) {
       const player = humanPlayer.value
       
-      console.log('Ron win - doraIndicators:', doraIndicators.value, 'doraCount:', winResult.result.doraCount, 'uradoraCount:', winResult.result.uradoraCount)
+      console.log('Ron win - doraIndicators:', doraIndicators.value, 'doraCount:', winResult.result.doraCount, 'uradoraCount:', winResult.result.uradoraCount, 'player riichi:', player.riichi)
+      console.log('Ron win - uradoraIndicators:', winResult.result.uradoraCount > 0 && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [])
       
       winModalData.value = {
         winner: player,
@@ -716,7 +718,7 @@ function declareRon() {
         fu: winResult.result.fu,
         doraIndicators: doraIndicators.value,
         doraCount: winResult.result.doraCount,
-        uradoraIndicators: winResult.result.uradoraCount > 0 && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
+        uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
         uradoraCount: winResult.result.uradoraCount
       }
       

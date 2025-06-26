@@ -88,9 +88,20 @@
           :class="tileBackClasses"
         ></div>
         
-        <!-- ツモ牌の裏面 -->
-        <div v-if="drawnTile" :class="drawnTileBackClasses">
-          <div :class="tileBackClasses"></div>
+        <!-- ツモ牌の裏面（常に表示） -->
+        <div :class="drawnTileBackClasses">
+          <div
+            v-if="drawnTile"
+            :class="tileBackClasses"
+          ></div>
+          <div
+            v-else
+            class="empty-drawn-tile"
+            :style="{ 
+              width: getTileSize().width, 
+              height: getTileSize().height
+            }"
+          ></div>
         </div>
       </div>
     </div>

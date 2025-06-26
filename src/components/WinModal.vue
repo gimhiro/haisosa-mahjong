@@ -89,7 +89,7 @@
         </div>
         
         <!-- 裏ドラ情報（リーチ時のみ） -->
-        <div v-if="winData.uradoraCount > 0" class="uradora-info">
+        <div v-if="winData.winner.riichi" class="uradora-info">
           <h4>裏ドラ</h4>
           <div class="uradora-tiles">
             <MahjongTile
