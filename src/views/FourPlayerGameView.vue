@@ -120,7 +120,7 @@
               <span class="info-value">{{ isHumanTurn ? '(あなたのターン)' : '(CPUのターン)' }}</span>
             </div>
             <div class="info-row dora-row">
-              <span class="info-label">ドラ:</span>
+              <span class="info-label">ドラ表示牌:</span>
               <div class="dora-tiles">
                 <MahjongTile
                   v-for="dora in doraIndicators"
@@ -181,6 +181,8 @@
           :game-manager="gameManager"
           @tile-discarded="onHumanTileDiscard"
         />
+        <!-- Debug: GameManager info -->
+        {{ console.log('FourPlayerGameView passing gameManager:', gameManager, 'value:', gameManager.value) }}
       </div>
     </div>
 

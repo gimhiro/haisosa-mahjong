@@ -25,7 +25,12 @@
       </div>
       
       <!-- ドラマスク -->
-      <div v-if="isDora" class="dora-mask" @click.stop></div>
+      <div v-if="isDora" class="dora-mask" @click.stop>
+        <!-- デバッグ用：コンソールにログ出力 -->
+        {{ logDoraRender() }}
+      </div>
+      <!-- デバッグ用：isDoraの値を確認 -->
+      {{ console.log(`MahjongTile ${props.tile.suit}${props.tile.rank}: isDora=${props.isDora}`) }}
       
       <!-- ツモ切りマスク -->
       <div v-if="isTsumoDiscard" class="tsumo-discard-mask" @click.stop></div>
@@ -124,6 +129,11 @@ function handleDragStart() {
 function handleDragEnd() {
   emit('dragEnd', props.tile)
 }
+
+function logDoraRender() {
+  console.log(`MahjongTile: Rendering dora mask for ${props.tile.suit}${props.tile.rank}`)
+  return ''
+}
 </script>
 
 <style scoped>
@@ -132,8 +142,7 @@ function handleDragEnd() {
   display: inline-block;
   margin: 1px;
   border-radius: 4px;
-  background: linear-gradient(145deg, #f0f0f0, #d0d0d0);
-  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  background: transparent;
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
@@ -229,11 +238,12 @@ function handleDragEnd() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 215, 0, 0.5);
+  /* background: rgba(255, 215, 0, 0.4); */
+  border: 2px solid gold;
   border-radius: 2px;
   pointer-events: none;
-  box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
   z-index: 10;
+  /* box-shadow: 0 0 6px rgba(255, 215, 0, 0.8); */
 }
 
 @keyframes dora-glow {

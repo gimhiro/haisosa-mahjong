@@ -122,7 +122,7 @@ interface Props {
     text: string
     color: string
   }
-  gameManager?: { value: GameManager }
+  gameManager?: GameManager
   cpuTilesVisible?: boolean
 }
 
@@ -192,11 +192,17 @@ const isCpuPlayer = computed(() => props.player.type === 'cpu')
 
 
 function checkIsDora(tile: Tile): boolean {
-  if (!props.gameManager?.value) {
+  if (!props.gameManager) {
+    console.warn('PlayerArea: GameManager not available for dora check', props.gameManager)
     return false
   }
   
-  return props.gameManager.value.isDoraTile(tile)
+  const isDora = props.gameManager.isDoraTile(tile)
+  if (isDora) {
+    console.log(`PlayerArea: Dora tile found: ${tile.suit}${tile.rank}`)
+  }
+  
+  return isDora
 }
 
 function onTileClick(tile: Tile) {
@@ -221,6 +227,7 @@ function onTileClick(tile: Tile) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  /* background: transparent; */
   background: rgba(255, 255, 255, 0.7);
   border-radius: 6px;
   padding: 4px;
@@ -230,8 +237,8 @@ function onTileClick(tile: Tile) {
 
 .current-turn {
   border-color: #1976d2;
-  background: rgba(25, 118, 210, 0.1);
-  box-shadow: 0 0 12px rgba(25, 118, 210, 0.3);
+  background: rgba(25, 118, 210, 0.05);
+  box-shadow: 0 0 8px rgba(25, 118, 210, 0.2);
 }
 
 .player-info {
@@ -334,7 +341,7 @@ function onTileClick(tile: Tile) {
 .hand-tiles-left .mahjong-tile,
 .hand-tiles-left .tile-back {
   transform: rotate(90deg);
-  margin: -2.5% 0;
+  margin: -2% 0;
 }
 
 .hand-tiles-right {
@@ -348,7 +355,7 @@ function onTileClick(tile: Tile) {
 .hand-tiles-right .mahjong-tile,
 .hand-tiles-right .tile-back {
   transform: rotate(-90deg);
-  margin: -2.5% 0;
+  margin: -2% 0;
 }
 
 /* ツモ牌スタイル */

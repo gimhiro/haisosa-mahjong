@@ -26,7 +26,7 @@ import MahjongTile from './MahjongTile.vue'
 interface Props {
   playerIndex: number
   getPlayerDiscardRow: (playerIndex: number, rowIndex: number) => Tile[]
-  gameManager?: { value: GameManager }
+  gameManager?: GameManager
 }
 
 const props = defineProps<Props>()
@@ -55,11 +55,15 @@ const maxRows = computed(() => {
 })
 
 function checkIsDora(tile: Tile): boolean {
-  if (!props.gameManager?.value) {
+  if (!props.gameManager) {
+    console.warn('PlayerDiscardArea: GameManager not available for dora check', props.gameManager)
     return false
   }
   
-  return props.gameManager.value.isDoraTile(tile)
+  const isDora = props.gameManager.isDoraTile(tile)
+  console.log(`PlayerDiscardArea: Checking tile ${tile.suit}${tile.rank}, isDora: ${isDora}`)
+  
+  return isDora
 }
 
 // 固定レイアウトで行を取得
