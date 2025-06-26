@@ -260,11 +260,12 @@
             <div v-if="isHumanTurn" class="debug-info" style="font-size: 0.7rem; color: #666; margin-top: 8px;">
               デバッグ: 手牌{{ humanPlayer.tiles.length }}枚, ツモ牌: {{ currentDrawnTile ? 'あり' : 'なし' }}, リーチ可能: {{ canDeclareRiichi }}, シャンテン: {{ humanShanten }}<br>
               リーチ済み: {{ humanPlayer.riichi }}, 点数: {{ humanPlayer.score }}, ゲーム状態: {{ gamePhase }}<br>
+              ツモ可能: {{ canTsumo }}, ロン可能: {{ canRon }}, 自分のターン: {{ isHumanTurn }}<br>
               手牌内容: {{ humanPlayer.tiles.map(t => t.suit + t.rank).join(' ') }}{{ currentDrawnTile ? ' + ' + currentDrawnTile.suit + currentDrawnTile.rank : '' }}
             </div>
 
             <!-- 捨牌のヒント -->
-            <div v-if="isHumanTurn && humanPlayer.tiles.length === 14 && !canTsumo && !canRon" class="discard-hint">
+            <div v-if="isHumanTurn && humanPlayer.tiles.length === 13 && currentDrawnTile && !canTsumo && !canRon" class="discard-hint">
               <span v-if="humanPlayer.riichi && currentDrawnTile">
                 リーチ中：ツモ牌のみ捨てることができます
               </span>
@@ -382,11 +383,18 @@ const canTsumo = computed(() => {
   const drawnTile = currentDrawnTile.value
   
   if (!isMyTurn || !drawnTile) {
+    console.log('canTsumo: false - isMyTurn:', isMyTurn, 'drawnTile:', drawnTile)
     return false
   }
   
-  const winResult = gameManager.value.checkWinConditionForPlayer(0, drawnTile, true)
-  return winResult.isWin
+  try {
+    const winResult = gameManager.value.checkWinConditionForPlayer(0, drawnTile, true)
+    console.log('canTsumo: winResult.isWin =', winResult.isWin)
+    return winResult.isWin
+  } catch (error) {
+    console.error('Error in canTsumo:', error)
+    return false
+  }
 })
 
 const canRon = computed(() => {

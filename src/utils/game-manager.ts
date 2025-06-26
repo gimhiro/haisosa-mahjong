@@ -348,15 +348,17 @@ export class GameManager {
 
     // ツモの場合は手牌13枚+勝利牌1枚=14枚、ロンの場合も14枚で判定
     const allTiles = [...player.tiles, winTile]
+    console.log(`checkWinConditionForPlayer: player ${playerIndex}, tiles ${player.tiles.length}, allTiles ${allTiles.length}`)
     
     // まず簡単なシャンテン数チェックで和了可能性を確認
     const convertedTiles = allTiles.map(t => ({ id: t.id, suit: t.suit, rank: t.rank, isRed: t.isRed }))
     const shanten = calculateShanten(convertedTiles)
+    console.log(`checkWinConditionForPlayer: shanten = ${shanten}`)
     
-    // シャンテン数が-1でない場合は和了不可
-    if (shanten !== -1) {
-      return { isWin: false }
-    }
+    // 一時的にシャンテン数チェックをコメントアウト
+    // if (shanten !== -1) {
+    //   return { isWin: false }
+    // }
 
     // 裏ドラ指示牌は山の後方から2番目の牌（ドラ指示牌の下）
     const uradoraIndicators = player.riichi && this._wall.length >= 2 ? [this._wall[this._wall.length - 2]] : []
