@@ -90,6 +90,7 @@
             <!-- 中央エリア（ドラ表示など） -->
             <div class="center-info">
               <div class="center-label">河</div>
+              <div class="remaining-tiles">{{ wallRemaining }}</div>
             </div>
             
             <!-- プレイヤー点数表示 -->
@@ -127,16 +128,6 @@
             <div class="info-row">
               <span class="info-label">局:</span>
               <span class="info-value">{{ getDealerText() }}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">残り牌:</span>
-              <span class="info-value">{{ wallRemaining }}枚</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">状態:</span>
-              <v-chip :color="gamePhaseColor" size="x-small">
-                {{ gamePhaseText }}
-              </v-chip>
             </div>
             <div class="info-row">
               <span class="info-label">現在:</span>
@@ -258,7 +249,7 @@
 
             <!-- 結果表示・次の局へボタン（モーダル閉じ後のみ） -->
             <v-btn
-              v-if="showResultAndNextButtons"
+              v-if="showResultAndNextButtons && !showDrawResultButtons"
               color="info"
               size="small"
               block
@@ -269,12 +260,35 @@
             </v-btn>
 
             <v-btn
-              v-if="showResultAndNextButtons"
+              v-if="showResultAndNextButtons && !showDrawResultButtons"
               color="primary"
               size="small"
               block
               class="action-btn"
               @click="onContinueGame"
+            >
+              次の局へ
+            </v-btn>
+
+            <!-- 流局結果表示・次の局へボタン（流局モーダル閉じ後のみ） -->
+            <v-btn
+              v-if="showDrawResultButtons"
+              color="info"
+              size="small"
+              block
+              class="action-btn"
+              @click="reopenDrawModal"
+            >
+              流局結果表示
+            </v-btn>
+
+            <v-btn
+              v-if="showDrawResultButtons"
+              color="primary"
+              size="small"
+              block
+              class="action-btn"
+              @click="onContinueFromDraw"
             >
               次の局へ
             </v-btn>
@@ -309,6 +323,23 @@
       @new-game="onNewGame"
       @close="onWinModalClose"
     />
+
+    <!-- 流局モーダル -->
+    <DrawModal
+      v-model="showDrawModal"
+      :draw-data="drawModalData"
+      @continue="onContinueFromDraw"
+      @close="onDrawModalClose"
+    />
+
+    <!-- ゲーム終了モーダル -->
+    <GameEndModal
+      v-model="showGameEndModal"
+      :game-end-data="gameEndModalData"
+      @back-to-home="onBackToHome"
+      @rematch="onRematch"
+      @close="onGameEndModalClose"
+    />
   </div>
 </template>
 
@@ -322,8 +353,12 @@ import PlayerArea from '../components/PlayerArea.vue'
 import PlayerDiscardArea from '../components/PlayerDiscardArea.vue'
 import MahjongTile from '../components/MahjongTile.vue'
 import WinModal, { type WinData } from '../components/WinModal.vue'
+import DrawModal, { type DrawData } from '../components/DrawModal.vue'
+import GameEndModal, { type GameEndData } from '../components/GameEndModal.vue'
+import { useRouter } from 'vue-router'
 
 const gameManager = ref(new GameManager())
+const router = useRouter()
 
 // CPU手牌表示状態
 const cpuTilesVisible = ref({
@@ -340,6 +375,15 @@ const processingCpuTurn = ref(false)
 
 // Win modal state
 const showWinModal = ref(false)
+
+// Draw modal state  
+const showDrawModal = ref(false)
+const drawModalData = ref<DrawData | null>(null)
+
+// Game end modal state
+const showGameEndModal = ref(false)
+const gameEndModalData = ref<GameEndData | null>(null)
+
 const winModalData = ref<WinData>({
   winner: gameManager.value.players[0],
   winningHand: [],
@@ -370,25 +414,6 @@ const currentPlayer = computed(() => gameManager.value.currentPlayer)
 const humanPlayer = computed(() => gameManager.value.humanPlayer)
 const wallRemaining = computed(() => gameManager.value.wallRemaining)
 
-const gamePhaseColor = computed(() => {
-  switch (gamePhase.value) {
-    case 'waiting': return 'grey'
-    case 'dealing': return 'info'
-    case 'playing': return 'success'
-    case 'finished': return 'primary'
-    default: return 'grey'
-  }
-})
-
-const gamePhaseText = computed(() => {
-  switch (gamePhase.value) {
-    case 'waiting': return '待機中'
-    case 'dealing': return '配牌中'
-    case 'playing': return 'プレイ中'
-    case 'finished': return '終了'
-    default: return '不明'
-  }
-})
 
 const isHumanTurn = computed(() => {
   return gameManager.value.isHumanTurn()
@@ -475,7 +500,7 @@ function startGame() {
   // ゲーム開始後、最初のプレイヤーにツモ牌を配る
   setTimeout(() => {
     if (gameManager.value.gamePhase === 'playing') {
-      const firstTile = gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
+      gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
       
       // CPUプレイヤーの場合は自動的にターンを開始
       if (players.value[currentPlayerIndex.value].type === 'cpu') {
@@ -508,6 +533,9 @@ async function onHumanTileDiscard(tileId: string) {
     if (!cpuRonOccurred) {
       // ロンが発生しなかった場合のみ次のターンに進む
       gameManager.value.nextTurn()
+      
+      // 次のターンに進んだ後、流局判定を行う
+      checkForDraw()
     }
   } 
 }
@@ -593,6 +621,9 @@ async function processCpuTurn() {
         }
         
         gameManager.value.nextTurn()
+        
+        // 次のターンに進んだ後、流局判定を行う
+        checkForDraw()
       }
     }
   }
@@ -737,6 +768,12 @@ function declareTsumo() {
         true // isTsumo
       )
       
+      // 人間プレイヤーの上がりを記録
+      gameManager.value.recordHumanWin(
+        winResult.result.yaku.map(y => y.name),
+        winResult.result.totalPoints
+      )
+      
       // ゲーム状態を終了に変更
       gameManager.value.gamePhase = 'finished'
       showWinModal.value = true
@@ -746,8 +783,6 @@ function declareTsumo() {
 
 function declareRon() {
   if (canRon.value && gameManager.value.lastDiscardedTile) {
-    const player = humanPlayer.value
-    
     const winResult = gameManager.value.checkWinConditionForPlayer(0, gameManager.value.lastDiscardedTile, false, true)
     
     if (winResult.isWin && winResult.result) {
@@ -781,6 +816,12 @@ function declareRon() {
         winResult.result.totalPoints,
         false, // isTsumo
         gameManager.value.lastDiscardPlayerIndex // ron target
+      )
+      
+      // 人間プレイヤーの上がりを記録
+      gameManager.value.recordHumanWin(
+        winResult.result.yaku.map(y => y.name),
+        winResult.result.totalPoints
       )
       
       // ゲーム状態を終了に変更
@@ -920,12 +961,21 @@ function checkWinConditionForPlayer(playerIndex: number, winTile: any, isTsumo: 
 function onContinueGame() {
   showWinModal.value = false
   showResultAndNextButtons.value = false
+  
+  // ゲーム終了判定
+  const gameEndCheck = gameManager.value.checkGameEnd()
+  if (gameEndCheck.isGameEnd) {
+    gameEndModalData.value = gameEndCheck.gameEndData
+    showGameEndModal.value = true
+    return
+  }
+  
   gameManager.value.advanceToNextRound()
   
   // 次局開始後、最初のプレイヤーにツモ牌を配る
   setTimeout(() => {
     if (gameManager.value.gamePhase === 'playing') {
-      const firstTile = gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
+      gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
       
       // CPUプレイヤーの場合は自動的にターンを開始
       if (players.value[currentPlayerIndex.value].type === 'cpu') {
@@ -944,6 +994,7 @@ function onNewGame() {
 }
 
 const showResultAndNextButtons = ref(false)
+const showDrawResultButtons = ref(false)
 
 function onWinModalClose() {
   showResultAndNextButtons.value = gameManager.value.gamePhase === 'finished'
@@ -952,6 +1003,94 @@ function onWinModalClose() {
 function reopenWinModal() {
   showWinModal.value = true
   showResultAndNextButtons.value = false
+}
+
+function reopenDrawModal() {
+  showDrawModal.value = true
+  showDrawResultButtons.value = false
+}
+
+// 流局関連のハンドラー
+function onContinueFromDraw() {
+  showDrawModal.value = false
+  showDrawResultButtons.value = false
+  
+  // ゲーム終了判定
+  const gameEndCheck = gameManager.value.checkGameEnd()
+  if (gameEndCheck.isGameEnd) {
+    gameEndModalData.value = gameEndCheck.gameEndData
+    showGameEndModal.value = true
+    return
+  }
+  
+  gameManager.value.advanceToNextRound()
+  
+  // 次局開始後、最初のプレイヤーにツモ牌を配る
+  setTimeout(() => {
+    if (gameManager.value.gamePhase === 'playing') {
+      gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
+      
+      // CPUプレイヤーの場合は自動的にターンを開始
+      if (players.value[currentPlayerIndex.value].type === 'cpu') {
+        setTimeout(() => {
+          processCpuTurn()
+        }, 500)
+      }
+    }
+  }, 100)
+}
+
+function onDrawModalClose() {
+  // 流局モーダルを閉じた後、結果表示ボタンを表示
+  showDrawResultButtons.value = gameManager.value.gamePhase === 'finished'
+}
+
+// ゲーム終了関連のハンドラー
+function onBackToHome() {
+  // ゲーム終了時の記録（上がりなし）
+  gameManager.value.recordGameEnd()
+  router.push('/')
+}
+
+function onRematch() {
+  showGameEndModal.value = false
+  gameManager.value.resetGame()
+  
+  // 新しいゲーム開始
+  setTimeout(() => {
+    gameManager.value.startNewGame()
+    
+    setTimeout(() => {
+      if (gameManager.value.gamePhase === 'playing') {
+        gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
+        
+        // CPUプレイヤーの場合は自動的にターンを開始
+        if (players.value[currentPlayerIndex.value].type === 'cpu') {
+          setTimeout(() => {
+            processCpuTurn()
+          }, 500)
+        }
+      }
+    }, 100)
+  }, 100)
+}
+
+function onGameEndModalClose() {
+  // ゲーム終了モーダルを閉じるだけ
+}
+
+// 流局判定
+function checkForDraw() {
+  if (gameManager.value.gamePhase !== 'playing') {
+    return
+  }
+  
+  const drawCheck = gameManager.value.checkDraw()
+  if (drawCheck.isDraw) {
+    drawModalData.value = drawCheck.drawData
+    showDrawModal.value = true
+    gameManager.value.gamePhase = 'finished'
+  }
 }
 
 async function checkCpuRon(discardPlayerIndex: number): Promise<boolean> {
@@ -1052,13 +1191,13 @@ onMounted(() => {
     
     setTimeout(() => {
       if (gameManager.value.gamePhase === 'playing') {
-        const firstTile = gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
+        gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
       }
     }, 100)
   }
 })
 
-watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
+watch(() => currentPlayerIndex.value, (newIndex) => {
   if (gamePhase.value === 'playing') {
     // プレイヤーの手牌が13枚でない場合はツモを行わない
     const player = players.value[newIndex]
@@ -1069,6 +1208,12 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
     // すべてのプレイヤーはdrawTileAndKeepSeparateを使用
     // （super CPUの場合は内部で有効牌処理が行われる）
     const drawnTile = gameManager.value.drawTileAndKeepSeparate(newIndex)
+    
+    // ツモが成功しなかった場合（山が空など）は流局判定
+    if (!drawnTile) {
+      checkForDraw()
+      return
+    }
     
     if (players.value[newIndex].type === 'cpu') {
       setTimeout(() => {
@@ -1197,6 +1342,17 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
   font-size: 1.5rem;
   font-weight: bold;
   color: rgba(0, 0, 0, 0.3);
+}
+
+.remaining-tiles {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.5);
+  margin-top: 8px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* プレイヤー点数表示 */
