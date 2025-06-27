@@ -25,7 +25,6 @@ export class CpuAI {
 
     // リーチ後はツモ切りのみ
     if (player.riichi && drawnTile) {
-      console.log(`[CPU AI ${player.id}] リーチ後ツモ切り: ${drawnTile.suit}${drawnTile.rank}`)
       return drawnTile.id
     }
 
@@ -288,7 +287,6 @@ export class CpuAI {
     const allTiles = drawnTile && player.tiles.length === 13 ? [...player.tiles, drawnTile] : player.tiles
     if (allTiles.length !== 14) return false
 
-    console.log(`[CPU AI ${player.id}] リーチ判定開始 - 手牌:`, allTiles.map(t => `${t.suit}${t.rank}`).join(' '))
 
     // 各牌を捨てた時にテンパイになるかチェック
     let canReach = false
@@ -297,13 +295,11 @@ export class CpuAI {
       const shanten = calculateShanten(remainingTiles)
       if (shanten === 0) {
         canReach = true
-        console.log(`[CPU AI ${player.id}] テンパイ確認！${tile.suit}${tile.rank}を捨ててリーチ可能`)
         break
       }
     }
 
     if (!canReach) {
-      console.log(`[CPU AI ${player.id}] リーチ不可 - テンパイになる捨て牌がない`)
       return false
     }
 
@@ -323,7 +319,6 @@ export class CpuAI {
       }
     })()
 
-    console.log(`[CPU AI ${player.id}] リーチ判定結果: ${shouldRiichi}`)
     return shouldRiichi
   }
 
@@ -340,7 +335,6 @@ export class CpuAI {
       const remainingTiles = allTiles.filter(t => t.id !== tile.id)
       const shanten = calculateShanten(remainingTiles)
       if (shanten === 0) {
-        console.log(`[CPU AI ${player.id}] リーチ用捨て牌決定: ${tile.suit}${tile.rank}`)
         return tile.id
       }
     }
@@ -369,7 +363,6 @@ export class CpuAI {
 
     // リーチ後はツモ切りのみ
     if (player.riichi && drawnTile) {
-      console.log(`[CPU AI ${player.id}] リーチ後ツモ切り: ${drawnTile.suit}${drawnTile.rank}`)
       return { action: 'discard', tileId: drawnTile.id }
     }
 

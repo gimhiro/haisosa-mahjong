@@ -252,7 +252,6 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       allow_aka: false
     }
 
-    console.log(`[calculateScore] 一発フラグ: ${input.isIppatsu}, リーチ: ${input.isRiichi}, ツモ: ${input.isTsumo}`)
 
     // リーチの場合は裏ドラも追加
     if (input.isRiichi && uradoraNumbers.length > 0) {

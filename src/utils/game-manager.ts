@@ -107,13 +107,11 @@ export class GameManager {
   private updateIppatsuFlags(currentPlayerIndex: number, isRiichiDeclaration: boolean): void {
     // リーチ宣言の場合は一発フラグの更新はスキップ
     if (isRiichiDeclaration) {
-      console.log(`[updateIppatsuFlags] プレイヤー${currentPlayerIndex} リーチ宣言牌なので一発フラグ維持`)
       return
     }
 
     // リーチ宣言後の通常の捨て牌の場合、そのプレイヤーの一発フラグを無効化
     if (this._ippatsuFlags[currentPlayerIndex]) {
-      console.log(`[updateIppatsuFlags] プレイヤー${currentPlayerIndex} 自分の捨て牌で一発フラグを無効化`)
       this._ippatsuFlags[currentPlayerIndex] = false
     }
 
@@ -386,7 +384,6 @@ export class GameManager {
       player.score -= 1000
       this._kyotaku++
       this._ippatsuFlags[playerIndex] = true // 一発フラグを設定
-      console.log(`[declareRiichi] プレイヤー${playerIndex} リーチ宣言、一発フラグ設定: ${this._ippatsuFlags[playerIndex]}`)
       return true
     }
     return false

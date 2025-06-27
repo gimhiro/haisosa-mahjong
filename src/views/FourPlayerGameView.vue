@@ -502,7 +502,6 @@ async function processCpuTurn() {
     
     
     if (currentDrawnTile.value) {
-      console.log(`[processCpuTurn] プレイヤー${currentIndex} ツモ上がりチェック - リーチ: ${player.riichi}, 一発: ${gameManager.value.isIppatsu(currentIndex)}`)
       const winResult = gameManager.value.checkWinConditionForPlayer(currentIndex, currentDrawnTile.value, true)
       if (winResult.isWin && winResult.result) {
         // CPU上がり処理（既にチェック済みの結果を渡す）
@@ -935,7 +934,6 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
     
     // すべてのプレイヤーはdrawTileAndKeepSeparateを使用
     // （super CPUの場合は内部で有効牌処理が行われる）
-    console.log(`[Watch] プレイヤー${newIndex} (${players.value[newIndex].name})のターン開始`)
     const drawnTile = gameManager.value.drawTileAndKeepSeparate(newIndex)
     
     if (players.value[newIndex].type === 'cpu') {
