@@ -84,7 +84,6 @@ const tileClasses = computed(() => [
     'tile-selected': props.isSelected,
     'tile-draggable': props.isDraggable && !props.disabled,
     'tile-discarded': props.isDiscarded,
-    'tile-winning': props.isWinningTile,
     'tile-riichi-declaration': props.isRiichiDeclaration,
     'tile-disabled': props.disabled
   }
@@ -214,11 +213,6 @@ function logDoraRender() {
   background: #f5f5f5;
   border: 1px solid #ccc;
   border-radius: 2px;
-}
-
-.tile-winning {
-  border: 3px solid #ffd700 !important;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 .selection-indicator {

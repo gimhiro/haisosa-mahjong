@@ -167,8 +167,8 @@ function getYakuName(yakuId: number): string {
     [RsYaku.OwnWindWest]: '自風 西',
     [RsYaku.OwnWindNorth]: '自風 北',
     [RsYaku.Haku]: '白',
-    [RsYaku.Hatsu]: '發',
-    [RsYaku.Chun]: '中',
+    [RsYaku.Hatsu]: '中',
+    [RsYaku.Chun]: '發',
     [RsYaku.Dora]: 'ドラ',
     [RsYaku.Uradora]: '裏ドラ',
     [RsYaku.Akadora]: '赤ドラ'
