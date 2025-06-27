@@ -100,7 +100,7 @@ export class GameManager {
   }
 
   get wallRemaining(): number {
-    return this._wall.length
+    return Math.max(0, this._wall.length - 14)
   }
 
   get kyotaku(): number {
@@ -200,7 +200,8 @@ export class GameManager {
   }
 
   drawTileAndKeepSeparate(playerIndex: number): Tile | null {
-    if (this._wall.length === 0) return null
+    // 14枚残しで終了
+    if (this._wall.length <= 14) return null
 
     const player = this._players[playerIndex]
 
@@ -236,7 +237,7 @@ export class GameManager {
     }
 
     // 通常の引き方（該当しない難易度の場合、または有効牌が引けなかった場合）
-    if (!tile && this._wall.length > 0) {
+    if (!tile && this._wall.length > 14) {
       tile = this._wall.shift()!
     }
 
@@ -719,8 +720,8 @@ export class GameManager {
 
   // 流局処理
   checkDraw(): { isDraw: boolean, drawData?: any } {
-    // 山が空になった場合の流局
-    if (this._wall.length === 0) {
+    // 山が14枚以下になった場合の流局（14枚残し）
+    if (this._wall.length <= 14) {
       return this.processDraw('荒牌平局')
     }
     
