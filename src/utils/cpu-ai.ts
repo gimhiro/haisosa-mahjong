@@ -1,5 +1,5 @@
 import type { Tile, Player } from '../stores/fourPlayerMahjong'
-import { calculateShanten, getUsefulTiles } from './mahjong-logic'
+import { calculateShanten, getUsefulTiles, checkWinCondition } from './mahjong-logic'
 
 export class CpuAI {
   private difficulty: 'easy' | 'medium' | 'hard' | 'super'
@@ -349,6 +349,28 @@ export class CpuAI {
     const baseTime = 10
     // const randomTime = Math.random() * 1000
     return baseTime
+  }
+
+  /**
+   * CPUがロンできるかどうかを判定する
+   */
+  canRon(player: Player, winTile: Tile, doraIndicators: Tile[]): boolean {
+    // ロン時は手牌に上がり牌を加えた14枚で判定する
+    const handWithWinTile = [...player.tiles, winTile]
+    const winResult = checkWinCondition(handWithWinTile, winTile, false, player.riichi, doraIndicators)
+    return winResult.isWin
+  }
+
+  /**
+   * CPUがロンするかどうかを決定する
+   */
+  shouldDeclareRon(player: Player, winTile: Tile, doraIndicators: Tile[]): boolean {
+    if (!this.canRon(player, winTile, doraIndicators)) {
+      return false
+    }
+
+    // 常に100%ロンする（難易度に関わらず）
+    return true
   }
 
   /**

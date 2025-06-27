@@ -256,6 +256,29 @@
               キャンセル
             </v-btn>
 
+            <!-- 結果表示・次の局へボタン（モーダル閉じ後のみ） -->
+            <v-btn
+              v-if="showResultAndNextButtons"
+              color="info"
+              size="small"
+              block
+              class="action-btn"
+              @click="reopenWinModal"
+            >
+              結果表示
+            </v-btn>
+
+            <v-btn
+              v-if="showResultAndNextButtons"
+              color="primary"
+              size="small"
+              block
+              class="action-btn"
+              @click="onContinueGame"
+            >
+              次の局へ
+            </v-btn>
+
             <!-- デバッグ情報 -->
             <div v-if="isHumanTurn" class="debug-info" style="font-size: 0.7rem; color: #666; margin-top: 8px;">
               デバッグ: 手牌{{ humanPlayer.tiles.length }}枚, ツモ牌: {{ currentDrawnTile ? 'あり' : 'なし' }}, リーチ可能: {{ canDeclareRiichi }}, シャンテン: {{ humanShanten }}<br>
@@ -284,6 +307,7 @@
       :win-data="winModalData"
       @continue="onContinueGame"
       @new-game="onNewGame"
+      @close="onWinModalClose"
     />
   </div>
 </template>
@@ -327,6 +351,7 @@ const winModalData = ref<WinData>({
   yaku: [],
   totalHan: 0,
   fu: 0,
+  yakuman: 0,
   doraIndicators: [],
   doraCount: 0,
   uradoraIndicators: [],
@@ -470,7 +495,6 @@ function resetGame() {
 // 人間プレイヤーのターンが開始されたときに自動的にツモする
 
 async function onHumanTileDiscard(tileId: string) {
-  
   if (!isHumanTurn.value) {
     return
   }
@@ -478,9 +502,13 @@ async function onHumanTileDiscard(tileId: string) {
   const success = gameManager.value.discardTile(0, tileId)
   
   if (success) {
-    // 人間プレイヤーが牌を捨てた場合はそのまま次のターンに進む
-    // （他の人間プレイヤーがロンすることは想定しない）
-    gameManager.value.nextTurn()
+    // プレイヤーが牌を捨てた後、CPUのロン判定を行う
+    const cpuRonOccurred = await checkCpuRon(0)
+    
+    if (!cpuRonOccurred) {
+      // ロンが発生しなかった場合のみ次のターンに進む
+      gameManager.value.nextTurn()
+    }
   } 
 }
 
@@ -540,6 +568,11 @@ async function processCpuTurn() {
               return
             }
             
+            // CPUプレイヤーがロンできるかチェック
+            if (await checkCpuRon(currentIndex)) {
+              return
+            }
+            
             gameManager.value.nextTurn()
           }
         }
@@ -551,6 +584,11 @@ async function processCpuTurn() {
         // CPUが牌を捨てた後、人間プレイヤーがロン可能かチェック
         if (gameManager.value.canHumanRon()) {
           // ロンボタンが表示されるので、ここでは次のターンに進まない
+          return
+        }
+        
+        // CPUプレイヤーがロンできるかチェック
+        if (await checkCpuRon(currentIndex)) {
           return
         }
         
@@ -650,6 +688,14 @@ function confirmRiichiAndDiscard(tileId: string) {
   // リーチを宣言
   if (canDeclareRiichi.value) {
     gameManager.value.declareRiichi(0)
+    
+    // リーチ宣言したプレイヤーの手牌をconsole.logに出力
+    console.log('=== 人間プレイヤーリーチ宣言 ===');
+    console.log('プレイヤーインデックス: 0');
+    console.log('プレイヤー名:', humanPlayer.value.name);
+    console.log('リーチ時の手牌:', humanPlayer.value.tiles.map(t => t.suit + t.rank));
+    console.log('ツモ牌:', currentDrawnTile.value ? currentDrawnTile.value.suit + currentDrawnTile.value.rank : 'なし');
+    console.log('リーチ宣言牌ID:', tileId);
   }
 
   // プレビューモードを解除
@@ -680,6 +726,7 @@ function declareTsumo() {
         yaku: winResult.result.yaku,
         totalHan: winResult.result.totalHan,
         fu: winResult.result.fu,
+        yakuman: winResult.result.yakuman,
         doraIndicators: doraIndicators.value,
         doraCount: winResult.result.doraCount,
         uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
@@ -724,6 +771,7 @@ function declareRon() {
         yaku: winResult.result.yaku,
         totalHan: winResult.result.totalHan,
         fu: winResult.result.fu,
+        yakuman: winResult.result.yakuman,
         doraIndicators: doraIndicators.value,
         doraCount: winResult.result.doraCount,
         uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
@@ -772,6 +820,7 @@ function handleCpuWinWithResult(playerIndex: number, winTile: any, isTsumo: bool
     yaku: winResult.yaku,
     totalHan: winResult.totalHan,
     fu: winResult.fu,
+    yakuman: winResult.yakuman,
     doraIndicators: doraIndicators.value,
     doraCount: winResult.doraCount,
     uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
@@ -823,6 +872,7 @@ function handleCpuWin(playerIndex: number, winTile: any, isTsumo: boolean) {
       yaku: winResult.yaku,
       totalHan: winResult.totalHan,
       fu: winResult.fu,
+      yakuman: winResult.yakuman,
       doraIndicators: doraIndicators.value,
       doraCount: winResult.doraCount,
       uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
@@ -876,6 +926,7 @@ function checkWinConditionForPlayer(playerIndex: number, winTile: any, isTsumo: 
 
 function onContinueGame() {
   showWinModal.value = false
+  showResultAndNextButtons.value = false
   gameManager.value.advanceToNextRound()
   
   // 次局開始後、最初のプレイヤーにツモ牌を配る
@@ -895,7 +946,97 @@ function onContinueGame() {
 
 function onNewGame() {
   showWinModal.value = false
+  showResultAndNextButtons.value = false
   gameManager.value.resetGame()
+}
+
+const showResultAndNextButtons = ref(false)
+
+function onWinModalClose() {
+  showResultAndNextButtons.value = gameManager.value.gamePhase === 'finished'
+}
+
+function reopenWinModal() {
+  showWinModal.value = true
+  showResultAndNextButtons.value = false
+}
+
+async function checkCpuRon(discardPlayerIndex: number): Promise<boolean> {
+  if (!gameManager.value.lastDiscardedTile) {
+    return false
+  }
+
+  const lastDiscardedTile = gameManager.value.lastDiscardedTile
+  const doraIndicators = gameManager.value.doraIndicators
+  
+  // 捨て牌を出したプレイヤー以外の全プレイヤーをチェック（人間プレイヤーは除く）  
+  for (let i = 1; i <= 3; i++) {
+    if (i === discardPlayerIndex) continue // 捨てたプレイヤー自身はスキップ
+    
+    const player = players.value[i]
+    if (player.type !== 'cpu') continue
+    
+    const ai = cpuAIs[i as 1 | 2 | 3]
+    if (!ai) continue
+    
+    // CPUがロンできるかチェック
+    if (ai.canRon(player, lastDiscardedTile, doraIndicators)) {
+      // CPUがロンするかどうかを決定（難易度に応じた確率）
+      if (ai.shouldDeclareRon(player, lastDiscardedTile, doraIndicators)) {
+        // CPUのロン処理を実行
+        await handleCpuRon(i, discardPlayerIndex, lastDiscardedTile)
+        return true
+      }
+    }
+  }
+  
+  return false
+}
+
+async function handleCpuRon(winnerIndex: number, loserIndex: number, winTile: any) {
+  const winner = players.value[winnerIndex]
+  
+  // ロン判定と得点計算
+  const winResult = gameManager.value.checkWinConditionForPlayer(winnerIndex, winTile, false, true)
+  
+  if (winResult.isWin && winResult.result) {
+    // 実際の上がり確定時に一発フラグをリセット
+    gameManager.value.checkWinConditionForPlayer(winnerIndex, winTile, false, true)
+    
+    winModalData.value = {
+      winner: winner,
+      winningHand: [...winner.tiles, winTile],
+      winningTile: winTile,
+      isTsumo: false,
+      basePoints: winResult.result.basePoints,
+      totalPoints: winResult.result.totalPoints,
+      paymentInfo: winResult.result.paymentInfo,
+      yaku: winResult.result.yaku,
+      totalHan: winResult.result.totalHan,
+      fu: winResult.result.fu,
+      yakuman: winResult.result.yakuman,
+      doraIndicators: doraIndicators.value,
+      doraCount: winResult.result.doraCount,
+      uradoraIndicators: winner.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
+      uradoraCount: winResult.result.uradoraCount
+    }
+    
+    // 供託分を加算
+    gameManager.value.applyKyotakuToWinner(winnerIndex)
+    
+    // 点数移動を実行（ロン）
+    gameManager.value.executeScoreTransfer(
+      winnerIndex, // winner index
+      winResult.result.paymentInfo,
+      winResult.result.totalPoints,
+      false, // isTsumo
+      loserIndex // ron target (放銃者)
+    )
+    
+    // ゲーム状態を終了に変更
+    gameManager.value.gamePhase = 'finished'
+    showWinModal.value = true
+  }
 }
 
 function getPlayerDiscardRow(playerIndex: number, rowIndex: number): any[] {

@@ -2,8 +2,8 @@
   <v-dialog 
     v-model="isOpen" 
     max-width="900" 
-    persistent
     :scrim="false"
+    @click:outside="closeModal"
   >
     <v-card class="win-modal">
       <v-card-title class="text-h4 text-center win-title">
@@ -69,7 +69,12 @@
           </v-list>
           
           <div class="total-han">
-            合計: {{ winData.totalHan }}翻 {{ winData.fu }}符
+            <span v-if="winData.yakuman > 0">
+              {{ winData.yakuman === 1 ? '役満' : `${winData.yakuman}倍役満` }}
+            </span>
+            <span v-else>
+              合計: {{ winData.totalHan }}翻 {{ winData.fu }}符
+            </span>
           </div>
         </div>
         
@@ -140,6 +145,7 @@ export interface WinData {
   yaku: Array<{ name: string; han: number }>
   totalHan: number
   fu: number
+  yakuman: number
   doraIndicators: Tile[]
   doraCount: number
   uradoraIndicators: Tile[]
@@ -155,6 +161,7 @@ interface Emits {
   (e: 'update:modelValue', value: boolean): void
   (e: 'continue'): void
   (e: 'newGame'): void
+  (e: 'close'): void
 }
 
 const props = defineProps<Props>()
@@ -164,6 +171,11 @@ const isOpen = computed({
   get: () => props.modelValue,
   set: (value: boolean) => emit('update:modelValue', value)
 })
+
+const closeModal = () => {
+  emit('update:modelValue', false)
+  emit('close')
+}
 </script>
 
 <style scoped>

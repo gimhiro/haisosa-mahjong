@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-function startSingleGame() {
+function startUkeireDemo() {
   router.push('/game')
 }
 
@@ -22,7 +22,7 @@ function startFourPlayerGame() {
           </v-card-title>
           
           <v-card-subtitle class="text-h6 text-center">
-            80% 有効牌ツモシステム
+            riichi-rs-bundlers 受け入れ計算デモ
           </v-card-subtitle>
           
           <v-card-text>
@@ -30,34 +30,34 @@ function startFourPlayerGame() {
               <v-list>
                 <v-list-item>
                   <template #prepend>
-                    <v-icon color="success">mdi-check-circle</v-icon>
+                    <v-icon color="success">mdi-calculator-variant</v-icon>
                   </template>
-                  <v-list-item-title>80% の確率で有効牌をツモ</v-list-item-title>
-                  <v-list-item-subtitle>進行をサポートする独自のシステム</v-list-item-subtitle>
+                  <v-list-item-title>受け入れ計算デモ</v-list-item-title>
+                  <v-list-item-subtitle>2シャンテンからの受け入れ枚数を計算</v-list-item-subtitle>
                 </v-list-item>
                 
                 <v-list-item>
                   <template #prepend>
-                    <v-icon color="info">mdi-calculator</v-icon>
+                    <v-icon color="info">mdi-code-braces</v-icon>
                   </template>
-                  <v-list-item-title>リアルタイムシャンテン計算</v-list-item-title>
-                  <v-list-item-subtitle>syanten ライブラリで正確な計算</v-list-item-subtitle>
+                  <v-list-item-title>riichi-rs-bundlers 使用</v-list-item-title>
+                  <v-list-item-subtitle>Rust製の高速・高精度な麻雀ライブラリ</v-list-item-subtitle>
                 </v-list-item>
                 
                 <v-list-item>
                   <template #prepend>
-                    <v-icon color="warning">mdi-drag</v-icon>
+                    <v-icon color="warning">mdi-hand-pointing-up</v-icon>
                   </template>
-                  <v-list-item-title>直感的な操作</v-list-item-title>
-                  <v-list-item-subtitle>ドラッグ＆ドロップで簡単操作</v-list-item-subtitle>
+                  <v-list-item-title>手牌編集機能</v-list-item-title>
+                  <v-list-item-subtitle>クリックで手牌を変更して受け入れを確認</v-list-item-subtitle>
                 </v-list-item>
                 
                 <v-list-item>
                   <template #prepend>
-                    <v-icon color="primary">mdi-web</v-icon>
+                    <v-icon color="primary">mdi-chart-line</v-icon>
                   </template>
-                  <v-list-item-title>GitHub Pages 対応</v-list-item-title>
-                  <v-list-item-subtitle>ブラウザでどこでもプレイ可能</v-list-item-subtitle>
+                  <v-list-item-title>捨て牌候補分析</v-list-item-title>
+                  <v-list-item-subtitle>各捨て牌ごとの次巻受け入れを表示</v-list-item-subtitle>
                 </v-list-item>
               </v-list>
             </div>
@@ -69,11 +69,11 @@ function startFourPlayerGame() {
                 color="primary"
                 size="large"
                 elevation="2"
-                @click="startSingleGame"
+                @click="startUkeireDemo"
                 class="mb-2"
               >
-                <v-icon start>mdi-account</v-icon>
-                1人用ゲーム
+                <v-icon start>mdi-calculator-variant</v-icon>
+                受け入れ計算デモ
               </v-btn>
               
               <v-btn
@@ -100,24 +100,24 @@ function startFourPlayerGame() {
               <v-col cols="12" md="4">
                 <div class="instruction-step">
                   <v-icon size="48" color="primary">mdi-numeric-1-circle</v-icon>
-                  <h3>ゲーム選択</h3>
-                  <p>1人用ゲームまたは4人対戦を選択してゲームを開始します。</p>
+                  <h3>デモ選択</h3>
+                  <p>受け入れ計算デモまたは4人対戦を選択します。</p>
                 </div>
               </v-col>
               
               <v-col cols="12" md="4">
                 <div class="instruction-step">
                   <v-icon size="48" color="success">mdi-numeric-2-circle</v-icon>
-                  <h3>ツモと打牌</h3>
-                  <p>「ツモ」ボタンで牌を引き、不要な牌をクリックして捨てます。</p>
+                  <h3>手牌編集</h3>
+                  <p>デモでは牌をクリックして手牌を編集し、受け入れを計算できます。</p>
                 </div>
               </v-col>
               
               <v-col cols="12" md="4">
                 <div class="instruction-step">
                   <v-icon size="48" color="warning">mdi-numeric-3-circle</v-icon>
-                  <h3>4人対戦</h3>
-                  <p>3人のCPUと対戦し、本格的な麻雀を楽しめます。</p>
+                  <h3>分析結果</h3>
+                  <p>向聽数、待ち牌、捨て牌候補ごとの受け入れ枚数が表示されます。</p>
                 </div>
               </v-col>
             </v-row>

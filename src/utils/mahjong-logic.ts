@@ -154,6 +154,7 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
   basePoints: number
   totalPoints: number
   paymentInfo: string
+  yakuman: number
   doraCount: number
   uradoraCount: number
 } {
@@ -179,6 +180,7 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
         basePoints: 0,
         totalPoints: 0,
         paymentInfo: '',
+        yakuman: 0,
         doraCount: 0,
         uradoraCount: 0
       }
@@ -196,6 +198,7 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
       basePoints: scoringResult.points,
       totalPoints: scoringResult.totalPoints,
       paymentInfo: scoringResult.paymentInfo,
+      yakuman: scoringResult.yakuman,
       doraCount,
       uradoraCount
     }
@@ -215,6 +218,7 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
         basePoints: 0,
         totalPoints: 0,
         paymentInfo: '',
+        yakuman: 0,
         doraCount: 0,
         uradoraCount: 0
       }
@@ -281,6 +285,7 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
       basePoints,
       totalPoints: basePoints,
       paymentInfo,
+      yakuman: 0,
       doraCount,
       uradoraCount
     }

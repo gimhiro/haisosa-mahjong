@@ -18,37 +18,35 @@ export interface ScoringResult {
   points: number
   paymentInfo: string  // 支払い形式 (例: "400-700", "1000 all")
   totalPoints: number  // 合計獲得点数
+  yakuman: number      // 役満の倍数 (0=役満でない、1=単役満、2=ダブル役満等)
   yaku: Array<{
     name: string
     han: number
   }>
 }
 
-// 点数から支払い形式を計算
-function calculatePaymentInfo(points: number, isDealer: boolean, isTsumo: boolean): { paymentInfo: string, totalPoints: number } {
-  if (isTsumo) {
-    if (isDealer) {
-      // 親のツモ: 全員から同額
-      const eachPayment = Math.ceil(points / 3 / 100) * 100
+// outgoing_tenから支払い形式を計算
+function formatPaymentInfo(outgoingTen: [number, number] | null, totalPoints: number, isTsumo: boolean): { paymentInfo: string, totalPoints: number } {
+  if (isTsumo && outgoingTen) {
+    const [first, second] = outgoingTen
+    if (second === 0) {
+      // 親ツモ: [全員払い, 0]
       return {
-        paymentInfo: `${eachPayment} all`,
-        totalPoints: eachPayment * 3
+        paymentInfo: `${first} all`,
+        totalPoints: first * 3
       }
     } else {
-      // 子のツモ: 親は2倍、子は1倍
-      const koPayment = Math.ceil(points / 4 / 100) * 100
-      const oyaPayment = koPayment * 2
+      // 子ツモ: [親払い, 子払い]
       return {
-        paymentInfo: `${koPayment}-${oyaPayment}`,
-        totalPoints: koPayment * 2 + oyaPayment
+        paymentInfo: `${second}-${first}`,
+        totalPoints: first + second * 2
       }
     }
   } else {
-    // ロン: 放銃者が全額支払い
-    const actualPoints = isDealer ? Math.ceil(points * 1.5 / 100) * 100 : points
+    // ロン: outgoing_tenはnullなので、totalPointsをそのまま使用
     return {
-      paymentInfo: `${actualPoints}`,
-      totalPoints: actualPoints
+      paymentInfo: `${totalPoints}`,
+      totalPoints: totalPoints
     }
   }
 }
@@ -178,6 +176,94 @@ function getYakuName(yakuId: number): string {
   return result
 }
 
+// 受け入れ計算（ukeire calculation）の結果
+export interface HairiResult {
+  now: number           // 現在のシャンテン数（0=テンパイ、-1=上がり）
+  wait: number[]        // 待ち牌（現在の手牌で待っている牌）
+  waits_after_discard: Array<[number, number[]]>  // [捨て牌, その後の待ち牌配列]
+}
+
+// 受け入れ計算を含む入力
+export interface UkeireInput {
+  hand: Tile[]
+  doraIndicators?: Tile[]
+  uradoraIndicators?: Tile[]
+  isRiichi?: boolean
+  isDealer?: boolean
+}
+
+// 受け入れ計算を含む結果
+export interface UkeireResult {
+  hairi: HairiResult | null
+  isAgari: boolean
+  han?: number
+  fu?: number
+  points?: number
+}
+
+// 受け入れ計算（ukeire calculation）を実行する関数
+export function calculateUkeire(input: UkeireInput): UkeireResult {
+  try {
+    // 13枚または14枚でない場合は計算不可
+    if (input.hand.length !== 13 && input.hand.length !== 14) {
+      return { hairi: null, isAgari: false }
+    }
+
+    // 手牌をriichi-rs-bundlers形式に変換
+    const closedPart = convertTilesToNumbers(input.hand)
+
+    // ドラ情報の変換
+    const doraNumbers = input.doraIndicators ? convertDoraIndicatorsToDora(input.doraIndicators) : []
+    const uradoraNumbers = input.uradoraIndicators ? convertDoraIndicatorsToDora(input.uradoraIndicators) : []
+
+    // calc関数のオプション設定
+    const riichiOptions: any = {
+      dora: doraNumbers,
+      riichi: input.isRiichi || false,
+      bakaze: RsTile.East, // 場風: 東場
+      jikaze: input.isDealer ? RsTile.East : RsTile.South, // 自風
+      allow_kuitan: true,
+      allow_aka: false,
+      tile_discarded_by_someone: -1 // ツモ想定
+    }
+
+    // リーチの場合は裏ドラも追加
+    if (input.isRiichi && uradoraNumbers.length > 0) {
+      riichiOptions.uradora = uradoraNumbers
+    }
+
+    // calc_hairi: trueで受け入れ計算を実行
+    const result = calc({
+      closed_part: closedPart,
+      open_part: [],
+      options: riichiOptions,
+      calc_hairi: true
+    })
+
+    return {
+      hairi: result.hairi || null,
+      isAgari: result.is_agari,
+      han: result.han,
+      fu: result.fu,
+      points: result.ten
+    }
+  } catch (error) {
+    console.error('Error calculating ukeire:', error)
+    return { hairi: null, isAgari: false }
+  }
+}
+
+// タイル数値を日本語名に変換するヘルパー関数
+export function tileNumberToString(tileNumber: number): string {
+  const tileNames: Record<number, string> = {
+    1: '1万', 2: '2万', 3: '3万', 4: '4万', 5: '5万', 6: '6万', 7: '7万', 8: '8万', 9: '9万',
+    10: '1筒', 11: '2筒', 12: '3筒', 13: '4筒', 14: '5筒', 15: '6筒', 16: '7筒', 17: '8筒', 18: '9筒',
+    19: '1索', 20: '2索', 21: '3索', 22: '4索', 23: '5索', 24: '6索', 25: '7索', 26: '8索', 27: '9索',
+    28: '東', 29: '南', 30: '西', 31: '北', 32: '白', 33: '發', 34: '中'
+  }
+  return tileNames[tileNumber] || `牌${tileNumber}`
+}
+
 export function calculateScore(input: ScoringInput): ScoringResult | null {
   try {
     // ツモとロンで処理を分ける
@@ -241,6 +327,7 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
     const bakaze = RsTile.East // 場風: 東場
     const jikaze = input.isDealer ? RsTile.East : RsTile.South // 自風: 親=東、子=南
 
+
     // Create RiichiInput for riichi-rs-bundlers
     const riichiOptions: any = {
       dora: doraNumbers as any,
@@ -275,7 +362,6 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
     // Call riichi-rs-bundlers calc function
     const result = calc(riichiInput)
 
-
     if (!result.is_agari) {
       return null
     }
@@ -292,7 +378,7 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       })
 
     // 支払い形式と合計点数を計算
-    const payment = calculatePaymentInfo(result.ten, input.isDealer, input.isTsumo)
+    const payment = formatPaymentInfo(result.outgoing_ten || null, result.ten, input.isTsumo)
 
     return {
       han: result.han,
@@ -300,6 +386,7 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       points: result.ten,
       paymentInfo: payment.paymentInfo,
       totalPoints: payment.totalPoints,
+      yakuman: result.yakuman,
       yaku
     }
   } catch (error) {
