@@ -689,13 +689,6 @@ function confirmRiichiAndDiscard(tileId: string) {
   if (canDeclareRiichi.value) {
     gameManager.value.declareRiichi(0)
     
-    // リーチ宣言したプレイヤーの手牌をconsole.logに出力
-    console.log('=== 人間プレイヤーリーチ宣言 ===');
-    console.log('プレイヤーインデックス: 0');
-    console.log('プレイヤー名:', humanPlayer.value.name);
-    console.log('リーチ時の手牌:', humanPlayer.value.tiles.map(t => t.suit + t.rank));
-    console.log('ツモ牌:', currentDrawnTile.value ? currentDrawnTile.value.suit + currentDrawnTile.value.rank : 'なし');
-    console.log('リーチ宣言牌ID:', tileId);
   }
 
   // プレビューモードを解除

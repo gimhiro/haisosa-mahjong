@@ -186,21 +186,42 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
       }
     }
 
-    // Extract dora counts from yaku
-    const doraCount = scoringResult.yaku.filter(y => y.name === 'ドラ').reduce((sum, y) => sum + y.han, 0)
-    const uradoraCount = scoringResult.yaku.filter(y => y.name === '裏ドラ').reduce((sum, y) => sum + y.han, 0)
+    // 独自でドラと裏ドラの枚数を計算
+    const { actualDoraCount, actualUradoraCount } = calculateActualDoraCount(
+      tiles, 
+      doraIndicators, 
+      riichi ? uradoraIndicators : []
+    )
+    
+    
+    // 役一覧を修正：riichi-rs-bundlersの「ドラ」を分離
+    const modifiedYaku = [...scoringResult.yaku]
+    
+    // 既存の「ドラ」役を除去
+    const doraIndex = modifiedYaku.findIndex(y => y.name === 'ドラ')
+    if (doraIndex !== -1) {
+      modifiedYaku.splice(doraIndex, 1)
+    }
+    
+    // 表ドラと裏ドラを別々に追加
+    if (actualDoraCount > 0) {
+      modifiedYaku.push({ name: 'ドラ', han: actualDoraCount })
+    }
+    if (actualUradoraCount > 0) {
+      modifiedYaku.push({ name: '裏ドラ', han: actualUradoraCount })
+    }
 
     return {
       isWin: true,
-      yaku: scoringResult.yaku,
+      yaku: modifiedYaku,
       totalHan: scoringResult.han,
       fu: scoringResult.fu,
       basePoints: scoringResult.points,
       totalPoints: scoringResult.totalPoints,
       paymentInfo: scoringResult.paymentInfo,
       yakuman: scoringResult.yakuman,
-      doraCount,
-      uradoraCount
+      doraCount: actualDoraCount,
+      uradoraCount: actualUradoraCount
     }
   } catch (error) {
     console.error('Error in checkWinCondition:', error)
@@ -363,4 +384,30 @@ function isDoraFromIndicator(tile: FourPlayerTile, indicator: FourPlayerTile): b
     const nextRank = indicator.rank === 9 ? 1 : indicator.rank + 1
     return tile.rank === nextRank
   }
+}
+
+// 実際のドラと裏ドラの枚数を計算
+function calculateActualDoraCount(tiles: FourPlayerTile[], doraIndicators: FourPlayerTile[], uradoraIndicators: FourPlayerTile[]): { actualDoraCount: number, actualUradoraCount: number } {
+  let actualDoraCount = 0
+  let actualUradoraCount = 0
+  
+  // 表ドラの計算
+  for (const tile of tiles) {
+    for (const indicator of doraIndicators) {
+      if (isDoraFromIndicator(tile, indicator)) {
+        actualDoraCount++
+      }
+    }
+  }
+  
+  // 裏ドラの計算
+  for (const tile of tiles) {
+    for (const indicator of uradoraIndicators) {
+      if (isDoraFromIndicator(tile, indicator)) {
+        actualUradoraCount++
+      }
+    }
+  }
+  
+  return { actualDoraCount, actualUradoraCount }
 }

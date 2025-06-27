@@ -408,8 +408,6 @@ function calculateUkeire() {
     }
 
     // デバッグ用：現在の手牌を表示
-    console.log('Current hand tiles:', handTiles.value)
-    console.log('Hand display:', handTiles.value.map(t => getTileDisplay(t)).join(' '))
 
     // 手牌をソートしてからcalcに渡す
     const sortedHand = [...handTiles.value].sort((a, b) => a - b)
@@ -433,7 +431,6 @@ function calculateUkeire() {
       return
     }
 
-    console.log(res.hairi)
 
     // 現在の待ち牌を文字列に変換
     const waitTiles = res.hairi.wait.map(id => getTileDisplay(id))

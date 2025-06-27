@@ -125,11 +125,13 @@ export class GameManager {
     for (const suit of ['man', 'pin', 'sou'] as const) {
       for (let rank = 1; rank <= 9; rank++) {
         for (let i = 0; i < 4; i++) {
+          // 5の牌の最初の1枚は赤ドラにする
+          const isRedTile = rank === 5 && i === 0
           tiles.push({
             id: `${suit}${rank}-${i}`,
             suit,
             rank,
-            isRed: false
+            isRed: isRedTile
           })
         }
       }

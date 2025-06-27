@@ -20,14 +20,27 @@
         <div class="winning-tiles">
           <h4>上がり牌</h4>
           <div class="tiles-display">
-            <MahjongTile
-              v-for="tile in winData.winningHand"
-              :key="tile.id"
-              :tile="tile"
-              size="medium"
-              :is-draggable="false"
-              :is-winning-tile="tile.id === winData.winningTile?.id"
-            />
+            <!-- 手牌13枚 -->
+            <div class="hand-tiles">
+              <MahjongTile
+                v-for="tile in handTiles"
+                :key="tile.id"
+                :tile="tile"
+                size="medium"
+                :is-draggable="false"
+                :is-dora="isDoraTile(tile)"
+              />
+            </div>
+            <!-- 上がり牌（少し右に配置） -->
+            <div class="winning-tile-separate">
+              <MahjongTile
+                :tile="winData.winningTile"
+                size="medium"
+                :is-draggable="false"
+                :is-winning-tile="true"
+                :is-dora="isDoraTile(winData.winningTile)"
+              />
+            </div>
           </div>
         </div>
         
@@ -176,6 +189,61 @@ const closeModal = () => {
   emit('update:modelValue', false)
   emit('close')
 }
+
+// 手牌（上がり牌を除いた13枚）
+const handTiles = computed(() => {
+  return props.winData.winningHand.filter(tile => tile.id !== props.winData.winningTile?.id)
+})
+
+// ドラ判定
+const isDoraTile = (tile: any) => {
+  if (!tile) return false
+  
+  // ドラ表示牌から実際のドラを計算
+  const doraNumbers = props.winData.doraIndicators.map(indicator => getNextTile(indicator))
+  const uradoraNumbers = props.winData.uradoraIndicators.map(indicator => getNextTile(indicator))
+  
+  const tileNumber = convertTileToNumber(tile)
+  return doraNumbers.includes(tileNumber) || uradoraNumbers.includes(tileNumber)
+}
+
+// 次の牌を取得（ドラ計算用）
+const getNextTile = (tile: any) => {
+  if (tile.suit === 'man') {
+    // 萬子: 1-9, 9の次は1
+    const nextRank = tile.rank === 9 ? 1 : tile.rank + 1
+    const result = nextRank - 1 // 0-8の範囲
+    return result
+  } else if (tile.suit === 'pin') {
+    // 筒子: 1-9, 9の次は1
+    const nextRank = tile.rank === 9 ? 1 : tile.rank + 1
+    const result = 9 + nextRank - 1 // 9-17の範囲
+    return result
+  } else if (tile.suit === 'sou') {
+    // 索子: 1-9, 9の次は1
+    const nextRank = tile.rank === 9 ? 1 : tile.rank + 1
+    const result = 18 + nextRank - 1 // 18-26の範囲
+    return result
+  } else if (tile.suit === 'honor') {
+    // 字牌: 東南西北白發中 (1-7) → (27-33)
+    const honorOrder = [1, 2, 3, 4, 5, 6, 7] // rank
+    const currentIndex = honorOrder.indexOf(tile.rank)
+    const nextRank = honorOrder[(currentIndex + 1) % honorOrder.length]
+    const result = 27 + nextRank - 1
+    return result
+  }
+  
+  return 0
+}
+
+// 牌を数値に変換
+const convertTileToNumber = (tile: any) => {
+  if (tile.suit === 'man') return tile.rank - 1
+  if (tile.suit === 'pin') return tile.rank + 8
+  if (tile.suit === 'sou') return tile.rank + 17
+  if (tile.suit === 'honor') return tile.rank + 26
+  return 0
+}
 </script>
 
 <style scoped>
@@ -214,13 +282,24 @@ const closeModal = () => {
 
 .tiles-display {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 2px;
+  align-items: center;
+  gap: 16px;
   justify-content: center;
   padding: 12px;
   background: #f5f5f5;
   border-radius: 8px;
   overflow-x: auto;
+}
+
+.hand-tiles {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+
+.winning-tile-separate {
+  margin-left: 8px;
+  position: relative;
 }
 
 .score-info {

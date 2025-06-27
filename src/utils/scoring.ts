@@ -26,17 +26,19 @@ export interface ScoringResult {
 }
 
 // outgoing_tenから支払い形式を計算
-function formatPaymentInfo(outgoingTen: [number, number] | null, totalPoints: number, isTsumo: boolean): { paymentInfo: string, totalPoints: number } {
+function formatPaymentInfo(outgoingTen: [number, number] | null, totalPoints: number, isTsumo: boolean, isDealer: boolean): { paymentInfo: string, totalPoints: number } {
   if (isTsumo && outgoingTen) {
     const [first, second] = outgoingTen
-    if (second === 0) {
-      // 親ツモ: [全員払い, 0]
+    
+    if (isDealer) {
+      // 親ツモ: 全員が同額支払い
+      const eachPayment = first
       return {
-        paymentInfo: `${first} all`,
-        totalPoints: first * 3
+        paymentInfo: `${eachPayment} all`,
+        totalPoints: eachPayment * 3
       }
     } else {
-      // 子ツモ: [親払い, 子払い]
+      // 子ツモ: 親が2倍、子が1倍支払い
       return {
         paymentInfo: `${second}-${first}`,
         totalPoints: first + second * 2
@@ -234,7 +236,7 @@ export function calculateUkeire(input: UkeireInput): UkeireResult {
 
     // calc_hairi: trueで受け入れ計算を実行
     const result = calc({
-      closed_part: closedPart,
+      closed_part: closedPart as any,
       open_part: [],
       options: riichiOptions,
       calc_hairi: true
@@ -251,6 +253,11 @@ export function calculateUkeire(input: UkeireInput): UkeireResult {
     console.error('Error calculating ukeire:', error)
     return { hairi: null, isAgari: false }
   }
+}
+
+// 赤ドラの枚数を計算
+function calculateAkaDoraCount(tiles: Tile[]): number {
+  return tiles.filter(tile => tile.isRed === true).length
 }
 
 // タイル数値を日本語名に変換するヘルパー関数
@@ -328,21 +335,26 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
     const jikaze = input.isDealer ? RsTile.East : RsTile.South // 自風: 親=東、子=南
 
 
+    // 表ドラと裏ドラを合わせてdora配列に入れる
+    const allDoraNumbers = [...doraNumbers]
+    if (input.isRiichi && uradoraNumbers.length > 0) {
+      allDoraNumbers.push(...uradoraNumbers)
+    }
+    
+    // 赤ドラの枚数を計算
+    const akaCount = calculateAkaDoraCount(input.hand)
+    
+
     // Create RiichiInput for riichi-rs-bundlers
     const riichiOptions: any = {
-      dora: doraNumbers as any,
+      dora: allDoraNumbers as any,
+      aka_count: akaCount,
       riichi: input.isRiichi,
       ippatsu: input.isIppatsu || false,
       bakaze,
       jikaze,
       allow_kuitan: true,
-      allow_aka: false
-    }
-
-
-    // リーチの場合は裏ドラも追加
-    if (input.isRiichi && uradoraNumbers.length > 0) {
-      riichiOptions.uradora = uradoraNumbers as any
+      allow_aka: true
     }
 
     // ツモとロンで上がり牌の指定方法を変える
@@ -362,6 +374,7 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
     // Call riichi-rs-bundlers calc function
     const result = calc(riichiInput)
 
+
     if (!result.is_agari) {
       return null
     }
@@ -378,7 +391,7 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       })
 
     // 支払い形式と合計点数を計算
-    const payment = formatPaymentInfo(result.outgoing_ten || null, result.ten, input.isTsumo)
+    const payment = formatPaymentInfo(result.outgoing_ten || null, result.ten, input.isTsumo, input.isDealer)
 
     return {
       han: result.han,
