@@ -10,6 +10,12 @@ export interface ScoringInput {
   uradoraIndicators: Tile[]
   isDealer: boolean
   isIppatsu?: boolean
+  melds?: Array<{
+    type: 'pon' | 'kan' | 'chi'
+    tiles: Tile[]
+    calledTile: Tile
+    fromPlayer?: number
+  }>
 }
 
 export interface ScoringResult {
@@ -56,11 +62,11 @@ function formatPaymentInfo(outgoingTen: [number, number] | null, totalPoints: nu
 // Convert our Tile format to riichi-rs-bundlers numeric format
 function convertTileToNumber(tile: Tile): number {
   if (tile.suit === 'honor') {
-    // Honor tiles: 1=東(28), 2=南(29), 3=西(30), 4=北(31), 5=白(32), 6=發(33), 7=中(34)
+    // Honor tiles: Use RsTile constants directly
     const honorMap = [RsTile.East, RsTile.South, RsTile.West, RsTile.North, RsTile.Haku, RsTile.Hatsu, RsTile.Chun]
     return honorMap[tile.rank - 1]
   } else {
-    // Number tiles
+    // Number tiles: Use RsTile constants
     if (tile.suit === 'man') {
       return RsTile.M1 + tile.rank - 1
     } else if (tile.suit === 'pin') {
@@ -260,6 +266,8 @@ function calculateAkaDoraCount(tiles: Tile[]): number {
   return tiles.filter(tile => tile.isRed === true).length
 }
 
+
+
 // タイル数値を日本語名に変換するヘルパー関数
 export function tileNumberToString(tileNumber: number): string {
   const tileNames: Record<number, string> = {
@@ -277,48 +285,36 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
     let closedPart: number[]
 
     if (input.isTsumo) {
-      // ツモ牌を除いた13枚の手牌
-      const handWithoutWinTile = [...input.hand]
-      let removed = false
-      for (let i = 0; i < handWithoutWinTile.length; i++) {
-        const tile = handWithoutWinTile[i]
-        if (tile.id === input.winningTile.id ||
-          (!removed && tile.suit === input.winningTile.suit && tile.rank === input.winningTile.rank)) {
-          handWithoutWinTile.splice(i, 1)
-          removed = true
-          break
-        }
+      // ツモ: 鳴き牌を考慮した正しい手牌数を計算
+      const meldTileCount = input.melds ? input.melds.reduce((count, meld) => count + meld.tiles.length, 0) : 0
+      const expectedHandSize = 13 - meldTileCount  // 鳴き牌を除いた手牌数
+      const expectedTsumoHandSize = expectedHandSize + 1  // ツモ後の手牌数
+      
+      if (input.hand.length !== expectedTsumoHandSize) {
+        console.warn(`TSUMO: Expected ${expectedTsumoHandSize} tiles, got ${input.hand.length}`)
       }
-
-      // 13枚の手牌を変換
-      const handNumbers = convertTilesToNumbers(handWithoutWinTile).sort((a, b) => a - b)
-      // ツモ牌を最後に追加（ソートしない！最後の位置が重要）
+      
+      // 手牌の最初のN枚を取得（ツモ牌以外）
+      const handTiles = input.hand.slice(0, expectedHandSize)
+      const handNumbers = convertTilesToNumbers(handTiles).sort((a, b) => a - b)
+      
+      // ツモ牌（上がり牌）を最後に追加
       const winTileNumber = convertTileToNumber(input.winningTile)
       closedPart = [...handNumbers, winTileNumber]
 
     } else {
-      // ロンの場合：13枚のclosed_partと上がり牌を分離
-      const handWithoutWinTile = [...input.hand]
-
-      // 上がり牌を1枚除外する（まずIDで検索、なければ同種の牌を除外）
-      let removed = false
-      for (let i = 0; i < handWithoutWinTile.length; i++) {
-        const tile = handWithoutWinTile[i]
-        if (tile.id === input.winningTile.id ||
-          (!removed && tile.suit === input.winningTile.suit && tile.rank === input.winningTile.rank)) {
-          handWithoutWinTile.splice(i, 1)
-          removed = true
-          break
-        }
+      // ロン: 鳴き牌を考慮した正しい手牌数を計算
+      const meldTileCount = input.melds ? input.melds.reduce((count, meld) => count + meld.tiles.length, 0) : 0
+      const expectedHandSize = 13 - meldTileCount  // 鳴き牌を除いた手牌数
+      
+      if (input.hand.length !== expectedHandSize) {
+        console.warn(`RON: Expected ${expectedHandSize} tiles, got ${input.hand.length}`)
+        // 期待される枚数でない場合は先頭N枚を取る
+        const handTiles = input.hand.slice(0, expectedHandSize)
+        closedPart = convertTilesToNumbers(handTiles) as number[]
+      } else {
+        closedPart = convertTilesToNumbers(input.hand) as number[]
       }
-
-      // 13枚でない場合は先頭から13枚を取る
-      if (handWithoutWinTile.length !== 13) {
-        console.warn(`Expected 13 tiles after removing win tile, got ${handWithoutWinTile.length}`)
-        handWithoutWinTile.splice(13)
-      }
-
-      closedPart = convertTilesToNumbers(handWithoutWinTile) as number[]
     }
     // ドラ指示牌から実際のドラ牌に変換
     const doraNumbers = convertDoraIndicatorsToDora(input.doraIndicators) as number[]
@@ -326,9 +322,6 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
 
     // Determine tile discarded by someone (for ron)
     const winTileNumber = convertTileToNumber(input.winningTile)
-    // For tsumo, we should not specify tile_discarded_by_someone
-    // For ron, we specify the winning tile number
-    const tileDiscardedBy = input.isTsumo ? undefined : winTileNumber
 
     // Determine winds
     const bakaze = RsTile.East // 場風: 東場
@@ -362,15 +355,38 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       // ツモの場合: tile_discarded_by_someone = -1
       riichiOptions.tile_discarded_by_someone = -1
     } else {
-      // ロンの場合: tile_discarded_by_someoneで指定
-      riichiOptions.tile_discarded_by_someone = tileDiscardedBy as any
+      // ロンの場合: tile_discarded_by_someoneで上がり牌を指定
+      riichiOptions.tile_discarded_by_someone = winTileNumber as any
+    }
+
+    // Convert melds to riichi-rs format: [is_open, Tile[]]
+    const openPart: any[] = []
+    if (input.melds && input.melds.length > 0) {
+      for (const meld of input.melds) {
+        const meldTiles = convertTilesToNumbers(meld.tiles).sort((a, b) => a - b)
+        
+        // is_open: true = ポン/チー/明槓, false = 暗槓
+        // Note: 'ankan' is not in the meld type union, all melds from UI are open
+        const isOpen = true
+        
+        // riichi-rs-bundlers形式: [is_open, Tile[]]
+        openPart.push([isOpen, meldTiles])
+        
+      }
     }
 
     const riichiInput = {
       closed_part: closedPart as any, // ツモ=14枚、ロン=13枚
-      open_part: [], // No open melds for now
+      open_part: openPart, // メルド情報
       options: riichiOptions
     }
+    
+    // Final validation - 鳴き牌を考慮した期待される長さ
+    const meldTileCount = input.melds ? input.melds.reduce((count, meld) => count + meld.tiles.length, 0) : 0
+    const expectedClosedPartLength = input.isTsumo ? (13 - meldTileCount + 1) : (13 - meldTileCount)
+    
+    
+    
     // Call riichi-rs-bundlers calc function
     const result = calc(riichiInput)
 

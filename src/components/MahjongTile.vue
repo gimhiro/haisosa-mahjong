@@ -47,6 +47,7 @@ interface Props {
   isDraggable?: boolean
   isDiscarded?: boolean
   isBack?: boolean
+  isYoko?: boolean
   isWinningTile?: boolean
   isDora?: boolean
   isTsumoDiscard?: boolean
@@ -60,6 +61,7 @@ const props = withDefaults(defineProps<Props>(), {
   isDraggable: true,
   isDiscarded: false,
   isBack: false,
+  isYoko: false,
   isWinningTile: false,
   isDora: false,
   isTsumoDiscard: false,
@@ -85,12 +87,13 @@ const tileClasses = computed(() => [
     'tile-draggable': props.isDraggable && !props.disabled,
     'tile-discarded': props.isDiscarded,
     'tile-riichi-declaration': props.isRiichiDeclaration,
-    'tile-disabled': props.disabled
+    'tile-disabled': props.disabled,
+    'tile-yoko': props.isYoko
   }
 ])
 
 const tileImageUrl = computed(() => {
-  return getTileImageUrl(props.tile, { isBack: props.isBack })
+  return getTileImageUrl(props.tile, { isBack: props.isBack, isYoko: props.isYoko })
 })
 
 const tileText = computed(() => {
@@ -154,6 +157,12 @@ function logDoraRender() {
   height: clamp(39px, 5.6vw, 70px);
 }
 
+/* 横向き牌の基本スタイル - 幅と高さを入れ替え */
+.tile-yoko {
+  width: clamp(39px, 5.6vw, 70px);
+  height: clamp(28px, 4vw, 50px);
+}
+
 .tile-small {
   width: clamp(24px, 3vw, 35px);
   height: clamp(33px, 4.2vw, 49px);
@@ -167,6 +176,22 @@ function logDoraRender() {
 .tile-large {
   width: clamp(40px, 5.5vw, 55px);
   height: clamp(56px, 7.7vw, 77px);
+}
+
+/* 横向き牌のスタイル - 幅と高さを入れ替え */
+.tile-yoko.tile-small {
+  width: clamp(33px, 4.2vw, 49px);
+  height: clamp(24px, 3vw, 35px);
+}
+
+.tile-yoko.tile-medium {
+  width: clamp(45px, 6.3vw, 63px);
+  height: clamp(32px, 4.5vw, 45px);
+}
+
+.tile-yoko.tile-large {
+  width: clamp(56px, 7.7vw, 77px);
+  height: clamp(40px, 5.5vw, 55px);
 }
 
 .tile-draggable:hover {

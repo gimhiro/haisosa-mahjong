@@ -235,14 +235,50 @@
               {{ riichiButtonText }}
             </v-btn>
 
-            <!-- キャンセルボタン（ロン表示時のみ） -->
+            <!-- ポンボタン -->
             <v-btn
-              v-if="canRon"
+              v-if="canPon"
+              color="info"
+              size="small"
+              block
+              class="action-btn"
+              @click="declarePon"
+            >
+              ポン
+            </v-btn>
+
+            <!-- カンボタン -->
+            <v-btn
+              v-if="canKan"
+              color="warning"
+              size="small"
+              block
+              class="action-btn"
+              @click="declareKan"
+            >
+              カン
+            </v-btn>
+
+            <!-- チーボタン -->
+            <v-btn
+              v-if="canChi"
+              color="primary"
+              size="small"
+              block
+              class="action-btn"
+              @click="declareChi"
+            >
+              チー
+            </v-btn>
+
+            <!-- キャンセルボタン（ロンまたはポン・カン・チー表示時） -->
+            <v-btn
+              v-if="canRon || canPon || canKan || canChi"
               color="grey"
               size="small"
               block
               class="action-btn"
-              @click="cancelRon"
+              @click="cancelActions"
             >
               キャンセル
             </v-btn>
@@ -326,6 +362,7 @@
 
     <!-- 流局モーダル -->
     <DrawModal
+      v-if="drawModalData"
       v-model="showDrawModal"
       :draw-data="drawModalData"
       @continue="onContinueFromDraw"
@@ -334,6 +371,7 @@
 
     <!-- ゲーム終了モーダル -->
     <GameEndModal
+      v-if="gameEndModalData"
       v-model="showGameEndModal"
       :game-end-data="gameEndModalData"
       @back-to-home="onBackToHome"
@@ -347,8 +385,9 @@
 import { computed, ref, watch, onMounted } from 'vue'
 import { GameManager } from '../utils/game-manager'
 import { cpuAIs } from '../utils/cpu-ai'
-import { calculateShanten, canRiichi, checkWinCondition } from '../utils/mahjong-logic'
+import { calculateShanten, calculateShantenWithMelds, canRiichi, checkWinCondition } from '../utils/mahjong-logic'
 import { defaultEnhancedDraw } from '../utils/enhanced-draw'
+import type { Tile } from '../stores/fourPlayerMahjong'
 import PlayerArea from '../components/PlayerArea.vue'
 import PlayerDiscardArea from '../components/PlayerDiscardArea.vue'
 import MahjongTile from '../components/MahjongTile.vue'
@@ -440,7 +479,8 @@ const canTsumo = computed(() => {
   
   try {
     const winResult = gameManager.value.checkWinConditionForPlayer(0, drawnTile, true)
-    return winResult.isWin
+    // 上がり形かつ点数が0より大きい場合のみツモ可能
+    return winResult.isWin && (winResult.result?.totalPoints || 0) > 0
   } catch (error) {
     return false
   }
@@ -462,11 +502,17 @@ const humanShanten = computed(() => {
     ? [...player.tiles, currentDrawnTile.value]
     : player.tiles
   
-  if (allTiles.length !== 13 && allTiles.length !== 14) {
+  // 鳴き牌を考慮した枚数チェック
+  const meldTileCount = player.melds.reduce((count, meld) => count + meld.tiles.length, 0)
+  const expectedHandTiles = 13 - meldTileCount
+  const expectedTotalTiles = [expectedHandTiles, expectedHandTiles + 1]
+  
+  if (!expectedTotalTiles.includes(allTiles.length)) {
     return 8
   }
-    
-  return calculateShanten(allTiles)
+  
+  // 鳴き牌を考慮したシャンテン数計算
+  return calculateShantenWithMelds(allTiles, player.melds)
 })
 
 const shantenColor = computed(() => {
@@ -596,6 +642,14 @@ async function processCpuTurn() {
               return
             }
             
+            // 人間プレイヤーがポン・カン・チー可能かチェック
+            checkHumanMeldActions(currentIndex)
+            
+            // ポン・カン・チーが可能な場合はプレイヤーの選択を待つ
+            if (canPon.value || canKan.value || canChi.value) {
+              return
+            }
+            
             // CPUプレイヤーがロンできるかチェック
             if (await checkCpuRon(currentIndex)) {
               return
@@ -612,6 +666,14 @@ async function processCpuTurn() {
         // CPUが牌を捨てた後、人間プレイヤーがロン可能かチェック
         if (gameManager.value.canHumanRon()) {
           // ロンボタンが表示されるので、ここでは次のターンに進まない
+          return
+        }
+        
+        // 人間プレイヤーがポン・カン・チー可能かチェック
+        checkHumanMeldActions(currentIndex)
+        
+        // ポン・カン・チーが可能な場合はプレイヤーの選択を待つ
+        if (canPon.value || canKan.value || canChi.value) {
           return
         }
         
@@ -815,7 +877,7 @@ function declareRon() {
         winResult.result.paymentInfo,
         winResult.result.totalPoints,
         false, // isTsumo
-        gameManager.value.lastDiscardPlayerIndex // ron target
+        gameManager.value.lastDiscardPlayerIndex ?? undefined // ron target
       )
       
       // 人間プレイヤーの上がりを記録
@@ -835,6 +897,260 @@ function cancelRon() {
   // ロンをキャンセルして次のプレイヤーのターンに進む
   gameManager.value.clearLastDiscard()
   gameManager.value.nextTurn()
+}
+
+// ポン・カン・チーのアクション
+function declarePon() {
+  if (!lastDiscardedTile.value) return
+  
+  const humanPlayer = gameManager.value.humanPlayer
+  const tile = lastDiscardedTile.value
+  
+  // ポンの実行（手牌から同じ牌2枚を削除し、鳴き牌に追加）
+  const sameRankTiles = humanPlayer.tiles.filter(t => t.suit === tile.suit && t.rank === tile.rank)
+  
+  if (sameRankTiles.length >= 2) {
+    // 手牌から2枚削除
+    for (let i = 0; i < 2; i++) {
+      const index = humanPlayer.tiles.findIndex(t => t.suit === tile.suit && t.rank === tile.rank)
+      if (index !== -1) {
+        humanPlayer.tiles.splice(index, 1)
+      }
+    }
+    
+    // 捨て牌を削除し、どのプレイヤーから鳴いたかを記録
+    const lastDiscardPlayer = gameManager.value.players.find(p => 
+      p.discards.length > 0 && p.discards[p.discards.length - 1].id === tile.id
+    )
+    let fromPlayerIndex = 0
+    if (lastDiscardPlayer) {
+      fromPlayerIndex = lastDiscardPlayer.id
+      lastDiscardPlayer.discards.pop()
+    }
+    
+    // 鳴き牌に追加
+    humanPlayer.melds.push({
+      type: 'pon',
+      tiles: [sameRankTiles[0], sameRankTiles[1], tile],
+      calledTile: tile,
+      fromPlayer: fromPlayerIndex
+    })
+    
+    // 人間プレイヤーのターンに設定
+    gameManager.value.currentPlayerIndex = 0
+    
+    // フラグリセット
+    resetActionFlags()
+  }
+}
+
+function declareKan() {
+  if (!lastDiscardedTile.value) return
+  
+  const humanPlayer = gameManager.value.humanPlayer
+  const tile = lastDiscardedTile.value
+  
+  // カンの実行（手牌から同じ牌3枚を削除し、鳴き牌に追加）
+  const sameRankTiles = humanPlayer.tiles.filter(t => t.suit === tile.suit && t.rank === tile.rank)
+  
+  if (sameRankTiles.length >= 3) {
+    // 手牌から3枚削除
+    for (let i = 0; i < 3; i++) {
+      const index = humanPlayer.tiles.findIndex(t => t.suit === tile.suit && t.rank === tile.rank)
+      if (index !== -1) {
+        humanPlayer.tiles.splice(index, 1)
+      }
+    }
+    
+    // 捨て牌を削除し、どのプレイヤーから鳴いたかを記録
+    const lastDiscardPlayer = gameManager.value.players.find(p => 
+      p.discards.length > 0 && p.discards[p.discards.length - 1].id === tile.id
+    )
+    let fromPlayerIndex = 0
+    if (lastDiscardPlayer) {
+      fromPlayerIndex = lastDiscardPlayer.id
+      lastDiscardPlayer.discards.pop()
+    }
+    
+    // 鳴き牌に追加
+    humanPlayer.melds.push({
+      type: 'kan',
+      tiles: [sameRankTiles[0], sameRankTiles[1], sameRankTiles[2], tile],
+      calledTile: tile,
+      fromPlayer: fromPlayerIndex
+    })
+    
+    // カン後は嶺上牌を引く
+    const kanTile = gameManager.value.drawTileAndKeepSeparate(0)
+    
+    // 人間プレイヤーのターンに設定
+    gameManager.value.currentPlayerIndex = 0
+    
+    // フラグリセット
+    resetActionFlags()
+  }
+}
+
+function declareChi() {
+  // チーの場合は選択肢があるので、最初の選択肢を使用（簡易実装）
+  if (!lastDiscardedTile.value || chiOptions.value.length === 0) return
+  
+  const humanPlayer = gameManager.value.humanPlayer
+  const tile = lastDiscardedTile.value
+  const option = chiOptions.value[0] // 最初の選択肢を使用
+  
+  // チーの実行
+  // 鳴き牌のタイル情報を削除前に収集
+  const calledTile = tile // チーした牌
+  const handTiles: Tile[] = [] // 手牌から使う牌
+  
+  option.forEach(id => {
+    if (id !== tile.id) {
+      const handTile = humanPlayer.tiles.find(t => t.id === id)
+      if (handTile) {
+        handTiles.push(handTile)
+      }
+    }
+  })
+  
+  // 手牌の牌を数字順に並べ替え
+  handTiles.sort((a, b) => a.rank - b.rank)
+  
+  // チーした牌を左端に、残りを数字順で配置
+  const meldTiles = [calledTile, ...handTiles]
+  
+  // 手牌から必要な牌を削除
+  const tilesToRemove = option.filter(id => id !== tile.id)
+  tilesToRemove.forEach(tileId => {
+    const index = humanPlayer.tiles.findIndex(t => t.id === tileId)
+    if (index !== -1) {
+      humanPlayer.tiles.splice(index, 1)
+    }
+  })
+  
+  humanPlayer.melds.push({
+    type: 'chi',
+    tiles: meldTiles,
+    calledTile: tile
+  })
+  
+  // 捨て牌を削除し、どのプレイヤーから鳴いたかを記録
+  const lastDiscardPlayer = gameManager.value.players.find(p => 
+    p.discards.length > 0 && p.discards[p.discards.length - 1].id === tile.id
+  )
+  let fromPlayerIndex = 0
+  if (lastDiscardPlayer) {
+    fromPlayerIndex = lastDiscardPlayer.id
+    lastDiscardPlayer.discards.pop()
+  }
+  
+  // 鳴き牌の fromPlayer フィールドを更新
+  const lastMeld = humanPlayer.melds[humanPlayer.melds.length - 1]
+  if (lastMeld) {
+    lastMeld.fromPlayer = fromPlayerIndex
+  }
+  
+  // 人間プレイヤーのターンに設定
+  gameManager.value.currentPlayerIndex = 0
+  
+  // フラグリセット
+  resetActionFlags()
+}
+
+function cancelActions() {
+  resetActionFlags()
+  
+  // キャンセル後は次のプレイヤーのターンに進む
+  gameManager.value.nextTurn()
+}
+
+function resetActionFlags() {
+  canPon.value = false
+  canKan.value = false
+  canChi.value = false
+  chiOptions.value = []
+  selectedChiOption.value = null
+  lastDiscardedTile.value = null
+}
+
+// 人間プレイヤーがポン・カン・チー可能かチェックする関数
+function checkHumanMeldActions(discardPlayerIndex: number) {
+  // まず既存のフラグをリセット
+  canPon.value = false
+  canKan.value = false
+  canChi.value = false
+  chiOptions.value = []
+  lastDiscardedTile.value = null
+
+  // 最後に捨てられた牌を取得
+  const discardedTile = gameManager.value.lastDiscardedTile
+  if (!discardedTile) {
+    return
+  }
+
+  const humanPlayer = gameManager.value.humanPlayer
+  lastDiscardedTile.value = discardedTile
+
+  // ポンの判定：同じ牌が2枚以上手牌にある
+  const ponCount = humanPlayer.tiles.filter(t => 
+    t.suit === discardedTile.suit && t.rank === discardedTile.rank
+  ).length
+  
+  canPon.value = ponCount >= 2
+
+  // カンの判定：同じ牌が3枚以上手牌にある
+  canKan.value = ponCount >= 3
+
+  // チーの判定：数牌のみ、かつ左隣のプレイヤーからの捨て牌のみ
+  if (discardedTile.suit !== 'honor' && isLeftNeighbor(discardPlayerIndex)) {
+    chiOptions.value = getChiOptions(humanPlayer.tiles, discardedTile)
+    canChi.value = chiOptions.value.length > 0
+  }
+}
+
+// 左隣のプレイヤーかどうかを判定（人間プレイヤーは0番、左隣は3番）
+function isLeftNeighbor(playerIndex: number): boolean {
+  return playerIndex === 3
+}
+
+// チーの選択肢を取得
+function getChiOptions(handTiles: Tile[], discardedTile: Tile): string[][] {
+  const options: string[][] = []
+  const suit = discardedTile.suit
+  const rank = discardedTile.rank
+
+  if (suit === 'honor') {
+    return options // 字牌はチーできない
+  }
+
+  // パターン1: [n-2, n-1, n] の n
+  if (rank >= 3) {
+    const tile1 = handTiles.find(t => t.suit === suit && t.rank === rank - 2)
+    const tile2 = handTiles.find(t => t.suit === suit && t.rank === rank - 1)
+    if (tile1 && tile2) {
+      options.push([tile1.id, tile2.id, discardedTile.id])
+    }
+  }
+
+  // パターン2: [n-1, n, n+1] の n
+  if (rank >= 2 && rank <= 8) {
+    const tile1 = handTiles.find(t => t.suit === suit && t.rank === rank - 1)
+    const tile2 = handTiles.find(t => t.suit === suit && t.rank === rank + 1)
+    if (tile1 && tile2) {
+      options.push([tile1.id, discardedTile.id, tile2.id])
+    }
+  }
+
+  // パターン3: [n, n+1, n+2] の n
+  if (rank <= 7) {
+    const tile1 = handTiles.find(t => t.suit === suit && t.rank === rank + 1)
+    const tile2 = handTiles.find(t => t.suit === suit && t.rank === rank + 2)
+    if (tile1 && tile2) {
+      options.push([discardedTile.id, tile1.id, tile2.id])
+    }
+  }
+
+  return options
 }
 
 function handleCpuWinWithResult(playerIndex: number, winTile: any, isTsumo: boolean, winResult: any) {
@@ -879,7 +1195,7 @@ function handleCpuWinWithResult(playerIndex: number, winTile: any, isTsumo: bool
       winResult.paymentInfo,
       winResult.totalPoints,
       false,
-      gameManager.value.lastDiscardPlayerIndex
+      gameManager.value.lastDiscardPlayerIndex ?? undefined
     )
   }
   
@@ -931,7 +1247,7 @@ function handleCpuWin(playerIndex: number, winTile: any, isTsumo: boolean) {
         winResult.paymentInfo,
         winResult.totalPoints,
         false,
-        gameManager.value.lastDiscardPlayerIndex
+        gameManager.value.lastDiscardPlayerIndex ?? undefined
       )
     }
     
@@ -995,6 +1311,14 @@ function onNewGame() {
 
 const showResultAndNextButtons = ref(false)
 const showDrawResultButtons = ref(false)
+
+// ポン・カン・チー関連
+const canPon = ref(false)
+const canKan = ref(false)
+const canChi = ref(false)
+const chiOptions = ref<string[][]>([]) // チーの選択肢
+const selectedChiOption = ref<string[] | null>(null)
+const lastDiscardedTile = ref<Tile | null>(null)
 
 function onWinModalClose() {
   showResultAndNextButtons.value = gameManager.value.gamePhase === 'finished'
@@ -1197,11 +1521,18 @@ onMounted(() => {
   }
 })
 
-watch(() => currentPlayerIndex.value, (newIndex) => {
+watch(() => currentPlayerIndex.value, async (newIndex) => {
   if (gamePhase.value === 'playing') {
-    // プレイヤーの手牌が13枚でない場合はツモを行わない
+    // プレイヤーの手牌が適切な枚数でない場合はツモを行わない
     const player = players.value[newIndex]
-    if (player.tiles.length !== 13) {
+    
+    // 鳴き牌を考慮した枚数計算
+    const meldTileCount = player.melds.reduce((count, meld) => {
+      return count + meld.tiles.length
+    }, 0)
+    const expectedHandTiles = 13 - meldTileCount
+    
+    if (player.tiles.length !== expectedHandTiles) {
       return
     }
     
@@ -1350,9 +1681,7 @@ watch(() => currentPlayerIndex.value, (newIndex) => {
   color: rgba(0, 0, 0, 0.5);
   margin-top: 8px;
   padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.7);
   border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* プレイヤー点数表示 */

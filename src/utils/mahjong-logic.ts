@@ -24,9 +24,10 @@ export function convertTilesToSyantenFormat(tiles: Tile[] | FourPlayerTile[]): [
 }
 
 export function calculateShanten(tiles: Tile[] | FourPlayerTile[]): number {
-  // 手牌枚数のチェック（13枚または14枚でない場合は計算不可）
-  if (tiles.length !== 13 && tiles.length !== 14) {
-    return 8 // 不正な手牌サイズの場合は最大シャンテン数を返す
+  // syantenライブラリは1,4,7,10,13,14枚などの3n+1,3n+2枚で計算可能
+  // 空の場合のみチェック
+  if (tiles.length === 0) {
+    return 8 // 空の手牌の場合は最大シャンテン数を返す
   }
   
   const [man, pin, sou, honor] = convertTilesToSyantenFormat(tiles)
@@ -43,6 +44,33 @@ export function calculateShanten(tiles: Tile[] | FourPlayerTile[]): number {
   }
 }
 
+// 鳴き牌を考慮したシャンテン数計算
+export function calculateShantenWithMelds(tiles: Tile[] | FourPlayerTile[], melds: Array<{type: 'pon' | 'kan' | 'chi', tiles: Tile[]}> = []): number {
+  // 鳴き牌の数を考慮した手牌枚数チェック
+  const meldTileCount = melds.reduce((count, meld) => count + meld.tiles.length, 0)
+  const expectedHandTiles = 13 - meldTileCount
+  const expectedTotalTiles = [expectedHandTiles, expectedHandTiles + 1] // ツモ前/後
+  
+  if (!expectedTotalTiles.includes(tiles.length)) {
+    return 8 // 不正な手牌サイズ
+  }
+  
+  // 鳴き牌がない場合は通常の計算
+  if (melds.length === 0) {
+    return calculateShanten(tiles)
+  }
+  
+  // syantenライブラリは1,4,7,10,13枚でも計算できるので、そのまま手牌を渡す
+  const handShanten = calculateShanten(tiles)
+  
+  // 鳴き牌による面子数を考慮して調整
+  // 1面子確定につき、シャンテン数が下がる
+  const adjustedShanten = handShanten - melds.length
+  
+  // 最小で-1（和了）まで
+  return Math.max(-1, adjustedShanten)
+}
+
 export function getUsefulTiles(tiles: Tile[]): number[] {
   const currentShanten = calculateShanten(tiles)
   if (currentShanten === -1) return []
@@ -54,9 +82,6 @@ export function getUsefulTiles(tiles: Tile[]): number[] {
     const testTile = createTileFromIndex(i, 'test')
     const testTiles = [...tiles, testTile]
     
-    // 手牌数チェック - 13枚または14枚の場合のみ処理
-    if (testTiles.length !== 14 && testTiles.length !== 13) continue
-    
     const newShanten = calculateShanten(testTiles)
     
     if (newShanten < currentShanten) {
@@ -65,6 +90,80 @@ export function getUsefulTiles(tiles: Tile[]): number[] {
   }
   
   return useful
+}
+
+// 鳴き牌を考慮した有効牌計算
+export function getUsefulTilesWithMelds(tiles: Tile[], melds: Array<{type: 'pon' | 'kan' | 'chi', tiles: Tile[]}> = []): number[] {
+  const currentShanten = calculateShantenWithMelds(tiles, melds)
+  if (currentShanten === -1) return []
+  
+  const useful: number[] = []
+  
+  // 4枚目の牌をチェック（手牌に同じ牌が3枚ある場合やポンしている場合）
+  const fourthTileIndices = getFourthTileOpportunities(tiles, melds)
+  
+  // 全ての可能な牌をテスト (34種類)
+  for (let i = 0; i < 34; i++) {
+    const testTile = createTileFromIndex(i, 'test')
+    const testTiles = [...tiles, testTile]
+    
+    const newShanten = calculateShantenWithMelds(testTiles, melds)
+    
+    if (newShanten < currentShanten || fourthTileIndices.includes(i)) {
+      useful.push(i)
+    }
+  }
+  
+  return [...new Set(useful)] // 重複除去
+}
+
+// 4枚目の牌の機会を検出
+function getFourthTileOpportunities(tiles: Tile[], melds: Array<{type: 'pon' | 'kan' | 'chi', tiles: Tile[]}>): number[] {
+  const opportunities: number[] = []
+  
+  // 手牌内で同じ牌が3枚ある場合
+  const tileCounts = countTilesByIndex(tiles)
+  for (const [index, count] of Object.entries(tileCounts)) {
+    if (count === 3) {
+      opportunities.push(parseInt(index))
+    }
+  }
+  
+  // ポンしている牌の4枚目
+  for (const meld of melds) {
+    if (meld.type === 'pon' && meld.tiles.length >= 3) {
+      const tile = meld.tiles[0]
+      const index = getTileIndex(tile)
+      opportunities.push(index)
+    }
+  }
+  
+  return opportunities
+}
+
+// 牌をインデックス別にカウント
+function countTilesByIndex(tiles: Tile[]): Record<number, number> {
+  const counts: Record<number, number> = {}
+  
+  for (const tile of tiles) {
+    const index = getTileIndex(tile)
+    counts[index] = (counts[index] || 0) + 1
+  }
+  
+  return counts
+}
+
+// 牌からインデックスを取得
+function getTileIndex(tile: Tile): number {
+  if (tile.suit === 'man') {
+    return tile.rank - 1
+  } else if (tile.suit === 'pin') {
+    return tile.rank - 1 + 9
+  } else if (tile.suit === 'sou') {
+    return tile.rank - 1 + 18
+  } else { // honor
+    return tile.rank - 1 + 27
+  }
 }
 
 export function createTileFromIndex(index: number, id: string): Tile {
@@ -146,7 +245,7 @@ export function calculateScore(yaku: string[], han: number, fu: number): number 
 import { calculateScore as calculateRiichiScore } from './scoring'
 
 // 麻雀の上がり判定（詳細版）
-export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTile, isTsumo: boolean, riichi: boolean, doraIndicators: FourPlayerTile[], uradoraIndicators: FourPlayerTile[] = [], isDealer: boolean = false, isIppatsu: boolean = false): {
+export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTile, isTsumo: boolean, riichi: boolean, doraIndicators: FourPlayerTile[], uradoraIndicators: FourPlayerTile[] = [], isDealer: boolean = false, isIppatsu: boolean = false, melds: Array<{type: 'pon' | 'kan' | 'chi', tiles: FourPlayerTile[], calledTile: FourPlayerTile, fromPlayer?: number}> = []): {
   isWin: boolean
   yaku: Array<{ name: string; han: number }>
   totalHan: number
@@ -168,7 +267,8 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
       doraIndicators,
       uradoraIndicators,
       isDealer,
-      isIppatsu
+      isIppatsu,
+      melds
     })
 
     if (!scoringResult) {
@@ -180,6 +280,22 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
         basePoints: 0,
         totalPoints: 0,
         paymentInfo: '',
+        yakuman: 0,
+        doraCount: 0,
+        uradoraCount: 0
+      }
+    }
+
+    // 点数が0の場合は役なしとして無効
+    if (scoringResult.totalPoints <= 0) {
+      return {
+        isWin: false,
+        yaku: scoringResult.yaku,
+        totalHan: scoringResult.han,
+        fu: scoringResult.fu,
+        basePoints: scoringResult.points,
+        totalPoints: 0,
+        paymentInfo: '0',
         yakuman: 0,
         doraCount: 0,
         uradoraCount: 0
@@ -211,7 +327,7 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
       modifiedYaku.push({ name: '裏ドラ', han: actualUradoraCount })
     }
 
-    return {
+    const finalResult = {
       isWin: true,
       yaku: modifiedYaku,
       totalHan: scoringResult.han,
@@ -223,6 +339,9 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
       doraCount: actualDoraCount,
       uradoraCount: actualUradoraCount
     }
+    
+    
+    return finalResult
   } catch (error) {
     console.error('Error in checkWinCondition:', error)
     
@@ -284,6 +403,7 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
         basePoints: 0,
         totalPoints: 0,
         paymentInfo: '',
+        yakuman: 0,
         doraCount,
         uradoraCount
       }

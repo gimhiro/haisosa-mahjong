@@ -392,9 +392,8 @@ export class CpuAI {
    * CPUがロンできるかどうかを判定する
    */
   canRon(player: Player, winTile: Tile, doraIndicators: Tile[]): boolean {
-    // ロン時は手牌に上がり牌を加えた14枚で判定する
-    const handWithWinTile = [...player.tiles, winTile]
-    const winResult = checkWinCondition(handWithWinTile, winTile, false, player.riichi, doraIndicators)
+    // ロン時は手牌13枚（player.tiles）と上がり牌（winTile）を分けて渡す
+    const winResult = checkWinCondition(player.tiles, winTile, false, player.riichi, doraIndicators, [], false, false, player.melds)
     return winResult.isWin
   }
 

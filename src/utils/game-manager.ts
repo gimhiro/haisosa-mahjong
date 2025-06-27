@@ -206,7 +206,13 @@ export class GameManager {
 
     const player = this._players[playerIndex]
 
-    if (player.tiles.length !== 13) return null
+    // 鳴き牌を考慮した枚数チェック
+    const meldTileCount = player.melds.reduce((count, meld) => {
+      return count + meld.tiles.length
+    }, 0)
+    const expectedHandTiles = 13 - meldTileCount
+    
+    if (player.tiles.length !== expectedHandTiles) return null
 
     let tile: Tile | null = null
 
@@ -453,7 +459,8 @@ export class GameManager {
         this._doraIndicators,
         uradoraIndicators,
         isDealer,                  // Pass dealer status for accurate scoring
-        this._ippatsuFlags[playerIndex] // 一発フラグ
+        this._ippatsuFlags[playerIndex], // 一発フラグ
+        player.melds               // プレイヤーのメルド情報
       )
 
       if (winResult.isWin) {
@@ -604,9 +611,11 @@ export class GameManager {
         this._doraIndicators,
         this.humanPlayer.riichi && this._wall.length >= 2 ? [this._wall[this._wall.length - 2]] : [],
         isDealer,                  // Pass dealer status for accurate scoring
-        this._ippatsuFlags[0]      // 人間プレイヤーの一発フラグ
+        this._ippatsuFlags[0],     // 人間プレイヤーの一発フラグ
+        this.humanPlayer.melds     // 人間プレイヤーのメルド情報
       )
-      return winResult.isWin
+      // 上がり形かつ点数が0より大きい場合のみロン可能
+      return winResult.isWin && winResult.totalPoints > 0
     } catch (error) {
       console.error('Error in canHumanRon scoring check:', error)
       return false

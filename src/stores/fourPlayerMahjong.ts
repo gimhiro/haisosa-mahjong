@@ -13,6 +13,13 @@ export type Tile = {
 
 export type PlayerType = 'human' | 'cpu'
 
+export type Meld = {
+  type: 'pon' | 'kan' | 'chi'
+  tiles: Tile[]
+  calledTile: Tile // 鳴いた牌
+  fromPlayer?: number // どのプレイヤーから鳴いたか (0=自分, 1=下家, 2=対面, 3=上家)
+}
+
 export type Player = {
   id: number
   name: string
@@ -20,7 +27,7 @@ export type Player = {
   difficulty?: 'easy' | 'medium' | 'hard' | 'super' // CPUの難易度
   tiles: Tile[]
   discards: Tile[]
-  melds: Tile[][]
+  melds: Meld[]
   riichi: boolean
   score: number
   wind: 'east' | 'south' | 'west' | 'north'
@@ -127,8 +134,14 @@ export const useFourPlayerMahjongStore = defineStore('fourPlayerMahjong', () => 
     
     const player = players.value[playerIndex]
     
-    // プレイヤーの手牌が13枚でない場合は引けない
-    if (player.tiles.length !== 13) return null
+    // 鳴き牌を考慮した枚数チェック
+    const meldTileCount = player.melds.reduce((count, meld) => {
+      return count + meld.tiles.length
+    }, 0)
+    const expectedHandTiles = 13 - meldTileCount
+    
+    // プレイヤーの手牌が適切な枚数でない場合は引けない
+    if (player.tiles.length !== expectedHandTiles) return null
     
     const tile = wall.value.shift()!
     player.tiles.push(tile)
@@ -143,8 +156,14 @@ export const useFourPlayerMahjongStore = defineStore('fourPlayerMahjong', () => 
     
     const player = players.value[playerIndex]
     
-    // プレイヤーの手牌が13枚でない場合は引けない
-    if (player.tiles.length !== 13) return null
+    // 鳴き牌を考慮した枚数チェック
+    const meldTileCount = player.melds.reduce((count, meld) => {
+      return count + meld.tiles.length
+    }, 0)
+    const expectedHandTiles = 13 - meldTileCount
+    
+    // プレイヤーの手牌が適切な枚数でない場合は引けない
+    if (player.tiles.length !== expectedHandTiles) return null
     
     const tile = wall.value.shift()!
     // 手牌には追加せず、currentDrawnTileに設定

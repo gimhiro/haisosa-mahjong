@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getTileText, getTileImagePath } from '../tile-renderer'
+import { getTileText, getTileImagePath, getTileImagePathYoko, getTileImageUrl } from '../tile-renderer'
 import type { Tile } from '../stores/fourPlayerMahjong'
 
 describe('tile-renderer', () => {

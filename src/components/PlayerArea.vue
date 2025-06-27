@@ -114,11 +114,12 @@
         class="meld-group"
       >
         <MahjongTile
-          v-for="tile in meld"
+          v-for="(tile, tileIndex) in meld.tiles"
           :key="tile.id"
           :tile="tile"
-          size="small"
+          :size="tileSize"
           :is-draggable="false"
+          :is-yoko="shouldTileBeYoko(meld, tileIndex)"
         />
       </div>
     </div>
@@ -127,7 +128,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Player } from '../stores/fourPlayerMahjong'
+import type { Player, Meld } from '../stores/fourPlayerMahjong'
 import type { Tile } from '../stores/fourPlayerMahjong'
 import type { GameManager } from '../utils/game-manager'
 import MahjongTile from './MahjongTile.vue'
@@ -251,6 +252,36 @@ function onTileClick(tile: Tile) {
       emit('tileDiscarded', tile.id)
     }
   } 
+}
+
+function shouldTileBeYoko(meld: Meld, tileIndex: number): boolean {
+  if (!meld.fromPlayer) {
+    return false
+  }
+  
+  // 鳴いた牌（calledTile）を横向きにする
+  const tile = meld.tiles[tileIndex]
+  const isCalledTile = tile.id === meld.calledTile.id
+  
+  if (meld.type === 'chi') {
+    // チーの場合、どのプレイヤーから鳴いたかに応じて横向きにする位置を決定
+    // fromPlayer: 1=下家(右), 2=対面, 3=上家(左) from human player perspective
+    switch (meld.fromPlayer) {
+      case 1: // 右のプレイヤーからチー → 一番右の牌を横向き
+        return tileIndex === meld.tiles.length - 1
+      case 2: // 対面のプレイヤーからチー → 真ん中の牌を横向き
+        return tileIndex === Math.floor(meld.tiles.length / 2)
+      case 3: // 左のプレイヤーからチー → 一番左の牌を横向き
+        return tileIndex === 0
+      default:
+        return false
+    }
+  } else if (meld.type === 'pon' || meld.type === 'kan') {
+    // ポン・カンの場合、鳴いた牌を横向きにする
+    return isCalledTile
+  }
+  
+  return false
 }
 </script>
 
@@ -503,9 +534,7 @@ function onTileClick(tile: Tile) {
   display: flex;
   gap: 1px;
   padding: 2px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.8);
+  align-items: flex-end; /* 下揃え */
 }
 
 /* レスポンシブ対応 */
