@@ -653,7 +653,9 @@ function onPresetChange() {
 
 /* ゲーム開始ボタン */
 .start-button-container {
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   margin-top: 3rem;
   padding-top: 2rem;
   border-top: 1px solid rgba(226, 232, 240, 0.6);
