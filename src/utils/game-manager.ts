@@ -21,11 +21,15 @@ export class GameManager {
 
   constructor() {
     this._enhancedDraw = new EnhancedDraw({ boostProbability: 0.8 })
+    
+    // ローカルストレージから設定を読み込み
+    const savedSettings = this.loadGameSettings()
+    
     this._players = [
       { id: 0, name: 'あなた', type: 'human', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'east' },
-      { id: 1, name: 'CPU1 (簡単)', type: 'cpu', difficulty: 'easy', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'south' },
-      { id: 2, name: 'CPU2 (普通)', type: 'cpu', difficulty: 'medium', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'west' },
-      { id: 3, name: 'CPU3 (超難)', type: 'cpu', difficulty: 'super', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'north' }
+      { id: 1, name: this.getCpuName(savedSettings.cpuStrengths[0], 1), type: 'cpu', difficulty: this.mapDifficulty(savedSettings.cpuStrengths[0]), tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'south' },
+      { id: 2, name: this.getCpuName(savedSettings.cpuStrengths[1], 2), type: 'cpu', difficulty: this.mapDifficulty(savedSettings.cpuStrengths[1]), tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'west' },
+      { id: 3, name: this.getCpuName(savedSettings.cpuStrengths[2], 3), type: 'cpu', difficulty: this.mapDifficulty(savedSettings.cpuStrengths[2]), tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'north' }
     ]
     this._gamePhase = 'waiting'
     this._currentPlayerIndex = 0
@@ -625,5 +629,56 @@ export class GameManager {
       discardOrder: this._discardOrder,
       kyotaku: this._kyotaku
     }
+  }
+
+  // ローカルストレージからゲーム設定を読み込み
+  private loadGameSettings(): { cpuStrengths: string[], gameType: string, agariRenchan: boolean, hakoshita: boolean } {
+    try {
+      const settingsJson = localStorage.getItem('mahjongGameSettings')
+      if (settingsJson) {
+        const settings = JSON.parse(settingsJson)
+        return {
+          cpuStrengths: settings.cpuStrengths || ['normal', 'normal', 'normal'],
+          gameType: settings.gameType || 'tonpuusen',
+          agariRenchan: settings.agariRenchan || false,
+          hakoshita: settings.hakoshita !== undefined ? settings.hakoshita : true
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load game settings:', error)
+    }
+    
+    // デフォルト設定
+    return {
+      cpuStrengths: ['normal', 'normal', 'normal'],
+      gameType: 'tonpuusen',
+      agariRenchan: false,
+      hakoshita: true
+    }
+  }
+
+  // CPU名を生成
+  private getCpuName(difficulty: string, cpuIndex: number): string {
+    const difficultyNames = {
+      easy: '簡単',
+      normal: '普通', 
+      hard: '難しい',
+      super: '超難しい'
+    }
+    
+    const difficultyName = difficultyNames[difficulty as keyof typeof difficultyNames] || '普通'
+    return `CPU${cpuIndex} (${difficultyName})`
+  }
+
+  // 文字列をタイプセーフな難易度に変換
+  private mapDifficulty(difficulty: string): 'easy' | 'medium' | 'hard' | 'super' {
+    const difficultyMap: Record<string, 'easy' | 'medium' | 'hard' | 'super'> = {
+      easy: 'easy',
+      normal: 'medium',
+      hard: 'hard', 
+      super: 'super'
+    }
+    
+    return difficultyMap[difficulty] || 'medium'
   }
 }
