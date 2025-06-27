@@ -17,6 +17,7 @@ export type Player = {
   id: number
   name: string
   type: PlayerType
+  difficulty?: 'easy' | 'medium' | 'hard' | 'super' // CPUの難易度
   tiles: Tile[]
   discards: Tile[]
   melds: Tile[][]

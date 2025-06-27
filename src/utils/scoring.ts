@@ -198,10 +198,10 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       }
 
       // 13枚の手牌を変換
-      const handNumbers = convertTilesToNumbers(handWithoutWinTile)
-      // ツモ牌を最後に追加
+      const handNumbers = convertTilesToNumbers(handWithoutWinTile).sort((a, b) => a - b)
+      // ツモ牌を最後に追加（ソートしない！最後の位置が重要）
       const winTileNumber = convertTileToNumber(input.winningTile)
-      closedPart = [...handNumbers, winTileNumber].sort((a, b) => a - b)
+      closedPart = [...handNumbers, winTileNumber]
 
     } else {
       // ロンの場合：13枚のclosed_partと上がり牌を分離
@@ -251,6 +251,8 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       allow_kuitan: true,
       allow_aka: false
     }
+
+    console.log(`[calculateScore] 一発フラグ: ${input.isIppatsu}, リーチ: ${input.isRiichi}, ツモ: ${input.isTsumo}`)
 
     // リーチの場合は裏ドラも追加
     if (input.isRiichi && uradoraNumbers.length > 0) {

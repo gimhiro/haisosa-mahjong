@@ -469,22 +469,6 @@ function resetGame() {
 // ツモボタンを削除したため、自動ツモ機能は削除
 // 人間プレイヤーのターンが開始されたときに自動的にツモする
 
-// 山の中から有効牌を探す関数
-function findUsefulTileInWall(hand: any[]): any | null {
-  const currentShanten = calculateShanten(hand)
-  
-  for (const tile of gameManager.value.wall) {
-    const testHand = [...hand, tile]
-    const newShanten = calculateShanten(testHand)
-    
-    if (newShanten < currentShanten) {
-      return tile // 有効牌発見
-    }
-  }
-  
-  return null // 有効牌がない
-}
-
 async function onHumanTileDiscard(tileId: string) {
   
   if (!isHumanTurn.value) {
@@ -517,27 +501,39 @@ async function processCpuTurn() {
     const player = currentPlayer.value
     
     
-    if (currentDrawnTile.value && checkWinConditionForPlayer(currentIndex, currentDrawnTile.value, true)) {
-      return
+    if (currentDrawnTile.value) {
+      console.log(`[processCpuTurn] プレイヤー${currentIndex} ツモ上がりチェック - リーチ: ${player.riichi}, 一発: ${gameManager.value.isIppatsu(currentIndex)}`)
+      const winResult = gameManager.value.checkWinConditionForPlayer(currentIndex, currentDrawnTile.value, true)
+      if (winResult.isWin && winResult.result) {
+        // CPU上がり処理（既にチェック済みの結果を渡す）
+        handleCpuWinWithResult(currentIndex, currentDrawnTile.value, true, winResult.result)
+        return
+      }
     }
     
     const ai = cpuAIs[currentIndex as 1 | 2 | 3]
     
     if (ai) {
+      // プレイヤーの難易度をAIに設定（初期化時のみ）
+      if (player.difficulty) {
+        ai.setDifficulty(player.difficulty)
+      }
+      
       const allTiles = currentDrawnTile.value ? [...player.tiles, currentDrawnTile.value] : player.tiles
       
       const decision = await ai.makeDecision({ ...player, tiles: allTiles }, currentDrawnTile.value)
     
     if (decision.action === 'riichi') {
-      // リーチ宣言
-      const riichiSuccess = gameManager.value.declareRiichi(currentIndex)
+      // リーチ宣言前にテンパイにするための捨て牌を決定
+      const riichiDiscardTile = ai.getRiichiDiscardTile(player, currentDrawnTile.value)
       
-      if (riichiSuccess) {
-        // リーチ後は最適な捨て牌を決定する
-        const tileToDiscard = ai.decideTileToDiscard(player, currentDrawnTile.value)
+      if (riichiDiscardTile) {
+        // リーチ宣言
+        const riichiSuccess = gameManager.value.declareRiichi(currentIndex)
         
-        if (tileToDiscard) {
-          const discardSuccess = gameManager.value.discardTile(currentIndex, tileToDiscard, true)
+        if (riichiSuccess) {
+          // リーチ宣言と同時に決定した牌を捨てる
+          const discardSuccess = gameManager.value.discardTile(currentIndex, riichiDiscardTile, true)
           
           if (discardSuccess) {
             // CPUが牌を捨てた後、人間プレイヤーがロン可能かチェック
@@ -694,6 +690,14 @@ function declareTsumo() {
       // 供託分を加算
       gameManager.value.applyKyotakuToWinner(0)
       
+      // 点数移動を実行（ツモ）
+      gameManager.value.executeScoreTransfer(
+        0, // winner index (human player)
+        winResult.result.paymentInfo,
+        winResult.result.totalPoints,
+        true // isTsumo
+      )
+      
       // ゲーム状態を終了に変更
       gameManager.value.gamePhase = 'finished'
       showWinModal.value = true
@@ -730,6 +734,15 @@ function declareRon() {
       // 供託分を加算
       gameManager.value.applyKyotakuToWinner(0)
       
+      // 点数移動を実行（ロン）
+      gameManager.value.executeScoreTransfer(
+        0, // winner index (human player)
+        winResult.result.paymentInfo,
+        winResult.result.totalPoints,
+        false, // isTsumo
+        gameManager.value.lastDiscardPlayerIndex // ron target
+      )
+      
       // ゲーム状態を終了に変更
       gameManager.value.gamePhase = 'finished'
       showWinModal.value = true
@@ -743,36 +756,115 @@ function cancelRon() {
   gameManager.value.nextTurn()
 }
 
+function handleCpuWinWithResult(playerIndex: number, winTile: any, isTsumo: boolean, winResult: any) {
+  const player = players.value[playerIndex]
+  
+  // 実際の上がり確定時に一発フラグをリセット
+  gameManager.value.checkWinConditionForPlayer(playerIndex, winTile, isTsumo, true)
+  
+  winModalData.value = {
+    winner: player,
+    winningHand: [...player.tiles, winTile],
+    winningTile: winTile,
+    isTsumo,
+    basePoints: winResult.basePoints,
+    totalPoints: winResult.totalPoints,
+    paymentInfo: winResult.paymentInfo,
+    yaku: winResult.yaku,
+    totalHan: winResult.totalHan,
+    fu: winResult.fu,
+    doraIndicators: doraIndicators.value,
+    doraCount: winResult.doraCount,
+    uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
+    uradoraCount: winResult.uradoraCount
+  }
+  
+  // 供託分を加算
+  gameManager.value.applyKyotakuToWinner(playerIndex)
+  
+  // 点数移動を実行
+  if (isTsumo) {
+    gameManager.value.executeScoreTransfer(
+      playerIndex,
+      winResult.paymentInfo,
+      winResult.totalPoints,
+      true
+    )
+  } else {
+    // ロンの場合（放銃者のインデックスを特定する必要がある）
+    gameManager.value.executeScoreTransfer(
+      playerIndex,
+      winResult.paymentInfo,
+      winResult.totalPoints,
+      false,
+      gameManager.value.lastDiscardPlayerIndex
+    )
+  }
+  
+  // ゲーム状態を終了に変更
+  gameManager.value.gamePhase = 'finished'
+  showWinModal.value = true
+}
+
+function handleCpuWin(playerIndex: number, winTile: any, isTsumo: boolean) {
+  const result = gameManager.value.checkWinConditionForPlayer(playerIndex, winTile, isTsumo, true)
+  
+  if (result.isWin && result.result) {
+    const player = players.value[playerIndex]
+    const winResult = result.result
+    
+    winModalData.value = {
+      winner: player,
+      winningHand: [...player.tiles, winTile],
+      winningTile: winTile,
+      isTsumo,
+      basePoints: winResult.basePoints,
+      totalPoints: winResult.totalPoints,
+      paymentInfo: winResult.paymentInfo,
+      yaku: winResult.yaku,
+      totalHan: winResult.totalHan,
+      fu: winResult.fu,
+      doraIndicators: doraIndicators.value,
+      doraCount: winResult.doraCount,
+      uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
+      uradoraCount: winResult.uradoraCount
+    }
+    
+    // 供託分を加算
+    gameManager.value.applyKyotakuToWinner(playerIndex)
+    
+    // 点数移動を実行
+    if (isTsumo) {
+      gameManager.value.executeScoreTransfer(
+        playerIndex,
+        winResult.paymentInfo,
+        winResult.totalPoints,
+        true
+      )
+    } else {
+      // ロンの場合（放銃者のインデックスを特定する必要がある）
+      gameManager.value.executeScoreTransfer(
+        playerIndex,
+        winResult.paymentInfo,
+        winResult.totalPoints,
+        false,
+        gameManager.value.lastDiscardPlayerIndex
+      )
+    }
+    
+    // ゲーム状態を終了に変更
+    gameManager.value.gamePhase = 'finished'
+    showWinModal.value = true
+  }
+}
+
 function checkWinConditionForPlayer(playerIndex: number, winTile: any, isTsumo: boolean): boolean {
   const result = gameManager.value.checkWinConditionForPlayer(playerIndex, winTile, isTsumo)
   
   if (result.isWin && result.result) {
     // CPUプレイヤーの場合は自動で上がる
     if (players.value[playerIndex].type === 'cpu') {
-      const player = players.value[playerIndex]
-      const winResult = result.result
-      
-      winModalData.value = {
-        winner: player,
-        winningHand: [...player.tiles, winTile],
-        winningTile: winTile,
-        isTsumo,
-        basePoints: winResult.basePoints,
-        totalPoints: winResult.totalPoints,
-        paymentInfo: winResult.paymentInfo,
-        yaku: winResult.yaku,
-        totalHan: winResult.totalHan,
-        fu: winResult.fu,
-        doraIndicators: doraIndicators.value,
-        doraCount: winResult.doraCount,
-        uradoraIndicators: winResult.uradoraCount > 0 ? [gameManager.value.wall[gameManager.value.wall.length - 1]] : [],
-        uradoraCount: winResult.uradoraCount
-      }
-      
-      // 供託分を加算
-      gameManager.value.applyKyotakuToWinner(playerIndex)
-      
-      showWinModal.value = true
+      handleCpuWin(playerIndex, winTile, isTsumo)
       return true
     }
     
@@ -841,24 +933,9 @@ watch(() => currentPlayerIndex.value, (newIndex, oldIndex) => {
       return
     }
     
-    // 人間プレイヤーの場合は80%確率で有効牌を引く
-    if (players.value[newIndex].type === 'human') {
-      if (player.tiles.length === 13) {
-        // 80%の確率で有効牌を引く
-        if (Math.random() < 0.8) {
-          const usefulTile = findUsefulTileInWall(player.tiles)
-          if (usefulTile) {
-            const tileIndex = gameManager.value.wall.findIndex(t => t.id === usefulTile.id)
-            if (tileIndex !== -1) {
-              gameManager.value.wall.splice(tileIndex, 1)
-              gameManager.value.currentDrawnTile = usefulTile
-              return
-            }
-          }
-        }
-      }
-    }
-    
+    // すべてのプレイヤーはdrawTileAndKeepSeparateを使用
+    // （super CPUの場合は内部で有効牌処理が行われる）
+    console.log(`[Watch] プレイヤー${newIndex} (${players.value[newIndex].name})のターン開始`)
     const drawnTile = gameManager.value.drawTileAndKeepSeparate(newIndex)
     
     if (players.value[newIndex].type === 'cpu') {

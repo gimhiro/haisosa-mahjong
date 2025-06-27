@@ -1,5 +1,6 @@
 import type { Tile, Player, GamePhase } from '../stores/fourPlayerMahjong'
 import { canRiichi, checkWinCondition, calculateShanten } from './mahjong-logic'
+import { EnhancedDraw } from './enhanced-draw'
 
 export class GameManager {
   private _players: Player[]
@@ -16,13 +17,15 @@ export class GameManager {
   private _renchan: boolean = false // 上がり連荘設定
   private _kyotaku: number = 0 // 供託の本数
   private _ippatsuFlags: boolean[] = [false, false, false, false] // 各プレイヤーの一発フラグ
+  private _enhancedDraw: EnhancedDraw
 
   constructor() {
+    this._enhancedDraw = new EnhancedDraw({ boostProbability: 0.8 })
     this._players = [
       { id: 0, name: 'あなた', type: 'human', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'east' },
-      { id: 1, name: 'CPU1 (簡単)', type: 'cpu', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'south' },
-      { id: 2, name: 'CPU2 (普通)', type: 'cpu', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'west' },
-      { id: 3, name: 'CPU3 (難しい)', type: 'cpu', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'north' }
+      { id: 1, name: 'CPU1 (簡単)', type: 'cpu', difficulty: 'easy', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'south' },
+      { id: 2, name: 'CPU2 (普通)', type: 'cpu', difficulty: 'medium', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'west' },
+      { id: 3, name: 'CPU3 (超難)', type: 'cpu', difficulty: 'super', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'north' }
     ]
     this._gamePhase = 'waiting'
     this._currentPlayerIndex = 0
@@ -104,13 +107,14 @@ export class GameManager {
   private updateIppatsuFlags(currentPlayerIndex: number, isRiichiDeclaration: boolean): void {
     // リーチ宣言の場合は一発フラグの更新はスキップ
     if (isRiichiDeclaration) {
+      console.log(`[updateIppatsuFlags] プレイヤー${currentPlayerIndex} リーチ宣言牌なので一発フラグ維持`)
       return
     }
 
     // リーチ宣言後の通常の捨て牌の場合、そのプレイヤーの一発フラグを無効化
     if (this._ippatsuFlags[currentPlayerIndex]) {
+      console.log(`[updateIppatsuFlags] プレイヤー${currentPlayerIndex} 自分の捨て牌で一発フラグを無効化`)
       this._ippatsuFlags[currentPlayerIndex] = false
-    } else {
     }
 
     // 鳴きがあった場合は全プレイヤーの一発を無効化
@@ -190,10 +194,32 @@ export class GameManager {
 
     if (player.tiles.length !== 13) return null
 
-    const tile = this._wall.shift()!
-    this._currentDrawnTile = tile
+    let tile: Tile | null = null
 
-    return tile
+    // super難易度のCPUまたは人間プレイヤーの場合、EnhancedDrawを使用
+    if (player.difficulty === 'super' || playerIndex === 0) {
+      const drawnTile = this._enhancedDraw.drawEnhancedTile(player.tiles, this._wall)
+      if (drawnTile) {
+        // 山から引いた牌を除去
+        const index = this._wall.findIndex(t => t.id === drawnTile.id)
+        if (index !== -1) {
+          this._wall.splice(index, 1)
+          tile = drawnTile
+        }
+      }
+    }
+
+    // 通常の引き方（super難易度でない場合、または有効牌が引けなかった場合）
+    if (!tile && this._wall.length > 0) {
+      tile = this._wall.shift()!
+    }
+
+    if (tile) {
+      this._currentDrawnTile = tile
+      return tile
+    }
+
+    return null
   }
 
   discardTile(playerIndex: number, tileId: string, isRiichiDeclaration: boolean = false): boolean {
@@ -329,6 +355,7 @@ export class GameManager {
       player.melds = []
       player.riichi = false
       player.score = 25000
+      // 難易度は維持する（リセットしない）
     })
   }
 
@@ -359,6 +386,7 @@ export class GameManager {
       player.score -= 1000
       this._kyotaku++
       this._ippatsuFlags[playerIndex] = true // 一発フラグを設定
+      console.log(`[declareRiichi] プレイヤー${playerIndex} リーチ宣言、一発フラグ設定: ${this._ippatsuFlags[playerIndex]}`)
       return true
     }
     return false
@@ -420,6 +448,52 @@ export class GameManager {
       this._kyotaku = 0
     }
     return kyotakuPoints
+  }
+
+  // 点数移動を実行する
+  executeScoreTransfer(winnerIndex: number, paymentInfo: string, totalPoints: number, isTsumo: boolean, ronTargetIndex?: number): void {
+    const winner = this._players[winnerIndex]
+    const isWinnerDealer = winnerIndex === this._dealer
+
+    if (isTsumo) {
+      // ツモの場合の点数移動
+      if (isWinnerDealer) {
+        // 親のツモ: 全員から同額支払い
+        const match = paymentInfo.match(/(\d+) all/)
+        if (match) {
+          const eachPayment = parseInt(match[1])
+          for (let i = 0; i < 4; i++) {
+            if (i !== winnerIndex) {
+              this._players[i].score -= eachPayment
+            }
+          }
+          winner.score += totalPoints
+        }
+      } else {
+        // 子のツモ: 親は2倍、子は1倍
+        const match = paymentInfo.match(/(\d+)-(\d+)/)
+        if (match) {
+          const koPayment = parseInt(match[1])
+          const oyaPayment = parseInt(match[2])
+          
+          for (let i = 0; i < 4; i++) {
+            if (i !== winnerIndex) {
+              const isDealer = i === this._dealer
+              const payment = isDealer ? oyaPayment : koPayment
+              this._players[i].score -= payment
+            }
+          }
+          winner.score += totalPoints
+        }
+      }
+    } else {
+      // ロンの場合の点数移動
+      if (ronTargetIndex !== undefined) {
+        const ronTarget = this._players[ronTargetIndex]
+        ronTarget.score -= totalPoints
+        winner.score += totalPoints
+      }
+    }
   }
 
   getPlayerDiscardRow(playerIndex: number, rowIndex: number): Tile[] {

@@ -1,5 +1,5 @@
 import type { Tile } from '../stores/mahjong'
-import { getUsefulTiles, createTileFromIndex } from './mahjong-logic'
+import { getUsefulTiles, createTileFromIndex, calculateShanten } from './mahjong-logic'
 import weighted from 'weighted'
 import seedrandom from 'seedrandom'
 
@@ -33,7 +33,8 @@ export class EnhancedDraw {
     const usefulTileIndices = getUsefulTiles(hand)
 
     // 有効牌が存在し、かつブースト確率に当選した場合
-    if (usefulTileIndices.length > 0 && this.rng() < this.options.boostProbability) {
+    const randomValue = this.rng()
+    if (usefulTileIndices.length > 0 && randomValue < this.options.boostProbability) {
       return this.drawUsefulTile(usefulTileIndices, availableTiles)
     }
 
@@ -64,9 +65,6 @@ export class EnhancedDraw {
 
     const selectedId = weighted.select(weights)
     const selectedTile = availableUsefulTiles.find(t => t.id === selectedId)!
-
-    if (this.options.enableDebugLog) {
-    }
 
     return selectedTile
   }

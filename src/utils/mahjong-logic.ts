@@ -54,8 +54,8 @@ export function getUsefulTiles(tiles: Tile[]): number[] {
     const testTile = createTileFromIndex(i, 'test')
     const testTiles = [...tiles, testTile]
     
-    // 手牌数チェック
-    if (testTiles.length % 3 !== 1) continue
+    // 手牌数チェック - 13枚または14枚の場合のみ処理
+    if (testTiles.length !== 14 && testTiles.length !== 13) continue
     
     const newShanten = calculateShanten(testTiles)
     
@@ -69,13 +69,13 @@ export function getUsefulTiles(tiles: Tile[]): number[] {
 
 export function createTileFromIndex(index: number, id: string): Tile {
   if (index < 9) {
-    return { id, suit: 'man', rank: index + 1 }
+    return { id, suit: 'man', rank: index + 1, isRed: false } as any
   } else if (index < 18) {
-    return { id, suit: 'pin', rank: index - 9 + 1 }
+    return { id, suit: 'pin', rank: index - 9 + 1, isRed: false } as any
   } else if (index < 27) {
-    return { id, suit: 'sou', rank: index - 18 + 1 }
+    return { id, suit: 'sou', rank: index - 18 + 1, isRed: false } as any
   } else {
-    return { id, suit: 'honor', rank: index - 27 + 1 }
+    return { id, suit: 'honor', rank: index - 27 + 1, isRed: false } as any
   }
 }
 

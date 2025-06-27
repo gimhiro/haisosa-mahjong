@@ -2,9 +2,14 @@ import type { Tile, Player } from '../stores/fourPlayerMahjong'
 import { calculateShanten, getUsefulTiles } from './mahjong-logic'
 
 export class CpuAI {
-  private difficulty: 'easy' | 'medium' | 'hard'
+  private difficulty: 'easy' | 'medium' | 'hard' | 'super'
 
-  constructor(difficulty: 'easy' | 'medium' | 'hard' = 'medium') {
+  constructor(difficulty: 'easy' | 'medium' | 'hard' | 'super' = 'medium') {
+    this.difficulty = difficulty
+  }
+
+  // 動的に難易度を設定するメソッド
+  setDifficulty(difficulty: 'easy' | 'medium' | 'hard' | 'super'): void {
     this.difficulty = difficulty
   }
 
@@ -18,6 +23,12 @@ export class CpuAI {
       return ''
     }
 
+    // リーチ後はツモ切りのみ
+    if (player.riichi && drawnTile) {
+      console.log(`[CPU AI ${player.id}] リーチ後ツモ切り: ${drawnTile.suit}${drawnTile.rank}`)
+      return drawnTile.id
+    }
+
     // 難易度による戦略
     switch (this.difficulty) {
       case 'easy':
@@ -25,6 +36,7 @@ export class CpuAI {
       case 'medium':
         return this.mediumAIDiscard(allTiles)
       case 'hard':
+      case 'super':
         return this.hardAIDiscard(allTiles)
       default:
         return this.randomDiscard(allTiles)
@@ -43,7 +55,9 @@ export class CpuAI {
    * 中級AI: シャンテン数を考慮して捨てる
    */
   private mediumAIDiscard(tiles: Tile[]): string {
-    const currentShanten = calculateShanten(tiles)
+    // allTilesの最後がツモ牌なので、これを除いた13枚でシャンテン数を計算
+    const handTiles = tiles.slice(0, -1) // 最後のツモ牌を除いた13枚
+    const currentShanten = calculateShanten(handTiles)
     const candidates: { tileId: string, shanten: number, score: number }[] = []
 
     // 各牌を捨てた場合のシャンテン数を計算
@@ -88,10 +102,100 @@ export class CpuAI {
   }
 
   /**
+   * 牌が孤立牌かどうかを判定する
+   */
+  private isIsolatedTile(tile: Tile, tiles: Tile[]): boolean {
+    if (tile.suit === 'honor') {
+      // 字牌の場合は同じ牌が1枚のみで孤立
+      return tiles.filter(t => t.suit === tile.suit && t.rank === tile.rank).length === 1
+    }
+
+    // 数牌の場合：同じ牌が複数あるか、隣接する牌があるかをチェック
+    const sameRankCount = tiles.filter(t => t.suit === tile.suit && t.rank === tile.rank).length
+
+    // 同じ牌が2枚以上あれば孤立ではない（対子・刻子の可能性）
+    if (sameRankCount >= 2) {
+      return false
+    }
+
+    // 隣接する牌があるかチェック（カンチャン塔子も考慮）
+    const hasNearby = tiles.some(t =>
+      t.suit === tile.suit &&
+      t.rank !== tile.rank &&
+      Math.abs(t.rank - tile.rank) <= 2  // 差が2以内なら塔子の可能性あり
+    )
+
+    return !hasNearby
+  }
+
+  /**
+   * 塔子の種類を判定する
+   */
+  private getTaatsuType(tile: Tile, tiles: Tile[]): 'ryanmen' | 'kanchan' | 'penchan' | 'shanpon' | 'none' {
+    if (tile.suit === 'honor') {
+      // 字牌は対子のみ考慮
+      const count = tiles.filter(t => t.suit === tile.suit && t.rank === tile.rank).length
+      return count >= 2 ? 'shanpon' : 'none'
+    }
+
+    const suitTiles = tiles.filter(t => t.suit === tile.suit)
+    const sameCount = suitTiles.filter(t => t.rank === tile.rank).length
+
+    // 対子の場合
+    if (sameCount >= 2) {
+      return 'shanpon'
+    }
+
+    // 数牌の塔子判定
+    const hasMinusTwo = suitTiles.some(t => t.rank === tile.rank - 2)
+    const hasMinusOne = suitTiles.some(t => t.rank === tile.rank - 1)
+    const hasPlusOne = suitTiles.some(t => t.rank === tile.rank + 1)
+    const hasPlusTwo = suitTiles.some(t => t.rank === tile.rank + 2)
+
+    // ペンチャン判定 (12, 89)
+    if (tile.rank === 1 && hasPlusOne && !hasPlusTwo) return 'penchan'
+    if (tile.rank === 2 && hasMinusOne && !hasMinusTwo) return 'penchan'
+    if (tile.rank === 8 && hasPlusOne && !hasMinusTwo) return 'penchan'
+    if (tile.rank === 9 && hasMinusOne && !hasMinusTwo) return 'penchan'
+
+    // リャンメン判定
+    if (hasMinusOne && hasPlusOne) return 'ryanmen'
+    if (tile.rank >= 2 && tile.rank <= 8) {
+      if (hasMinusOne || hasPlusOne) return 'ryanmen'
+    }
+
+    // カンチャン判定
+    if (hasMinusTwo || hasPlusTwo) return 'kanchan'
+
+    return 'none'
+  }
+
+  /**
+   * 対子の数を数える
+   */
+  private countPairs(tiles: Tile[]): number {
+    const counts = new Map<string, number>()
+
+    for (const tile of tiles) {
+      const key = `${tile.suit}-${tile.rank}`
+      counts.set(key, (counts.get(key) || 0) + 1)
+    }
+
+    let pairCount = 0
+    for (const count of counts.values()) {
+      if (count >= 2) pairCount++
+    }
+
+    return pairCount
+  }
+
+  /**
    * 上級AI: より複雑な戦略
    */
   private hardAIDiscard(tiles: Tile[]): string {
-    const currentShanten = calculateShanten(tiles)
+    // allTilesの最後がツモ牌なので、これを除いた13枚でシャンテン数を計算
+    const handTiles = tiles.slice(0, -1) // 最後のツモ牌を除いた13枚
+    const currentShanten = calculateShanten(handTiles)
     const candidates: { tileId: string, shanten: number, score: number }[] = []
 
     for (const tile of tiles) {
@@ -104,23 +208,43 @@ export class CpuAI {
 
         // シャンテン数改善への大きなボーナス
         if (newShanten < currentShanten) {
+          score += 300
+        }
+
+        // 孤立牌を最優先で捨てる
+        if (this.isIsolatedTile(tile, tiles)) {
           score += 200
         }
 
-        // 字牌を優先的に捨てる
-        if (tile.suit === 'honor') {
-          score += 80
+        // 塔子の種類と対子数による細かい優先順位
+        const taatsuType = this.getTaatsuType(tile, tiles)
+        const pairCount = this.countPairs(tiles)
+
+        if (taatsuType === 'shanpon' && pairCount >= 3) {
+          // 対子が3つ以上ある場合のシャンポン形
+          if (tile.suit !== 'honor' && tile.rank >= 3 && tile.rank <= 7) {
+            score += 100  // 中張牌の対子
+          } else if (tile.suit !== 'honor' && (tile.rank === 1 || tile.rank === 9)) {
+            score += 120  // 1,9牌の対子
+          } else if (tile.suit === 'honor') {
+            score += 140  // 字牌の対子
+          }
+        } else if (taatsuType === 'penchan') {
+          score += 80  // ペンチャン
+        } else if (taatsuType === 'kanchan') {
+          score += 60  // カンチャン
+        } else if (taatsuType === 'ryanmen') {
+          score += 0   // リャンメンは残したい
         }
 
-        // 1,9牌も捨てやすい
-        if (tile.suit !== 'honor' && (tile.rank === 1 || tile.rank === 9)) {
-          score += 40
-        }
-
-        // 中張牌の価値を評価（連続性を考慮）
-        if (tile.suit !== 'honor' && tile.rank >= 3 && tile.rank <= 7) {
-          // 中張牌は基本的に残したい
-          score -= 20
+        // その他の基本的な評価
+        if (taatsuType === 'none') {
+          // 塔子を形成していない牌の評価
+          if (tile.suit === 'honor') {
+            score += 50
+          } else if (tile.rank === 1 || tile.rank === 9) {
+            score += 30
+          }
         }
 
         candidates.push({ tileId: tile.id, shanten: newShanten, score })
@@ -159,11 +283,12 @@ export class CpuAI {
   shouldDeclareRiichi(player: Player, drawnTile: Tile | null): boolean {
     if (player.riichi) return false // 既にリーチ済み
     if (player.score < 1000) return false // 点数不足
-    if (!drawnTile) return false // ツモ牌がない
 
-    // 14枚でリーチ可能かチェック（手牌13枚+ツモ牌1枚）
-    const allTiles = [...player.tiles, drawnTile]
+    // player.tilesに既にdrawnTileが含まれているかチェック
+    const allTiles = drawnTile && player.tiles.length === 13 ? [...player.tiles, drawnTile] : player.tiles
     if (allTiles.length !== 14) return false
+
+    console.log(`[CPU AI ${player.id}] リーチ判定開始 - 手牌:`, allTiles.map(t => `${t.suit}${t.rank}`).join(' '))
 
     // 各牌を捨てた時にテンパイになるかチェック
     let canReach = false
@@ -172,43 +297,64 @@ export class CpuAI {
       const shanten = calculateShanten(remainingTiles)
       if (shanten === 0) {
         canReach = true
+        console.log(`[CPU AI ${player.id}] テンパイ確認！${tile.suit}${tile.rank}を捨ててリーチ可能`)
         break
       }
     }
 
-    if (!canReach) return false
+    if (!canReach) {
+      console.log(`[CPU AI ${player.id}] リーチ不可 - テンパイになる捨て牌がない`)
+      return false
+    }
 
     // リーチ可能状態なら積極的にリーチ
-    switch (this.difficulty) {
-      case 'easy':
-        return Math.random() < 0.7 // 70%の確率
-      case 'medium':
-        return Math.random() < 0.85 // 85%の確率
-      case 'hard':
-        return Math.random() < 0.95 // 95%の確率
-      default:
-        return false
+    const shouldRiichi = (() => {
+      switch (this.difficulty) {
+        case 'easy':
+          return Math.random() < 0.7 // 70%の確率
+        case 'medium':
+          return Math.random() < 0.85 // 85%の確率
+        case 'hard':
+          return Math.random() < 0.95 // 95%の確率
+        case 'super':
+          return true // 100%リーチ
+        default:
+          return false
+      }
+    })()
+
+    console.log(`[CPU AI ${player.id}] リーチ判定結果: ${shouldRiichi}`)
+    return shouldRiichi
+  }
+
+  /**
+   * リーチ宣言時に捨てるべき牌を決定する
+   */
+  getRiichiDiscardTile(player: Player, drawnTile: Tile | null): string | null {
+    // player.tilesに既にdrawnTileが含まれているかチェック
+    const allTiles = drawnTile && player.tiles.length === 13 ? [...player.tiles, drawnTile] : player.tiles
+    if (allTiles.length !== 14) return null
+
+    // 各牌を捨てた時にテンパイになる牌を探す
+    for (const tile of allTiles) {
+      const remainingTiles = allTiles.filter(t => t.id !== tile.id)
+      const shanten = calculateShanten(remainingTiles)
+      if (shanten === 0) {
+        console.log(`[CPU AI ${player.id}] リーチ用捨て牌決定: ${tile.suit}${tile.rank}`)
+        return tile.id
+      }
     }
+
+    return null
   }
 
   /**
    * CPUのターン全体の処理時間（ミリ秒）
    */
   getThinkingTime(): number {
-    const baseTime = 500
+    const baseTime = 10
     // const randomTime = Math.random() * 1000
-    const randomTime = 10
-
-    switch (this.difficulty) {
-      case 'easy':
-        return baseTime + randomTime * 0.5 // 0.5-1秒
-      case 'medium':
-        return baseTime + randomTime * 1.0 // 0.5-1.5秒
-      case 'hard':
-        return baseTime + randomTime * 1.5 // 0.5-2秒
-      default:
-        return baseTime
-    }
+    return baseTime
   }
 
   /**
@@ -221,6 +367,12 @@ export class CpuAI {
     // 思考時間をシミュレート
     await new Promise(resolve => setTimeout(resolve, this.getThinkingTime()))
 
+    // リーチ後はツモ切りのみ
+    if (player.riichi && drawnTile) {
+      console.log(`[CPU AI ${player.id}] リーチ後ツモ切り: ${drawnTile.suit}${drawnTile.rank}`)
+      return { action: 'discard', tileId: drawnTile.id }
+    }
+
     // リーチ判定（ツモ牌を含めて判定）
     if (this.shouldDeclareRiichi(player, drawnTile)) {
       return { action: 'riichi' }
@@ -232,9 +384,9 @@ export class CpuAI {
   }
 }
 
-// 各CPU用のAIインスタンス
+// 各CPU用のAIインスタンス（動的に難易度を適用）
 export const cpuAIs = {
   1: new CpuAI('easy'),
   2: new CpuAI('medium'),
-  3: new CpuAI('hard')
+  3: new CpuAI('super')
 }
