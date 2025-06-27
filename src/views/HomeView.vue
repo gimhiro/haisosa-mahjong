@@ -13,18 +13,54 @@ const gameSettings = ref({
   hakoshita: true // 箱下
 })
 
-const cpuStrengthOptions = [
-  { value: 'easy', title: '簡単' },
-  { value: 'normal', title: '普通' },
-  { value: 'hard', title: '難しい' },
-  { value: 'super', title: '超難しい' }
-]
 
 const cpuPresetOptions = [
-  { value: 'normal', title: '普通 × 3', description: 'バランスの取れた難易度' },
-  { value: 'hard', title: '難しい × 3', description: '上級者向け' },
-  { value: 'super', title: '超難しい × 3', description: '最高難易度' },
-  { value: 'custom', title: '詳細設定', description: 'CPUごとに個別設定' }
+  { 
+    value: 'normal', 
+    title: '普通 × 3', 
+    description: 'バランスの取れた難易度',
+    detail: '適度な判断力で、初心者から中級者におすすめ'
+  },
+  { 
+    value: 'hard', 
+    title: '難しい × 3', 
+    description: '上級者向け',
+    detail: '高い判断力で効率的に打牌、中級者以上向け'
+  },
+  { 
+    value: 'super', 
+    title: '超難しい × 3', 
+    description: '最高難易度',
+    detail: '最適解に近い打牌、上級者向けの高難易度'
+  },
+  { 
+    value: 'custom', 
+    title: '詳細設定', 
+    description: 'CPUごとに個別設定',
+    detail: 'CPU1〜3の強さを個別にカスタマイズ'
+  }
+]
+
+const cpuStrengthOptions = [
+  { value: 'easy', title: '簡単', description: '基本的な判断のみ、初心者向け' },
+  { value: 'normal', title: '普通', description: 'バランスの取れた判断力' },
+  { value: 'hard', title: '難しい', description: '高い判断力で効率的な打牌' },
+  { value: 'super', title: '超難しい', description: '最適解に近い高度な判断' }
+]
+
+const gameTypeOptions = [
+  { 
+    value: 'tonpuusen', 
+    title: '東風戦', 
+    description: '東場のみ（4局）の短時間戦',
+    icon: 'mdi-clock-fast'
+  },
+  { 
+    value: 'tonnanssen', 
+    title: '東南戦', 
+    description: '東場・南場（8局）の本格戦',
+    icon: 'mdi-clock'
+  }
 ]
 
 function startUkeireDemo() {
@@ -62,181 +98,182 @@ function onPresetChange() {
 </script>
 
 <template>
-  <v-container class="home-view">
-    <v-row justify="center">
-      <v-col cols="12" md="10" lg="8">
-        <v-card class="welcome-card" elevation="8">
-          <v-card-title class="text-h3 text-center">
-            麻雀アプリ
-          </v-card-title>
+  <div class="home-view">
+    <!-- メインタイトル -->
+    <div class="title-section">
+      <h1 class="main-title">牌操作麻雀</h1>
+      <p class="main-subtitle">リアルタイム牌操作で楽しむ本格4人対戦麻雀</p>
+    </div>
+
+    <!-- ゲーム開始設定パネル -->
+    <div class="panel-container">
+      <v-card class="game-settings-panel" elevation="12">
+          <div class="panel-header">
+            <v-icon class="header-icon">mdi-gamepad-variant</v-icon>
+            <h2 class="panel-title">ゲーム設定</h2>
+            <div class="header-decoration"></div>
+          </div>
           
-          <v-card-subtitle class="text-h6 text-center">
-            riichi-rs-bundlers 受け入れ計算デモ & 4人対戦
-          </v-card-subtitle>
-          
-          <v-card-text>
-            <!-- ゲーム開始設定パネル -->
-            <v-card class="game-settings-panel mt-4" variant="outlined">
-              <v-card-title class="text-h5">
-                <v-icon start>mdi-cog</v-icon>
-                ゲーム設定
-              </v-card-title>
-              
-              <v-card-text>
-                <v-row>
-                  <!-- CPU強さ設定 -->
-                  <v-col cols="12">
-                    <v-card variant="outlined" class="mb-4">
-                      <v-card-subtitle class="font-weight-bold">CPU の強さ</v-card-subtitle>
-                      <v-card-text>
-                        <v-radio-group 
-                          v-model="gameSettings.cpuStrengthPreset"
-                          @update:model-value="onPresetChange"
-                        >
-                          <v-radio
-                            v-for="preset in cpuPresetOptions"
-                            :key="preset.value"
-                            :value="preset.value"
-                            :label="preset.title"
-                          >
-                            <template #label>
-                              <div>
-                                <div class="font-weight-medium">{{ preset.title }}</div>
-                                <div class="text-caption text-medium-emphasis">{{ preset.description }}</div>
-                              </div>
-                            </template>
-                          </v-radio>
-                        </v-radio-group>
-                        
-                        <!-- 詳細設定 -->
-                        <v-expand-transition>
-                          <div v-show="gameSettings.cpuStrengthPreset === 'custom'" class="mt-4">
-                            <v-divider class="mb-4"></v-divider>
-                            <div class="text-subtitle-2 mb-3">個別CPU設定</div>
-                            <v-row>
-                              <v-col cols="12" sm="4" v-for="(strength, index) in gameSettings.customCpuStrengths" :key="index">
-                                <v-select
-                                  v-model="gameSettings.customCpuStrengths[index]"
-                                  :items="cpuStrengthOptions"
-                                  :label="`CPU${index + 1}`"
-                                  variant="outlined"
-                                  density="comfortable"
-                                />
-                              </v-col>
-                            </v-row>
-                          </div>
-                        </v-expand-transition>
-                      </v-card-text>
-                    </v-card>
-                  </v-col>
+          <v-card-text class="pa-8">
+            <v-row class="settings-grid">
+              <!-- CPU強さ設定 -->
+              <v-col cols="12">
+                <div class="setting-section">
+                  <div class="section-header">
+                    <v-icon class="section-icon">mdi-robot</v-icon>
+                    <h3 class="section-title">CPU の強さ</h3>
+                  </div>
                   
+                  <div class="preset-grid">
+                    <div
+                      v-for="preset in cpuPresetOptions"
+                      :key="preset.value"
+                      :class="['preset-card', { 'preset-card--selected': gameSettings.cpuStrengthPreset === preset.value }]"
+                      @click="gameSettings.cpuStrengthPreset = preset.value; onPresetChange()"
+                    >
+                      <div class="preset-card-inner">
+                        <div class="preset-header">
+                          <v-icon 
+                            :class="['preset-icon', { 'preset-icon--selected': gameSettings.cpuStrengthPreset === preset.value }]"
+                          >
+                            {{ preset.value === 'custom' ? 'mdi-tune' : 'mdi-robot' }}
+                          </v-icon>
+                          <div class="preset-title">{{ preset.title }}</div>
+                        </div>
+                        <div class="preset-description">{{ preset.description }}</div>
+                        <div class="preset-detail">{{ preset.detail }}</div>
+                        <div 
+                          :class="['preset-indicator', { 'preset-indicator--selected': gameSettings.cpuStrengthPreset === preset.value }]"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 詳細設定 -->
+                  <v-expand-transition>
+                    <div v-show="gameSettings.cpuStrengthPreset === 'custom'" class="custom-settings mt-6">
+                      <div class="custom-header">
+                        <v-icon class="custom-icon">mdi-tune</v-icon>
+                        <span class="custom-title">個別CPU設定</span>
+                      </div>
+                      <v-row class="mt-4">
+                        <v-col cols="12" sm="4" v-for="(strength, index) in gameSettings.customCpuStrengths" :key="index">
+                          <div class="cpu-custom-section">
+                            <h4 class="cpu-custom-label">CPU{{ index + 1 }}</h4>
+                            <v-select
+                              v-model="gameSettings.customCpuStrengths[index]"
+                              :items="cpuStrengthOptions"
+                              variant="outlined"
+                              density="comfortable"
+                              class="cpu-select"
+                            >
+                              <template #item="{ props, item }">
+                                <v-list-item v-bind="props" class="cpu-option-item">
+                                  <v-list-item-title>{{ item.title }}</v-list-item-title>
+                                  <v-list-item-subtitle>{{ item.raw.description }}</v-list-item-subtitle>
+                                </v-list-item>
+                              </template>
+                            </v-select>
+                          </div>
+                        </v-col>
+                      </v-row>
+                    </div>
+                  </v-expand-transition>
+                </div>
+              </v-col>
+              
+              <!-- 局数・ルール設定 -->
+              <v-col cols="12">
+                <v-row>
                   <!-- 局数設定 -->
                   <v-col cols="12" sm="6">
-                    <v-card variant="outlined">
-                      <v-card-subtitle class="font-weight-bold">局数</v-card-subtitle>
-                      <v-card-text>
-                        <v-radio-group v-model="gameSettings.gameType" density="compact">
-                          <v-radio value="tonpuusen" label="東風戦"></v-radio>
-                          <v-radio value="tonnanssen" label="東南戦"></v-radio>
-                        </v-radio-group>
-                      </v-card-text>
-                    </v-card>
+                    <div class="setting-section">
+                      <div class="section-header">
+                        <v-icon class="section-icon">mdi-clock-outline</v-icon>
+                        <h3 class="section-title">局数</h3>
+                      </div>
+                      <div class="game-type-grid">
+                        <div
+                          v-for="gameType in gameTypeOptions"
+                          :key="gameType.value"
+                          :class="['game-type-card', { 'game-type-card--selected': gameSettings.gameType === gameType.value }]"
+                          @click="gameSettings.gameType = gameType.value"
+                        >
+                          <div class="game-type-header">
+                            <v-icon 
+                              :class="['game-type-icon', { 'game-type-icon--selected': gameSettings.gameType === gameType.value }]"
+                            >
+                              {{ gameType.icon }}
+                            </v-icon>
+                            <div class="game-type-title">{{ gameType.title }}</div>
+                          </div>
+                          <div class="game-type-description">{{ gameType.description }}</div>
+                          <div 
+                            :class="['game-type-indicator', { 'game-type-indicator--selected': gameSettings.gameType === gameType.value }]"
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
                   </v-col>
                   
                   <!-- ゲームルール設定 -->
                   <v-col cols="12" sm="6">
-                    <v-card variant="outlined">
-                      <v-card-subtitle class="font-weight-bold">ゲームルール</v-card-subtitle>
-                      <v-card-text>
+                    <div class="setting-section">
+                      <div class="section-header">
+                        <v-icon class="section-icon">mdi-gavel</v-icon>
+                        <h3 class="section-title">ルール</h3>
+                      </div>
+                      <div class="rule-switches">
                         <v-switch
                           v-model="gameSettings.agariRenchan"
                           label="上がり連荘"
                           color="primary"
-                          density="comfortable"
+                          class="rule-switch"
                         ></v-switch>
                         <v-switch
                           v-model="gameSettings.hakoshita"
                           label="箱下"
                           color="primary"
-                          density="comfortable"
+                          class="rule-switch"
                         ></v-switch>
-                      </v-card-text>
-                    </v-card>
+                      </div>
+                    </div>
                   </v-col>
                 </v-row>
-              </v-card-text>
-            </v-card>
+              </v-col>
+            </v-row>
             
-            <!-- ゲームモード説明 -->
-            <div class="feature-list mt-6">
-              <v-list>
-                <v-list-item>
-                  <template #prepend>
-                    <v-icon color="success">mdi-calculator-variant</v-icon>
-                  </template>
-                  <v-list-item-title>受け入れ計算デモ</v-list-item-title>
-                  <v-list-item-subtitle>2シャンテンからの受け入れ枚数を計算</v-list-item-subtitle>
-                </v-list-item>
-                
-                <v-list-item>
-                  <template #prepend>
-                    <v-icon color="primary">mdi-account-group</v-icon>
-                  </template>
-                  <v-list-item-title>4人対戦</v-list-item-title>
-                  <v-list-item-subtitle>CPU3人との本格的な麻雀ゲーム</v-list-item-subtitle>
-                </v-list-item>
-                
-                <v-list-item>
-                  <template #prepend>
-                    <v-icon color="info">mdi-code-braces</v-icon>
-                  </template>
-                  <v-list-item-title>riichi-rs-bundlers 使用</v-list-item-title>
-                  <v-list-item-subtitle>Rust製の高速・高精度な麻雀ライブラリ</v-list-item-subtitle>
-                </v-list-item>
-              </v-list>
-            </div>
-          </v-card-text>
-          
-          <v-card-actions class="justify-center pb-6">
-            <div class="game-mode-buttons">
-              <v-btn
-                color="success"
-                size="large"
-                elevation="2"
-                @click="startUkeireDemo"
-                class="mb-2"
-                variant="elevated"
-              >
-                <v-icon start>mdi-calculator-variant</v-icon>
-                受け入れ計算デモ
-              </v-btn>
-              
+            <!-- ゲーム開始ボタン -->
+            <div class="start-button-container">
               <v-btn
                 color="primary"
                 size="x-large"
-                elevation="3"
+                elevation="8"
                 @click="startFourPlayerGame"
-                variant="elevated"
                 class="start-game-btn"
               >
-                <v-icon start size="large">mdi-account-group</v-icon>
+                <v-icon start size="large">mdi-play</v-icon>
                 4人対戦を開始
               </v-btn>
             </div>
-          </v-card-actions>
+          </v-card-text>
         </v-card>
-      </v-col>
-    </v-row>
+      </div>
     
-    <v-row justify="center" class="mt-8">
-      <v-col cols="12" md="10">
-        <v-card class="info-card">
-          <v-card-title>使い方</v-card-title>
+    <!-- 使い方 -->
+    <div class="info-section">
+      <v-card class="info-card" elevation="6">
+          <v-card-title class="info-title">
+            <v-icon class="info-icon">mdi-help-circle</v-icon>
+            使い方
+          </v-card-title>
           <v-card-text>
             <v-row>
               <v-col cols="12" md="4">
                 <div class="instruction-step">
-                  <v-icon size="48" color="primary">mdi-numeric-1-circle</v-icon>
+                  <div class="step-icon-wrapper">
+                    <v-icon size="48" class="step-icon">mdi-numeric-1-circle</v-icon>
+                  </div>
                   <h3>ゲーム設定</h3>
                   <p>CPU の強さや局数、ゲームルールを設定します。</p>
                 </div>
@@ -244,83 +281,702 @@ function onPresetChange() {
               
               <v-col cols="12" md="4">
                 <div class="instruction-step">
-                  <v-icon size="48" color="success">mdi-numeric-2-circle</v-icon>
+                  <div class="step-icon-wrapper">
+                    <v-icon size="48" class="step-icon">mdi-numeric-2-circle</v-icon>
+                  </div>
                   <h3>ゲーム開始</h3>
-                  <p>受け入れ計算デモまたは4人対戦を選択してゲームを開始します。</p>
+                  <p>設定完了後、4人対戦ボタンでゲームを開始します。</p>
                 </div>
               </v-col>
               
               <v-col cols="12" md="4">
                 <div class="instruction-step">
-                  <v-icon size="48" color="warning">mdi-numeric-3-circle</v-icon>
+                  <div class="step-icon-wrapper">
+                    <v-icon size="48" class="step-icon">mdi-numeric-3-circle</v-icon>
+                  </div>
                   <h3>対戦・分析</h3>
-                  <p>4人対戦では本格的な麻雀を楽しめ、デモでは受け入れ分析ができます。</p>
+                  <p>本格的な麻雀を楽しめます。</p>
                 </div>
               </v-col>
             </v-row>
           </v-card-text>
         </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+      </div>
+
+    <!-- その他のモード -->
+    <div class="other-modes-section">
+      <v-card class="other-modes-card" elevation="4">
+          <v-card-title class="other-modes-title">
+            <v-icon class="other-modes-icon">mdi-apps</v-icon>
+            その他のモード
+          </v-card-title>
+          <v-card-text>
+            <div class="other-modes-content">
+              <div class="mode-item">
+                <v-icon class="mode-icon">mdi-calculator-variant</v-icon>
+                <div class="mode-info">
+                  <h4>受け入れ計算デモ</h4>
+                  <p>2シャンテンからの受け入れ枚数を計算</p>
+                </div>
+                <v-btn
+                  color="success"
+                  variant="outlined"
+                  @click="startUkeireDemo"
+                  class="mode-btn"
+                >
+                  開始
+                </v-btn>
+              </div>
+              
+              <v-divider class="my-4"></v-divider>
+              
+              <div class="tech-info">
+                <v-icon class="tech-icon">mdi-code-braces</v-icon>
+                <div class="tech-text">
+                  <h4>riichi-rs-bundlers 使用</h4>
+                  <p>Rust製の高速・高精度な麻雀ライブラリを採用</p>
+                </div>
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </div>
+  </div>
 </template>
 
 <style scoped>
 .home-view {
-  width: 100vw;
+  width: 100%;
   min-height: calc(100vh - 64px);
   margin: 0;
-  padding: 1rem 0;
-  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  padding: 2rem 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  box-sizing: border-box;
 }
 
-.welcome-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+.home-view::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+  pointer-events: none;
 }
 
+/* セクション共通 */
+.title-section,
+.panel-container,
+.info-section,
+.other-modes-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  box-sizing: border-box;
+}
+
+.title-section {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.panel-container {
+  margin-bottom: 3rem;
+}
+
+.info-section {
+  margin-bottom: 2rem;
+}
+
+.other-modes-section {
+  max-width: 800px;
+}
+
+/* メインタイトル */
+.main-title {
+  font-size: 3.5rem;
+  font-weight: 900;
+  background: linear-gradient(45deg, #fff 0%, #e8f5e8 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  margin-bottom: 0.5rem;
+}
+
+.main-subtitle {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+/* ゲーム設定パネル */
 .game-settings-panel {
-  background: rgba(248, 249, 250, 0.8);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px !important;
+  overflow: hidden;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-.feature-list {
-  margin: 1rem 0;
+.panel-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+  color: white;
+  position: relative;
+  overflow: hidden;
 }
 
+.panel-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g fill="rgba(255,255,255,0.1)"><circle cx="20" cy="20" r="2"/></g></svg>');
+  opacity: 0.3;
+}
+
+.header-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.panel-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.header-decoration {
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.8) 0%, transparent 100%);
+  margin-top: 1rem;
+  border-radius: 2px;
+}
+
+/* 設定セクション */
+.setting-section {
+  background: rgba(248, 250, 252, 0.7);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: all 0.3s ease;
+}
+
+.setting-section:hover {
+  background: rgba(248, 250, 252, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-icon {
+  font-size: 1.5rem;
+  color: #667eea;
+  margin-right: 0.75rem;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #334155;
+  margin: 0;
+}
+
+/* CPU プリセット */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.preset-card {
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(226, 232, 240, 0.6);
+  border-radius: 16px;
+  padding: 0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.preset-card:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+}
+
+.preset-card--selected {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-color: #667eea;
+  box-shadow: 0 0 0 1px #667eea, 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.preset-card-inner {
+  padding: 1.5rem;
+  position: relative;
+}
+
+.preset-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.preset-icon {
+  font-size: 1.5rem;
+  color: #64748b;
+  margin-right: 0.75rem;
+  transition: color 0.3s ease;
+}
+
+.preset-icon--selected {
+  color: #667eea;
+}
+
+.preset-title {
+  font-weight: 700;
+  color: #334155;
+  font-size: 1.1rem;
+}
+
+.preset-description {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.preset-detail {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.preset-indicator {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 20px 20px 0;
+  border-color: transparent rgba(226, 232, 240, 0.6) transparent transparent;
+  transition: all 0.3s ease;
+}
+
+.preset-indicator--selected {
+  border-color: transparent #667eea transparent transparent;
+}
+
+.preset-indicator--selected::after {
+  content: '✓';
+  position: absolute;
+  top: 2px;
+  right: -16px;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+/* カスタム設定 */
+.custom-settings {
+  background: rgba(241, 245, 249, 0.8);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 2px dashed rgba(148, 163, 184, 0.4);
+}
+
+.custom-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.custom-icon {
+  color: #8b5cf6;
+  margin-right: 0.5rem;
+}
+
+.custom-title {
+  font-weight: 600;
+  color: #475569;
+}
+
+.cpu-custom-section {
+  margin-bottom: 1rem;
+}
+
+.cpu-custom-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.5rem;
+}
+
+.cpu-select :deep(.v-field) {
+  border-radius: 8px;
+}
+
+.cpu-option-item {
+  padding: 8px 16px;
+}
+
+.cpu-option-item :deep(.v-list-item-subtitle) {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* ゲーム開始ボタン */
+.start-button-container {
+  text-align: center;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.start-game-btn {
+  font-size: 1.2rem !important;
+  font-weight: 700 !important;
+  padding: 18px 48px !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  box-shadow: 
+    0 10px 25px rgba(102, 126, 234, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+  transition: all 0.3s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.start-game-btn .v-btn__content {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.start-game-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 
+    0 15px 35px rgba(102, 126, 234, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset !important;
+}
+
+/* ゲームタイプ */
+.game-type-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.game-type-card {
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.game-type-card:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #667eea;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.game-type-card--selected {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-color: #667eea;
+  box-shadow: 0 0 0 1px #667eea, 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.game-type-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.game-type-icon {
+  font-size: 1.2rem;
+  color: #64748b;
+  margin-right: 0.5rem;
+  transition: color 0.3s ease;
+}
+
+.game-type-icon--selected {
+  color: #667eea;
+}
+
+.game-type-title {
+  font-weight: 600;
+  color: #334155;
+  font-size: 0.95rem;
+}
+
+.game-type-description {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.game-type-indicator {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 16px 16px 0;
+  border-color: transparent rgba(226, 232, 240, 0.6) transparent transparent;
+  transition: all 0.3s ease;
+}
+
+.game-type-indicator--selected {
+  border-color: transparent #667eea transparent transparent;
+}
+
+.game-type-indicator--selected::after {
+  content: '✓';
+  position: absolute;
+  top: 1px;
+  right: -13px;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: bold;
+}
+
+/* ルール設定 */
+.rule-switches {
+  margin-top: 0.5rem;
+}
+
+.rule-switch {
+  margin-bottom: 0.5rem;
+}
+
+/* 使い方セクション */
 .info-card {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(5px);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  border-radius: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.info-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.info-icon {
+  margin-right: 0.75rem;
+  color: #667eea;
 }
 
 .instruction-step {
   text-align: center;
-  padding: 1rem;
+  padding: 1.5rem;
+}
+
+.step-icon-wrapper {
+  margin-bottom: 1rem;
+}
+
+.step-icon {
+  color: #667eea;
+  filter: drop-shadow(0 2px 4px rgba(102, 126, 234, 0.3));
 }
 
 .instruction-step h3 {
-  margin: 0.5rem 0;
-  color: #1976d2;
+  margin: 0.75rem 0 0.5rem;
+  color: #334155;
+  font-weight: 600;
 }
 
 .instruction-step p {
-  color: #666;
+  color: #64748b;
   line-height: 1.6;
+  margin: 0;
 }
 
-.game-mode-buttons {
+/* その他のモード */
+.other-modes-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.other-modes-title {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
   align-items: center;
-}
-
-.start-game-btn {
-  font-size: 1.1rem;
   font-weight: 600;
-  padding: 16px 32px !important;
+  color: #334155;
 }
 
+.other-modes-icon {
+  margin-right: 0.75rem;
+  color: #667eea;
+}
+
+.other-modes-content {
+  padding: 0.5rem 0;
+}
+
+.mode-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.mode-icon {
+  font-size: 2rem;
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.mode-info {
+  flex: 1;
+}
+
+.mode-info h4 {
+  margin: 0 0 0.25rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.mode-info p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.mode-btn {
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+}
+
+.tech-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.tech-icon {
+  font-size: 2rem;
+  color: #8b5cf6;
+  flex-shrink: 0;
+}
+
+.tech-text h4 {
+  margin: 0 0 0.25rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.tech-text p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .home-view {
+    padding: 1rem 0;
+  }
+  
+  .title-section,
+  .panel-container,
+  .info-section,
+  .other-modes-section {
+    padding: 0 0.75rem;
+  }
+  
+  .main-title {
+    font-size: 2.5rem;
+  }
+  
+  .panel-header {
+    padding: 1.5rem;
+  }
+  
+  .preset-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .game-type-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .mode-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .title-section,
+  .panel-container,
+  .info-section,
+  .other-modes-section {
+    padding: 0 0.5rem;
+  }
+  
+  .main-title {
+    font-size: 2rem;
+  }
+  
+  .panel-header {
+    padding: 1rem;
+  }
+  
+  .setting-section {
+    padding: 1rem;
+  }
+}
+
+/* ラジオボタンのスタイル調整 */
 .v-radio :deep(.v-label) {
   opacity: 1;
+}
+
+.v-radio :deep(.v-selection-control__wrapper) {
+  margin-right: 0.75rem;
 }
 </style>

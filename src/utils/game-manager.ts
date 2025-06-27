@@ -1,6 +1,7 @@
 import type { Tile, Player, GamePhase } from '../stores/fourPlayerMahjong'
 import { canRiichi, checkWinCondition, calculateShanten } from './mahjong-logic'
 import { EnhancedDraw } from './enhanced-draw'
+import { RecordsManager } from './records-manager'
 
 export class GameManager {
   private _players: Player[]
@@ -18,12 +19,15 @@ export class GameManager {
   private _kyotaku: number = 0 // 供託の本数
   private _ippatsuFlags: boolean[] = [false, false, false, false] // 各プレイヤーの一発フラグ
   private _enhancedDraw: EnhancedDraw
+  private _gameSettings: { cpuStrengths: string[], gameType: string, agariRenchan: boolean, hakoshita: boolean }
+  private _currentTurn: number = 0 // 現在の巡目
 
   constructor() {
     this._enhancedDraw = new EnhancedDraw({ boostProbability: 0.8 })
     
     // ローカルストレージから設定を読み込み
     const savedSettings = this.loadGameSettings()
+    this._gameSettings = savedSettings
     
     this._players = [
       { id: 0, name: 'あなた', type: 'human', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'east' },
@@ -101,6 +105,10 @@ export class GameManager {
 
   get kyotaku(): number {
     return this._kyotaku
+  }
+
+  get currentTurn(): number {
+    return this._currentTurn
   }
 
   isIppatsu(playerIndex: number): boolean {
@@ -200,9 +208,23 @@ export class GameManager {
 
     let tile: Tile | null = null
 
-    // super難易度のCPUまたは人間プレイヤーの場合、EnhancedDrawを使用
-    if (player.difficulty === 'super' || playerIndex === 0) {
+    // hardAI（30%の確率で有効牌）、superAI（80%）、または人間プレイヤーの場合、EnhancedDrawを使用
+    if (player.difficulty === 'hard' || player.difficulty === 'super' || playerIndex === 0) {
+      // 確率を設定
+      let boostProbability = 0.8 // デフォルト（super/人間）
+      if (player.difficulty === 'hard') {
+        boostProbability = 0.3 // hardAIは30%
+      }
+      
+      // 一時的にブースト確率を変更
+      const originalProbability = this._enhancedDraw['options'].boostProbability
+      this._enhancedDraw.setBoostProbability(boostProbability)
+      
       const drawnTile = this._enhancedDraw.drawEnhancedTile(player.tiles, this._wall)
+      
+      // 元の確率に戻す
+      this._enhancedDraw.setBoostProbability(originalProbability)
+      
       if (drawnTile) {
         // 山から引いた牌を除去
         const index = this._wall.findIndex(t => t.id === drawnTile.id)
@@ -213,7 +235,7 @@ export class GameManager {
       }
     }
 
-    // 通常の引き方（super難易度でない場合、または有効牌が引けなかった場合）
+    // 通常の引き方（該当しない難易度の場合、または有効牌が引けなかった場合）
     if (!tile && this._wall.length > 0) {
       tile = this._wall.shift()!
     }
@@ -280,6 +302,10 @@ export class GameManager {
 
   nextTurn(): void {
     this._currentPlayerIndex = (this._currentPlayerIndex + 1) % 4
+    // 親（0番）のターンが回ってきたら巡目を増やす
+    if (this._currentPlayerIndex === 0) {
+      this._currentTurn++
+    }
   }
 
   advanceToNextRound(): void {
@@ -305,6 +331,7 @@ export class GameManager {
     this._lastDiscardPlayerIndex = null
     this._discardOrder = 0
     this._ippatsuFlags = [false, false, false, false]
+    this._currentTurn = 1 // 巡目をリセット
 
     this.generateWall()
     this.dealInitialHands()
@@ -332,6 +359,7 @@ export class GameManager {
     this._gamePhase = 'dealing'
     this._currentPlayerIndex = this._dealer
     this._currentDrawnTile = null
+    this._currentTurn = 1 // 巡目をリセット
 
     this.generateWall()
     this.dealInitialHands()
@@ -352,6 +380,7 @@ export class GameManager {
     this._lastDiscardPlayerIndex = null
     this._kyotaku = 0
     this._ippatsuFlags = [false, false, false, false]
+    this._currentTurn = 1
 
     this._players.forEach(player => {
       player.tiles = []
@@ -586,6 +615,12 @@ export class GameManager {
 
   // ドラ判定
   isDoraTile(tile: Tile): boolean {
+    // 赤ドラ判定
+    if (tile.isRed && tile.rank === 5) {
+      return true
+    }
+    
+    // 通常ドラ判定
     for (const indicator of this._doraIndicators) {
       if (this.isDoraFromIndicator(tile, indicator)) {
         return true
@@ -680,5 +715,159 @@ export class GameManager {
     }
     
     return difficultyMap[difficulty] || 'medium'
+  }
+
+  // 流局処理
+  checkDraw(): { isDraw: boolean, drawData?: any } {
+    // 山が空になった場合の流局
+    if (this._wall.length === 0) {
+      return this.processDraw('荒牌平局')
+    }
+    
+    return { isDraw: false }
+  }
+
+  private processDraw(reason: string): { isDraw: true, drawData: any } {
+    // テンパイ判定
+    const playersDrawData = this._players.map(player => {
+      const isTenpai = this.isPlayerTenpai(player)
+      return {
+        id: player.id,
+        name: player.name,
+        isTenpai,
+        scoreChange: 0,
+        totalScore: player.score
+      }
+    })
+
+    // テンパイ数を計算
+    const tenpaiPlayers = playersDrawData.filter(p => p.isTenpai)
+    const tenpaiCount = tenpaiPlayers.length
+    const notenCount = 4 - tenpaiCount
+
+    // 点数移動計算
+    if (tenpaiCount > 0 && notenCount > 0) {
+      const pointsPerNoten = Math.floor(3000 / notenCount)
+      const pointsPerTenpai = Math.floor(3000 / tenpaiCount)
+
+      playersDrawData.forEach(playerData => {
+        if (playerData.isTenpai) {
+          playerData.scoreChange = pointsPerTenpai
+          this._players[playerData.id].score += pointsPerTenpai
+        } else {
+          playerData.scoreChange = -pointsPerNoten
+          this._players[playerData.id].score -= pointsPerNoten
+        }
+        playerData.totalScore = this._players[playerData.id].score
+      })
+    }
+
+    return {
+      isDraw: true,
+      drawData: {
+        players: playersDrawData,
+        reason,
+        tenpaiCount,
+        notenCount,
+        remainingTiles: this._wall.length
+      }
+    }
+  }
+
+  private isPlayerTenpai(player: Player): boolean {
+    if (player.tiles.length !== 13) return false
+    
+    // 簡易的なテンパイ判定：シャンテン数が0かどうか
+    const shanten = calculateShanten(player.tiles)
+    return shanten === 0
+  }
+
+  // ゲーム終了判定
+  checkGameEnd(): { isGameEnd: boolean, gameEndData?: any } {
+    const settings = this._gameSettings
+
+    // 箱下チェック（箱下がありの場合）
+    if (settings.hakoshita) {
+      const hasNegativeScore = this._players.some(player => player.score < 0)
+      if (hasNegativeScore) {
+        return this.createGameEndData('箱下終了')
+      }
+    }
+
+    // 規定局数チェック
+    const isEastGame = settings.gameType === 'tonpuusen'
+    const maxRound = isEastGame ? 4 : 8
+    
+    if (this._round > maxRound) {
+      const endReason = isEastGame ? '東風戦終了' : '東南戦終了'
+      return this.createGameEndData(endReason)
+    }
+
+    // 上がり連荘なしの場合の親流れチェック
+    if (!settings.agariRenchan) {
+      const isLastRound = (isEastGame && this._round === 4) || (!isEastGame && this._round === 8)
+      if (isLastRound && !this._renchan) {
+        const endReason = isEastGame ? '東4局終了' : '南4局終了'
+        return this.createGameEndData(endReason)
+      }
+    }
+
+    return { isGameEnd: false }
+  }
+
+  private createGameEndData(endReason: string): { isGameEnd: true, gameEndData: any } {
+    const players = this._players.map(player => ({
+      id: player.id,
+      name: player.name,
+      score: player.score,
+      scoreDiff: player.score - 25000, // 初期点数との差
+      originalPosition: player.id
+    }))
+
+    return {
+      isGameEnd: true,
+      gameEndData: {
+        players,
+        gameType: this._gameSettings.gameType,
+        finalRound: this.getDealerText(),
+        endReason,
+        gameTime: '未実装' // TODO: 実際の対局時間を計算
+      }
+    }
+  }
+
+  // 連荘設定
+  setRenchan(renchan: boolean): void {
+    this._renchan = renchan
+  }
+
+  get gameSettings(): { cpuStrengths: string[], gameType: string, agariRenchan: boolean, hakoshita: boolean } {
+    return this._gameSettings
+  }
+
+  // 人間プレイヤーの上がりを記録
+  recordHumanWin(yakuList: string[], totalPoints: number): void {
+    // 役の記録
+    RecordsManager.recordYaku(yakuList)
+    
+    // ゲーム統計の記録
+    RecordsManager.recordGameEnd(
+      this._gameSettings.gameType as 'tonpuusen' | 'tonnanssen',
+      this._gameSettings.agariRenchan,
+      this._players[0].score,
+      true,
+      totalPoints,
+      this._currentTurn
+    )
+  }
+
+  // ゲーム終了時の記録（上がりなし）
+  recordGameEnd(): void {
+    RecordsManager.recordGameEnd(
+      this._gameSettings.gameType as 'tonpuusen' | 'tonnanssen',
+      this._gameSettings.agariRenchan,
+      this._players[0].score,
+      false
+    )
   }
 }

@@ -51,7 +51,7 @@ export class CpuAI {
   }
 
   /**
-   * 中級AI: シャンテン数を考慮して捨てる
+   * 中級AI: 旧上級AIと同様の複雑な戦略（hardAIと同じロジック）
    */
   private mediumAIDiscard(tiles: Tile[]): string {
     // allTilesの最後がツモ牌なので、これを除いた13枚でシャンテン数を計算
@@ -59,7 +59,6 @@ export class CpuAI {
     const currentShanten = calculateShanten(handTiles)
     const candidates: { tileId: string, shanten: number, score: number }[] = []
 
-    // 各牌を捨てた場合のシャンテン数を計算
     for (const tile of tiles) {
       const remainingTiles = tiles.filter(t => t.id !== tile.id)
       const newShanten = calculateShanten(remainingTiles)
@@ -68,31 +67,69 @@ export class CpuAI {
       if (newShanten <= currentShanten) {
         let score = 0
 
-        // シャンテン数改善ボーナス
+        // シャンテン数改善への大きなボーナス
         if (newShanten < currentShanten) {
-          score += 100
+          score += 300
         }
 
-        // 字牌を優先的に捨てる
-        if (tile.suit === 'honor') {
-          score += 50
+        // 孤立牌を最優先で捨てる
+        if (this.isIsolatedTile(tile, tiles)) {
+          score += 200
         }
 
-        // 1,9牌も捨てやすい
-        if (tile.suit !== 'honor' && (tile.rank === 1 || tile.rank === 9)) {
-          score += 20
+        // 塔子の種類と対子数による細かい優先順位
+        const taatsuType = this.getTaatsuType(tile, tiles)
+        const pairCount = this.countPairs(tiles)
+
+        if (taatsuType === 'shanpon' && pairCount >= 3) {
+          // 対子が3つ以上ある場合のシャンポン形
+          if (tile.suit !== 'honor' && tile.rank >= 3 && tile.rank <= 7) {
+            score += 100  // 中張牌の対子
+          } else if (tile.suit !== 'honor' && (tile.rank === 1 || tile.rank === 9)) {
+            score += 120  // 1,9牌の対子
+          } else if (tile.suit === 'honor') {
+            score += 140  // 字牌の対子
+          }
+        } else if (taatsuType === 'penchan') {
+          score += 80  // ペンチャン
+        } else if (taatsuType === 'kanchan') {
+          score += 60  // カンチャン
+        } else if (taatsuType === 'ryanmen') {
+          score += 0   // リャンメンは残したい
         }
 
-        // 少しのランダム要素
-        score += Math.random() * 10
+        // その他の基本的な評価
+        if (taatsuType === 'none') {
+          // 塔子を形成していない牌の評価
+          if (tile.suit === 'honor') {
+            score += 50
+          } else if (tile.rank === 1 || tile.rank === 9) {
+            score += 30
+          }
+        }
 
         candidates.push({ tileId: tile.id, shanten: newShanten, score })
       }
     }
 
-    // 候補がない場合（すべての牌を捨てるとシャンテン数が悪化する場合）
+    // 候補がない場合
     if (candidates.length === 0) {
-      return tiles[Math.floor(Math.random() * tiles.length)].id
+      // 最もダメージの少ない牌を選択
+      let minDamage = Infinity
+      let bestTileId = ''
+
+      for (const tile of tiles) {
+        const remainingTiles = tiles.filter(t => t.id !== tile.id)
+        const newShanten = calculateShanten(remainingTiles)
+        const damage = newShanten - currentShanten
+
+        if (damage < minDamage) {
+          minDamage = damage
+          bestTileId = tile.id
+        }
+      }
+
+      return bestTileId || tiles[Math.floor(Math.random() * tiles.length)].id
     }
 
     // 最も良いスコアの牌を選択
