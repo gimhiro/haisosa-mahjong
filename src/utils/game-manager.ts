@@ -21,6 +21,7 @@ export class GameManager {
   private _enhancedDraw: EnhancedDraw
   private _gameSettings: { cpuStrengths: string[], gameType: string, agariRenchan: boolean, hakoshita: boolean }
   private _currentTurn: number = 0 // 現在の巡目
+  private _gameStartTime: Date | null = null // ゲーム開始時刻
 
   constructor() {
     this._enhancedDraw = new EnhancedDraw({ boostProbability: 0.8 })
@@ -365,6 +366,8 @@ export class GameManager {
     this.generateWall()
     this.dealInitialHands()
 
+    // ゲーム開始時刻を記録
+    this._gameStartTime = new Date()
     this._gamePhase = 'playing'
   }
 
@@ -382,6 +385,7 @@ export class GameManager {
     this._kyotaku = 0
     this._ippatsuFlags = [false, false, false, false]
     this._currentTurn = 1
+    this._gameStartTime = null
 
     this._players.forEach(player => {
       player.tiles = []
@@ -832,9 +836,23 @@ export class GameManager {
         gameType: this._gameSettings.gameType,
         finalRound: this.getDealerText(),
         endReason,
-        gameTime: '未実装' // TODO: 実際の対局時間を計算
+        gameTime: this.getGameTimeString()
       }
     }
+  }
+
+  // ゲーム時間を計算
+  private getGameTimeString(): string {
+    if (!this._gameStartTime) {
+      return '00:00'
+    }
+    
+    const now = new Date()
+    const diffMs = now.getTime() - this._gameStartTime.getTime()
+    const minutes = Math.floor(diffMs / 60000)
+    const seconds = Math.floor((diffMs % 60000) / 1000)
+    
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
   }
 
   // 連荘設定
