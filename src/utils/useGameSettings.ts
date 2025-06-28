@@ -1,8 +1,19 @@
 import { ref, watch, type Ref } from 'vue'
 
+interface PlayerTestData {
+  tiles: string[]
+  drawTiles: string[]
+}
+
+interface TestModeData {
+  isActive: boolean
+  players: PlayerTestData[]
+}
+
 interface GameSettings {
   disableMeld: boolean
   autoWin: boolean
+  testMode: TestModeData
 }
 
 const STORAGE_KEY = 'mahjong-game-settings'
@@ -10,6 +21,15 @@ const STORAGE_KEY = 'mahjong-game-settings'
 const defaultSettings: GameSettings = {
   disableMeld: false,
   autoWin: false,
+  testMode: {
+    isActive: false,
+    players: [
+      { tiles: [], drawTiles: [] },
+      { tiles: [], drawTiles: [] },
+      { tiles: [], drawTiles: [] },
+      { tiles: [], drawTiles: [] }
+    ]
+  }
 }
 
 let settings: Ref<GameSettings> | null = null
@@ -19,7 +39,19 @@ export function useGameSettings() {
     settings = ref<GameSettings>((() => {
       try {
         const savedSettings = localStorage.getItem(STORAGE_KEY)
-        return savedSettings ? JSON.parse(savedSettings) : defaultSettings
+        if (savedSettings) {
+          const parsed = JSON.parse(savedSettings)
+          // 古い設定形式の場合は新しい形式にマイグレーション
+          if (!parsed.testMode) {
+            return {
+              disableMeld: parsed.disableMeld || false,
+              autoWin: parsed.autoWin || false,
+              testMode: defaultSettings.testMode
+            }
+          }
+          return parsed
+        }
+        return defaultSettings
       } catch {
         return defaultSettings
       }
@@ -36,9 +68,26 @@ export function useGameSettings() {
     }
   }
 
+  const toggleTestMode = () => {
+    if (settings) {
+      settings.value.testMode.isActive = !settings.value.testMode.isActive
+    }
+  }
+
+  const updateTestModeData = (playerIndex: number, data: Partial<PlayerTestData>) => {
+    if (settings && playerIndex >= 0 && playerIndex < 4) {
+      settings.value.testMode.players[playerIndex] = {
+        ...settings.value.testMode.players[playerIndex],
+        ...data
+      }
+    }
+  }
+
   return {
     settings: settings as Ref<GameSettings>,
     updateSettings,
+    toggleTestMode,
+    updateTestModeData,
   }
 }
 
@@ -46,3 +95,6 @@ export function useGameSettings() {
 export function resetGameSettings() {
   settings = null
 }
+
+// 型エクスポート
+export type { GameSettings, TestModeData, PlayerTestData }

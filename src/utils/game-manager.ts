@@ -2,6 +2,7 @@ import type { Tile, Player, GamePhase } from '../stores/fourPlayerMahjong'
 import { canRiichi, checkWinCondition, calculateShanten } from './mahjong-logic'
 import { EnhancedDraw } from './enhanced-draw'
 import { RecordsManager } from './records-manager'
+import { type PlayerTestData } from './useGameSettings'
 
 export class GameManager {
   private _players: Player[]
@@ -22,6 +23,11 @@ export class GameManager {
   private _gameSettings: { cpuStrengths: string[], gameType: string, agariRenchan: boolean, hakoshita: boolean }
   private _currentTurn: number = 0 // 現在の巡目
   private _gameStartTime: Date | null = null // ゲーム開始時刻
+  private _testMode: { isActive: boolean, testData: PlayerTestData[] } = { 
+    isActive: false, 
+    testData: [] 
+  }
+  private _testDrawIndices: number[] = [0, 0, 0, 0] // 各プレイヤーのツモ牌インデックス
 
   constructor() {
     this._enhancedDraw = new EnhancedDraw({ boostProbability: 0.8 })
@@ -201,6 +207,16 @@ export class GameManager {
   }
 
   drawTileAndKeepSeparate(playerIndex: number): Tile | null {
+    // テストモードの場合は専用の処理
+    if (this._testMode.isActive) {
+      const testTile = this.getTestDrawTile(playerIndex)
+      if (testTile) {
+        this._currentDrawnTile = testTile
+        return testTile
+      }
+      // テストデータが尽きた場合は通常のドローに戻る
+    }
+
     // 14枚残しで終了
     if (this._wall.length <= 14) return null
 
@@ -897,5 +913,90 @@ export class GameManager {
       this._players[0].score,
       false
     )
+  }
+
+  // テストモード用メソッド
+  setTestMode(isActive: boolean, testData?: PlayerTestData[]) {
+    this._testMode.isActive = isActive
+    if (testData) {
+      this._testMode.testData = testData
+      this._testDrawIndices = [0, 0, 0, 0] // インデックスをリセット
+    }
+  }
+
+  get isTestMode(): boolean {
+    return this._testMode.isActive
+  }
+
+  // テストモードでの手牌設定
+  setTestHands() {
+    if (!this._testMode.isActive || this._testMode.testData.length === 0) {
+      return
+    }
+
+    for (let i = 0; i < 4; i++) {
+      const testData = this._testMode.testData[i]
+      
+      if (testData && testData.tiles.length > 0) {
+        // テスト用の牌データを実際のTileオブジェクトに変換
+        const newTiles = testData.tiles.map((tileStr, index) => {
+          return this.parseTileString(tileStr, `test_${i}_${index}`)
+        }).filter(tile => tile !== null) as Tile[]
+        
+        this._players[i].tiles = newTiles
+      }
+    }
+  }
+
+  // 牌文字列をTileオブジェクトに変換
+  private parseTileString(tileStr: string, id: string): Tile | null {
+    // 牌の文字列をパース（例: "1m", "2p", "3s", "ton", "nan", "sha", "pei", "haku", "hatsu", "chun"）
+    if (!tileStr || tileStr.length === 0) return null
+
+    let suit: 'man' | 'pin' | 'sou' | 'honor'
+    let rank: number
+
+    if (tileStr.endsWith('m')) {
+      suit = 'man'
+      rank = parseInt(tileStr.slice(0, -1))
+    } else if (tileStr.endsWith('p')) {
+      suit = 'pin'
+      rank = parseInt(tileStr.slice(0, -1))
+    } else if (tileStr.endsWith('s')) {
+      suit = 'sou'
+      rank = parseInt(tileStr.slice(0, -1))
+    } else {
+      suit = 'honor'
+      switch (tileStr) {
+        case 'ton': rank = 1; break  // 東
+        case 'nan': rank = 2; break  // 南
+        case 'sha': rank = 3; break  // 西
+        case 'pei': rank = 4; break  // 北
+        case 'haku': rank = 5; break // 白
+        case 'hatsu': rank = 6; break // 發
+        case 'chun': rank = 7; break // 中
+        default: return null
+      }
+    }
+
+    if (suit !== 'honor' && (rank < 1 || rank > 9)) return null
+    if (suit === 'honor' && (rank < 1 || rank > 7)) return null
+
+    return { id, suit, rank, isRed: false }
+  }
+
+  // テストモードでのツモ牌制御
+  private getTestDrawTile(playerIndex: number): Tile | null {
+    if (!this._testMode.isActive || !this._testMode.testData[playerIndex]) return null
+
+    const testData = this._testMode.testData[playerIndex]
+    const drawIndex = this._testDrawIndices[playerIndex]
+
+    if (drawIndex >= testData.drawTiles.length) return null
+
+    const tileStr = testData.drawTiles[drawIndex]
+    this._testDrawIndices[playerIndex]++
+
+    return this.parseTileString(tileStr, `test_draw_${playerIndex}_${drawIndex}`)
   }
 }

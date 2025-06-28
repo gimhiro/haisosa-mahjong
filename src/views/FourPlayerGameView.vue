@@ -196,7 +196,10 @@
 
       <!-- 設定エリア -->
       <div class="settings-area">
-        <GameSettingsPanel class="settings-panel" />
+        <GameSettingsPanel 
+          class="settings-panel" 
+          @open-test-dialog="showTestDialog = true"
+        />
       </div>
 
       <!-- アクションボタンエリア -->
@@ -383,6 +386,12 @@
       @rematch="onRematch"
       @close="onGameEndModalClose"
     />
+
+    <!-- テストモードダイアログ -->
+    <TestModeDialog
+      v-model="showTestDialog"
+      @test-mode-applied="onTestModeApplied"
+    />
   </div>
 </template>
 
@@ -400,6 +409,7 @@ import WinModal, { type WinData } from '../components/WinModal.vue'
 import DrawModal, { type DrawData } from '../components/DrawModal.vue'
 import GameEndModal, { type GameEndData } from '../components/GameEndModal.vue'
 import GameSettingsPanel from '../components/GameSettingsPanel.vue'
+import TestModeDialog from '../components/TestModeDialog.vue'
 import { useRouter } from 'vue-router'
 import { useGameSettings } from '../utils/useGameSettings'
 
@@ -430,6 +440,9 @@ const drawModalData = ref<DrawData | null>(null)
 // Game end modal state
 const showGameEndModal = ref(false)
 const gameEndModalData = ref<GameEndData | null>(null)
+
+// Test mode dialog state
+const showTestDialog = ref(false)
 
 const winModalData = ref<WinData>({
   winner: gameManager.value.players[0],
@@ -560,7 +573,17 @@ function getDealerText(): string {
 }
 
 function startGame() {
+  // テストモードが有効な場合はGameManagerに設定を送信
+  if (settings.value.testMode.isActive) {
+    gameManager.value.setTestMode(true, settings.value.testMode.players)
+  }
+  
   gameManager.value.startNewGame()
+  
+  // テストモードの場合は手牌を設定
+  if (settings.value.testMode.isActive) {
+    gameManager.value.setTestHands()
+  }
   
   // ゲーム開始後、最初のプレイヤーにツモ牌を配る
   setTimeout(() => {
@@ -579,6 +602,14 @@ function startGame() {
 
 function resetGame() {
   gameManager.value.resetGame()
+}
+
+// テストモード適用イベントハンドラ
+function onTestModeApplied() {
+  if (settings.value.testMode.isActive) {
+    gameManager.value.setTestMode(true, settings.value.testMode.players)
+    gameManager.value.setTestHands()
+  }
 }
 
 // ツモボタンを削除したため、自動ツモ機能は削除

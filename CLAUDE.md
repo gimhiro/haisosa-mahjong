@@ -28,4 +28,6 @@ cd /home/szkhi/dev/mahjong/test
 source .venv/bin/activate &&  python3 game_settings_test.py http://localhost:5173 --headless
 ```
 
+- テスト用ツールの説明は test/README.md に記載されてます。
 - そのほかにも、特定の用途 (console.log の確認や特定画面のスクリーンショットをとる機能) の専用のファイルを作成し、作業で使用しても構いません。
+

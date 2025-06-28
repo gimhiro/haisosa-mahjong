@@ -18,6 +18,17 @@
         hide-details
         @update:model-value="updateSettings({ autoWin: $event })"
       />
+      <v-btn
+        v-if="settings.testMode"
+        :color="settings.testMode.isActive ? 'success' : 'warning'"
+        variant="tonal"
+        size="small"
+        density="compact"
+        @click="handleTestModeToggle"
+        class="test-mode-btn"
+      >
+        {{ settings.testMode.isActive ? 'テストモード停止' : 'テストモック起動' }}
+      </v-btn>
     </v-card-text>
   </v-card>
 </template>
@@ -25,7 +36,26 @@
 <script setup lang="ts">
 import { useGameSettings } from '../utils/useGameSettings'
 
-const { settings, updateSettings } = useGameSettings()
+const { settings, updateSettings, toggleTestMode } = useGameSettings()
+
+const emit = defineEmits<{
+  openTestDialog: []
+}>()
+
+const handleTestModeToggle = () => {
+  if (!settings.value.testMode) {
+    console.error('testMode設定が見つかりません')
+    return
+  }
+  
+  if (settings.value.testMode.isActive) {
+    // テストモードを停止
+    toggleTestMode()
+  } else {
+    // テストデータ設定ダイアログを開く
+    emit('openTestDialog')
+  }
+}
 </script>
 
 <style scoped>
@@ -62,5 +92,10 @@ const { settings, updateSettings } = useGameSettings()
 
 .v-switch :deep(.v-input__control) {
   min-height: auto;
+}
+
+.test-mode-btn {
+  margin-top: 8px;
+  width: 100%;
 }
 </style>
