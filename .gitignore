@@ -11,6 +11,7 @@ lerna-debug.log*
 node_modules
 .pnp
 .pnp.js
+.venv
 
 # Production builds
 dist
@@ -58,6 +59,7 @@ vite.config.ts.timestamp-*
 # Testing
 coverage
 *.lcov
+screenshots
 
 # Temporary files
 *.tmp
