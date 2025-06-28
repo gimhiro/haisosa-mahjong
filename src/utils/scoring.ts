@@ -286,9 +286,13 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
 
     if (input.isTsumo) {
       // ツモ: 鳴き牌を考慮した正しい手牌数を計算
-      const meldTileCount = input.melds ? input.melds.reduce((count, meld) => count + meld.tiles.length, 0) : 0
+      // カンは手牌から4枚取り除かれるが、ポン・チーは3枚取り除かれる
+      const meldTileCount = input.melds ? input.melds.reduce((count, meld) => {
+        return count + (meld.type === 'kan' ? 3 : 3)  // カンもポン・チーも3枚として数える
+      }, 0) : 0
       const expectedHandSize = 13 - meldTileCount  // 鳴き牌を除いた手牌数
       const expectedTsumoHandSize = expectedHandSize + 1  // ツモ後の手牌数
+      
       
       if (input.hand.length !== expectedTsumoHandSize) {
         console.warn(`TSUMO: Expected ${expectedTsumoHandSize} tiles, got ${input.hand.length}`)
@@ -304,8 +308,12 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
 
     } else {
       // ロン: 鳴き牌を考慮した正しい手牌数を計算
-      const meldTileCount = input.melds ? input.melds.reduce((count, meld) => count + meld.tiles.length, 0) : 0
+      // カンは手牌から4枚取り除かれるが、ポン・チーは3枚取り除かれる
+      const meldTileCount = input.melds ? input.melds.reduce((count, meld) => {
+        return count + (meld.type === 'kan' ? 3 : 3)  // カンもポン・チーも3枚として数える
+      }, 0) : 0
       const expectedHandSize = 13 - meldTileCount  // 鳴き牌を除いた手牌数
+      
       
       if (input.hand.length !== expectedHandSize) {
         console.warn(`RON: Expected ${expectedHandSize} tiles, got ${input.hand.length}`)
@@ -365,9 +373,9 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       for (const meld of input.melds) {
         const meldTiles = convertTilesToNumbers(meld.tiles).sort((a, b) => a - b)
         
-        // is_open: true = ポン/チー/明槓, false = 暗槓
-        // Note: 'ankan' is not in the meld type union, all melds from UI are open
-        const isOpen = true
+        // is_open: 暗槓の場合はfalse、その他はtrue
+        // 暗槓の判定: type='kan' かつ fromPlayerが自分自身（プレイヤー0）
+        const isOpen = !(meld.type === 'kan' && meld.fromPlayer === 0)
         
         // riichi-rs-bundlers形式: [is_open, Tile[]]
         openPart.push([isOpen, meldTiles])
@@ -399,7 +407,16 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
     const yaku = Object.entries(result.yaku)
       .filter(([_, han]) => han > 0)
       .map(([yakuId, han]) => {
-        const yakuName = getYakuName(parseInt(yakuId))
+        // yakuIdが文字列の場合と数値の場合を両方処理
+        let yakuName: string
+        if (typeof yakuId === 'string' && isNaN(parseInt(yakuId))) {
+          // 文字列の役名の場合はそのまま使用
+          yakuName = yakuId
+        } else {
+          // 数値IDの場合は変換
+          yakuName = getYakuName(parseInt(yakuId))
+        }
+        
         return {
           name: yakuName,
           han: han

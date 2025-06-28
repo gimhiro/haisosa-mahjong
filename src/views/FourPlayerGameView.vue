@@ -233,7 +233,7 @@
 
             <!-- リーチボタン -->
             <v-btn
-              v-if="canDeclareRiichi && isHumanTurn && humanPlayer.tiles.length === 13 && currentDrawnTile && !humanPlayer.riichi"
+              v-if="canDeclareRiichi && isHumanTurn && currentDrawnTile && !humanPlayer.riichi"
               :color="riichiPreviewMode ? 'error' : 'warning'"
               size="small"
               block
@@ -255,7 +255,7 @@
               ポン
             </v-btn>
 
-            <!-- カンボタン -->
+            <!-- 明カンボタン -->
             <v-btn
               v-if="canKan"
               color="warning"
@@ -265,6 +265,18 @@
               @click="declareKan"
             >
               カン
+            </v-btn>
+
+            <!-- 暗カンボタン -->
+            <v-btn
+              v-if="canAnkan"
+              color="orange"
+              size="small"
+              block
+              class="action-btn"
+              @click="declareAnkan"
+            >
+              暗カン
             </v-btn>
 
             <!-- チーボタン -->
@@ -483,6 +495,17 @@ const canDraw = computed(() => {
   return gameManager.value.canHumanDraw()
 })
 
+const effectiveHandSize = computed(() => {
+  // 鳴き牌を考慮した実効手牌枚数を計算
+  // カンは3枚として扱う（実際の手牌から4枚取って、鳴き牌に3枚として記録される）
+  const actualTiles = humanPlayer.value.tiles.length
+  const meldTiles = humanPlayer.value.melds.reduce((total, meld) => {
+    return total + (meld.type === 'kan' ? 3 : 3) // カンもポン・チーも3枚として数える
+  }, 0)
+  const totalSize = actualTiles + meldTiles
+  return totalSize
+})
+
 const canDeclareRiichi = computed(() => {
   const result = gameManager.value.canPlayerRiichi(0)
   return result
@@ -492,7 +515,6 @@ const canTsumo = computed(() => {
   const isMyTurn = isHumanTurn.value
   const drawnTile = currentDrawnTile.value
   
-
   
   if (!isMyTurn || !drawnTile) {
     return false
@@ -501,7 +523,8 @@ const canTsumo = computed(() => {
   try {
     const winResult = gameManager.value.checkWinConditionForPlayer(0, drawnTile, true)
     // 上がり形かつ点数が0より大きい場合のみツモ可能
-    return winResult.isWin && (winResult.result?.totalPoints || 0) > 0
+    const canWin = winResult.isWin && (winResult.result?.totalPoints || 0) > 0
+    return canWin
   } catch (error) {
     return false
   }
@@ -523,8 +546,14 @@ const humanShanten = computed(() => {
     ? [...player.tiles, currentDrawnTile.value]
     : player.tiles
   
-  // 鳴き牌を考慮した枚数チェック
-  const meldTileCount = player.melds.reduce((count, meld) => count + meld.tiles.length, 0)
+  // 鳴き牌を考慮した枚数チェック（カンは3枚として数える）
+  const meldTileCount = player.melds.reduce((count, meld) => {
+    if (meld.type === 'kan') {
+      return count + 3 // カンは3枚として数える
+    } else {
+      return count + meld.tiles.length // ポン・チーは実際の枚数
+    }
+  }, 0)
   const expectedHandTiles = 13 - meldTileCount
   const expectedTotalTiles = [expectedHandTiles, expectedHandTiles + 1]
   
@@ -588,13 +617,19 @@ function startGame() {
   // ゲーム開始後、最初のプレイヤーにツモ牌を配る
   setTimeout(() => {
     if (gameManager.value.gamePhase === 'playing') {
-      gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
+      // テストモードで人間プレイヤーの場合は既にツモ済みなのでスキップ
+      if (!settings.value.testMode.isActive || currentPlayerIndex.value !== 0) {
+        gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
+      }
       
       // CPUプレイヤーの場合は自動的にターンを開始
       if (players.value[currentPlayerIndex.value].type === 'cpu') {
         setTimeout(() => {
           processCpuTurn()
         }, 500)
+      } else if (players.value[currentPlayerIndex.value].type === 'human') {
+        // 人間プレイヤーの場合は暗カンチェック
+        checkAnkanOptions()
       }
     }
   }, 100)
@@ -609,6 +644,10 @@ function onTestModeApplied() {
   if (settings.value.testMode.isActive) {
     gameManager.value.setTestMode(true, settings.value.testMode.players)
     gameManager.value.setTestHands()
+    // テスト手牌適用後に暗カンチェック
+    if (isHumanTurn.value) {
+      checkAnkanOptions()
+    }
   }
 }
 
@@ -1033,6 +1072,9 @@ function declareKan() {
     // カン後は嶺上牌を引く
     const kanTile = gameManager.value.drawTileAndKeepSeparate(0)
     
+    // 手牌をソート
+    gameManager.value.sortPlayerHand(humanPlayer)
+    
     // 人間プレイヤーのターンに設定
     gameManager.value.currentPlayerIndex = 0
     
@@ -1107,6 +1149,63 @@ function declareChi() {
   resetActionFlags()
 }
 
+// 暗カンを実行する関数
+function declareAnkan() {
+  if (ankanOptions.value.length === 0) return
+  
+  const humanPlayer = gameManager.value.humanPlayer
+  
+  // 簡易実装：最初の選択肢を使用
+  const option = ankanOptions.value[0]
+  
+  // 正しいカンのルール：ツモ牌を手牌に加えてからカンを実行
+  const currentDrawnTile = gameManager.value.currentDrawnTile
+  if (currentDrawnTile) {
+    humanPlayer.tiles.push(currentDrawnTile)
+    gameManager.value.currentDrawnTile = null
+  }
+  
+  // 手牌かざ4枚同じ牌を探す（ツモ牌含む）
+  const targetTiles = humanPlayer.tiles.filter(t => 
+    t.suit === option.suit && t.rank === option.rank
+  ).slice(0, 4)
+  
+  if (targetTiles.length >= 4) {
+    // 手牌から4枚削除
+    for (let i = 0; i < 4; i++) {
+      const index = humanPlayer.tiles.findIndex(t => 
+        t.suit === option.suit && t.rank === option.rank
+      )
+      if (index !== -1) {
+        humanPlayer.tiles.splice(index, 1)
+      }
+    }
+    
+    // 暗カンを鳴き牌に追加
+    humanPlayer.melds.push({
+      type: 'kan',
+      tiles: targetTiles,
+      calledTile: targetTiles[0], // 暗カンの場合は自分の牌
+      fromPlayer: 0 // 暗カンは自分から
+    })
+    
+    // 暗カン後は嶺上牌を引く
+    const kanTile = gameManager.value.drawTileAndKeepSeparate(0)
+    
+    // 手牌をソート
+    gameManager.value.sortPlayerHand(humanPlayer)
+    
+    // 人間プレイヤーのターンを維持
+    gameManager.value.currentPlayerIndex = 0
+    
+    // フラグリセット
+    resetActionFlags()
+    
+    // 再度暗カン可能な牌をチェック
+    checkAnkanOptions()
+  }
+}
+
 function cancelActions() {
   resetActionFlags()
   
@@ -1117,10 +1216,12 @@ function cancelActions() {
 function resetActionFlags() {
   canPon.value = false
   canKan.value = false
+  canAnkan.value = false
   canChi.value = false
   chiOptions.value = []
   selectedChiOption.value = null
   lastDiscardedTile.value = null
+  ankanOptions.value = []
 }
 
 // 人間プレイヤーがポン・カン・チー可能かチェックする関数
@@ -1128,9 +1229,11 @@ function checkHumanMeldActions(discardPlayerIndex: number) {
   // まず既存のフラグをリセット
   canPon.value = false
   canKan.value = false
+  canAnkan.value = false
   canChi.value = false
   chiOptions.value = []
   lastDiscardedTile.value = null
+  ankanOptions.value = []
 
   // 鳴きなし設定が有効な場合は早期リターン
   if (settings.value.disableMeld) {
@@ -1161,6 +1264,41 @@ function checkHumanMeldActions(discardPlayerIndex: number) {
     chiOptions.value = getChiOptions(humanPlayer.tiles, discardedTile)
     canChi.value = chiOptions.value.length > 0
   }
+}
+
+// 暗カン可能な牌をチェックする関数
+function checkAnkanOptions() {
+  const humanPlayer = gameManager.value.humanPlayer
+  ankanOptions.value = []
+  
+  // 手牌 + ツモ牌で同じ牌が4枚あるかチェック
+  const allTiles = [...humanPlayer.tiles]
+  const currentDrawnTile = gameManager.value.currentDrawnTile
+  if (currentDrawnTile) {
+    allTiles.push(currentDrawnTile)
+  }
+  
+  const tileGroups = new Map<string, Tile[]>()
+  
+  allTiles.forEach(tile => {
+    const key = `${tile.suit}-${tile.rank}`
+    if (!tileGroups.has(key)) {
+      tileGroups.set(key, [])
+    }
+    tileGroups.get(key)!.push(tile)
+  })
+  
+  tileGroups.forEach((tiles, key) => {
+    if (tiles.length >= 4) {
+      const [suit, rank] = key.split('-')
+      ankanOptions.value.push({
+        suit: suit,
+        rank: parseInt(rank)
+      })
+    }
+  })
+  
+  canAnkan.value = ankanOptions.value.length > 0
 }
 
 // 左隣のプレイヤーかどうかを判定（人間プレイヤーは0番、左隣は3番）
@@ -1369,11 +1507,13 @@ const showDrawResultButtons = ref(false)
 
 // ポン・カン・チー関連
 const canPon = ref(false)
-const canKan = ref(false)
+const canKan = ref(false) // 明カン（他人の捨て牌でのカン）
+const canAnkan = ref(false) // 暗カン（手牌4枚でのカン）
 const canChi = ref(false)
 const chiOptions = ref<string[][]>([]) // チーの選択肢
 const selectedChiOption = ref<string[] | null>(null)
 const lastDiscardedTile = ref<Tile | null>(null)
+const ankanOptions = ref<{suit: string, rank: number}[]>([]) // 暗カン可能な牌
 
 function onWinModalClose() {
   showResultAndNextButtons.value = gameManager.value.gamePhase === 'finished'
@@ -1581,9 +1721,13 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
     // プレイヤーの手牌が適切な枚数でない場合はツモを行わない
     const player = players.value[newIndex]
     
-    // 鳴き牌を考慮した枚数計算
+    // 鳴き牌を考慮した枚数計算（カンは3枚として数える）
     const meldTileCount = player.melds.reduce((count, meld) => {
-      return count + meld.tiles.length
+      if (meld.type === 'kan') {
+        return count + 3 // カンは3枚として数える
+      } else {
+        return count + meld.tiles.length // ポン・チーは実際の枚数
+      }
     }, 0)
     const expectedHandTiles = 13 - meldTileCount
     
@@ -1606,7 +1750,8 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
         processCpuTurn()
       }, 500)
     } else if (players.value[newIndex].type === 'human') {
-      // 人間プレイヤーのターン開始
+      // 人間プレイヤーのターン開始：暗カン可能な牌をチェック
+      checkAnkanOptions()
     }
   }
 })

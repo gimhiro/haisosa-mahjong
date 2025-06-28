@@ -1,5 +1,5 @@
 import type { Tile, Player, GamePhase } from '../stores/fourPlayerMahjong'
-import { canRiichi, checkWinCondition, calculateShanten } from './mahjong-logic'
+import { canRiichi, canRiichiWithMelds, checkWinCondition, calculateShanten } from './mahjong-logic'
 import { EnhancedDraw } from './enhanced-draw'
 import { RecordsManager } from './records-manager'
 import { type PlayerTestData } from './useGameSettings'
@@ -222,9 +222,13 @@ export class GameManager {
 
     const player = this._players[playerIndex]
 
-    // 鳴き牌を考慮した枚数チェック
+    // 鳴き牌を考慮した枚数チェック（カンは3枚として数える）
     const meldTileCount = player.melds.reduce((count, meld) => {
-      return count + meld.tiles.length
+      if (meld.type === 'kan') {
+        return count + 3 // カンは3枚として数える
+      } else {
+        return count + meld.tiles.length // ポン・チーは実際の枚数
+      }
     }, 0)
     const expectedHandTiles = 13 - meldTileCount
     
@@ -422,18 +426,43 @@ export class GameManager {
   canPlayerRiichi(playerIndex: number): boolean {
     const player = this._players[playerIndex]
 
+
     // リーチ条件：
     // 1. まだリーチしていない
     // 2. 1000点以上持っている
-    // 3. 14枚でリーチ可能（手牌13枚+ツモ牌1枚）
+    // 3. メンゼン（暗カンはOK、明カン・ポン・チーはNG）
+    // 4. 14枚でリーチ可能（手牌13枚+ツモ牌1枚）
     if (player.riichi || player.score < 1000) {
       return false
     }
+    
+    // メンゼン判定：暗カン以外の鳴きがある場合はNG
+    const hasOpenMelds = player.melds.some(meld => 
+      meld.type !== 'kan' || meld.fromPlayer !== playerIndex
+    )
+    if (hasOpenMelds) {
+      return false
+    }
 
-    // 手牌13枚+ツモ牌1枚=14枚の時のみリーチ判定
-    if (player.tiles.length === 13 && this._currentDrawnTile) {
-      const allTiles = [...player.tiles, this._currentDrawnTile]
-      return canRiichi(allTiles)
+    // 鳴き牌を考慮した実効手牌枚数を計算
+    const meldTiles = player.melds.reduce((total, meld) => {
+      return total + (meld.type === 'kan' ? 3 : 3) // カンもポン・チーも3枚として数える
+    }, 0)
+    const effectiveHandSize = player.tiles.length + meldTiles
+    
+    // ツモ牌を考慮した実効手牌14枚の時のみリーチ判定
+    if (this._currentDrawnTile) {
+      const effectiveHandSizeWithTsumo = effectiveHandSize + 1 // ツモ牌を追加
+      if (effectiveHandSizeWithTsumo === 14) {
+        const allTiles = [...player.tiles, this._currentDrawnTile]
+        
+        // 鳴き牌がある場合は専用の関数を使用
+        if (player.melds.length > 0) {
+          return canRiichiWithMelds(allTiles, player.melds)
+        } else {
+          return canRiichi(allTiles)
+        }
+      }
     }
 
     return false
@@ -457,8 +486,27 @@ export class GameManager {
   } {
     const player = this._players[playerIndex]
 
-    // ツモの場合は手牌13枚+勝利牌1枚=14枚、ロンの場合も14枚で判定
-    const allTiles = [...player.tiles, winTile]
+    // ツモの場合は手牌+勝利牌で判定、ロンの場合は手牌+勝利牌で判定
+    // 注意：ツモの場合はwinTileが既にplayer.tilesに含まれている可能性がある
+    let allTiles: Tile[]
+    if (isTsumo) {
+      // ツモの場合：winTileが既に手牌に含まれているかチェック
+      const winTileInHand = player.tiles.some(tile => 
+        tile.id === winTile.id || 
+        (tile.suit === winTile.suit && tile.rank === winTile.rank)
+      )
+      if (winTileInHand) {
+        // 既に含まれている場合はそのまま使用
+        allTiles = [...player.tiles]
+      } else {
+        // 含まれていない場合は追加
+        allTiles = [...player.tiles, winTile]
+      }
+    } else {
+      // ロンの場合：勝利牌を追加
+      allTiles = [...player.tiles, winTile]
+    }
+    
 
 
     // 裏ドラ指示牌は山の後方から2番目の牌（ドラ指示牌の下）
@@ -944,6 +992,15 @@ export class GameManager {
         }).filter(tile => tile !== null) as Tile[]
         
         this._players[i].tiles = newTiles
+      }
+      
+      // ツモ牌リストの最初の牌を自動的にツモる（人間プレイヤーのみ）
+      if (i === 0 && testData && testData.drawTiles.length > 0) {
+        const firstDrawTile = this.parseTileString(testData.drawTiles[0], `test_draw_${i}_0`)
+        if (firstDrawTile) {
+          this._currentDrawnTile = firstDrawTile
+          this._testDrawIndices[i] = 1 // 次回のツモは2番目から
+        }
       }
     }
   }
