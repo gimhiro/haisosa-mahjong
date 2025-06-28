@@ -194,6 +194,11 @@
         <!-- Debug: GameManager info -->
       </div>
 
+      <!-- 設定エリア -->
+      <div class="settings-area">
+        <GameSettingsPanel class="settings-panel" />
+      </div>
+
       <!-- アクションボタンエリア -->
       <div class="action-area">
         <v-card class="action-panel">
@@ -394,10 +399,13 @@ import MahjongTile from '../components/MahjongTile.vue'
 import WinModal, { type WinData } from '../components/WinModal.vue'
 import DrawModal, { type DrawData } from '../components/DrawModal.vue'
 import GameEndModal, { type GameEndData } from '../components/GameEndModal.vue'
+import GameSettingsPanel from '../components/GameSettingsPanel.vue'
 import { useRouter } from 'vue-router'
+import { useGameSettings } from '../utils/useGameSettings'
 
 const gameManager = ref(new GameManager())
 const router = useRouter()
+const { settings } = useGameSettings()
 
 // CPU手牌表示状態
 const cpuTilesVisible = ref({
@@ -533,6 +541,17 @@ const shantenText = computed(() => {
 // リーチボタンのテキスト
 const riichiButtonText = computed(() => {
   return riichiPreviewMode.value ? 'キャンセル' : 'リーチ'
+})
+
+// 自動アガリ機能のwatcher
+watch([canTsumo, canRon], ([newCanTsumo, newCanRon]) => {
+  if (settings.value.autoWin) {
+    if (newCanTsumo) {
+      declareTsumo()
+    } else if (newCanRon) {
+      declareRon()
+    }
+  }
 })
 
 
@@ -1082,6 +1101,11 @@ function checkHumanMeldActions(discardPlayerIndex: number) {
   chiOptions.value = []
   lastDiscardedTile.value = null
 
+  // 鳴きなし設定が有効な場合は早期リターン
+  if (settings.value.disableMeld) {
+    return
+  }
+
   // 最後に捨てられた牌を取得
   const discardedTile = gameManager.value.lastDiscardedTile
   if (!discardedTile) {
@@ -1577,7 +1601,7 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
   grid-template-areas: 
     "dora top info"
     "left center right"
-    ". bottom actions";
+    "settings bottom actions";
   grid-template-rows: 20% 60% 20%;
   grid-template-columns: 20% 60% 20%;
   gap: 4px;
@@ -1623,6 +1647,15 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
 
 .action-area {
   grid-area: actions;
+  padding: 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.settings-area {
+  grid-area: settings;
   padding: 8px;
   display: flex;
   align-items: flex-start;
@@ -1801,6 +1834,14 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
   max-width: 280px;
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid #ff9800;
+  font-size: 0.85rem;
+}
+
+.settings-panel {
+  width: 100%;
+  max-width: 280px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #9c27b0;
   font-size: 0.85rem;
 }
 
