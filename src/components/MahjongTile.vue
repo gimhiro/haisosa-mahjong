@@ -13,23 +13,30 @@
     :draggable="props.isDraggable"
   >
     <div class="tile-face">
-      <img 
-        :src="tileImageUrl"
-        :alt="tileText"
-        class="tile-image"
-        @error="handleImageError"
-        @load="handleImageLoad"
-      />
-      <div v-if="imageError" class="tile-error">
-        {{ tileText }}
+      <!-- 裏向きの場合は裏面を表示 -->
+      <div v-if="isBack" class="tile-back">
+        <div class="back-pattern"></div>
       </div>
+      <!-- 表向きの場合は通常の画像を表示 -->
+      <template v-else>
+        <img 
+          :src="tileImageUrl"
+          :alt="tileText"
+          class="tile-image"
+          @error="handleImageError"
+          @load="handleImageLoad"
+        />
+        <div v-if="imageError" class="tile-error">
+          {{ tileText }}
+        </div>
+      </template>
       
       <!-- ドラマスク -->
-      <div v-if="isDora" class="dora-mask" @click.stop>
+      <div v-if="isDora && !isBack" class="dora-mask" @click.stop>
       </div>
       
       <!-- ツモ切りマスク -->
-      <div v-if="isTsumoDiscard" class="tsumo-discard-mask" @click.stop></div>
+      <div v-if="isTsumoDiscard && !isBack" class="tsumo-discard-mask" @click.stop></div>
     </div>
     <div v-if="isSelected" class="selection-indicator"></div>
   </div>
@@ -88,12 +95,17 @@ const tileClasses = computed(() => [
     'tile-discarded': props.isDiscarded,
     'tile-riichi-declaration': props.isRiichiDeclaration,
     'tile-disabled': props.disabled,
-    'tile-yoko': props.isYoko
+    'tile-yoko': props.isYoko,
+    'tile-back': props.isBack
   }
 ])
 
 const tileImageUrl = computed(() => {
-  return getTileImageUrl(props.tile, { isBack: props.isBack, isYoko: props.isYoko })
+  // 裏向きの場合は画像を使用せずCSSで表示
+  if (props.isBack) {
+    return ''
+  }
+  return getTileImageUrl(props.tile, { isBack: false, isYoko: props.isYoko })
 })
 
 const tileText = computed(() => {
@@ -313,6 +325,27 @@ function logDoraRender() {
 .tile-disabled:hover {
   transform: none !important;
   box-shadow: none !important;
+}
+
+/* 裏向き牌のスタイル - 既存のtile-backスタイルに合わせる */
+.mahjong-tile .tile-back {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+  border: 1px solid #1a202c;
+  border-radius: 2px;
+  margin: 1px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mahjong-tile .back-pattern {
+  width: 80%;
+  height: 80%;
+ 
+  border-radius: 1px;
 }
 
 /* レスポンシブ対応 */

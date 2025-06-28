@@ -173,3 +173,62 @@
 1. カン処理の一貫性確保: game-manager.tsとscoring.tsで手牌枚数計算を統一
 2. 暗カン判定の正確化: fromPlayer=0を基準とした判定ロジック
 3. Vue反応性の改善: 不要な条件を削除してcanPlayerRiichi()の結果を信頼
+
+### カン・メルド表示機能の実装
+
+**実装内容**: カン表示の改善とWin Modalでのメルド表示追加
+
+**表示ルール**:
+- 暗槓: 1枚目と4枚目を裏向き表示
+- 明槓: 鳴いた方向に応じて横向き表示
+  - 右からのミンカン: 4枚目を横向き
+  - 上からのミンカン: 3枚目を横向き
+  - 左からのミンカン: 1枚目を横向き
+- ポン: 鳴いた牌を横向き表示
+- チー: 鳴いた牌を横向き表示
+
+**修正ファイル**:
+
+- **ファイル名**: src/components/PlayerArea.vue
+- **改修内容**:
+  - shouldTileBeYoko()関数を修正してカンの横向き表示ルールを実装
+  - shouldTileBeBack()関数を新規追加して暗槓の裏向き表示を実装
+  - MahjongTileコンポーネントにis-back属性を追加
+
+- **ファイル名**: src/components/MahjongTile.vue
+- **改修内容**:
+  - 裏向き表示用のテンプレート構造を追加（tile-back要素）
+  - isBackプロパティ対応の実装
+  - 既存のtile-backスタイルに合わせた裏向きCSS実装
+  - tile-backクラスをtileClassesに追加
+
+- **ファイル名**: src/components/WinModal.vue
+- **改修内容**:
+  - メルドセクションをWin Modalに追加
+  - shouldTileBeYoko()とshouldTileBeBack()関数を実装
+  - メルド表示用CSS（melds-section, melds-display, meld-group）を追加
+  - Meld型のインポート追加
+
+- **ファイル名**: test/meld_view_test.py
+- **改修内容**: 
+  - メルド表示の包括的テストスクリプトを作成
+  - 暗槓→リーチ→ツモ→Win Modal表示の完全フローテスト
+  - メルド表示のスクリーンショット撮影機能
+
+- **ファイル名**: test/all_meld_test.py
+- **改修内容**:
+  - 詳細なメルド表示分析テストスクリプト
+  - タイル属性の詳細確認機能
+  - 暗槓の裏向き表示確認機能
+
+**動作確認結果**:
+- 暗槓の裏向き表示: ✅ 正常（1枚目と4枚目が裏向き）
+- 明槓の横向き表示: ✅ 正常（方向別に適切な位置が横向き）
+- Win Modalでのメルド表示: ✅ 正常
+- メルド表示テスト: ✅ 成功
+
+**実装の特徴**:
+1. 既存のtile-backスタイルとの統一性確保
+2. PlayerArea.vueとWinModal.vueで共通のメルド表示ロジック
+3. CSS-onlyでの裏向き表示実装（画像ファイル不要）
+4. 包括的なテストスクリプトによる動作確認

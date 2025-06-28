@@ -120,6 +120,7 @@
           :size="tileSize"
           :is-draggable="false"
           :is-yoko="shouldTileBeYoko(meld, tileIndex)"
+          :is-back="shouldTileBeBack(meld, tileIndex)"
         />
       </div>
     </div>
@@ -255,14 +256,6 @@ function onTileClick(tile: Tile) {
 }
 
 function shouldTileBeYoko(meld: Meld, tileIndex: number): boolean {
-  if (!meld.fromPlayer) {
-    return false
-  }
-  
-  // 鳴いた牌（calledTile）を横向きにする
-  const tile = meld.tiles[tileIndex]
-  const isCalledTile = tile.id === meld.calledTile.id
-  
   if (meld.type === 'chi') {
     // チーの場合、どのプレイヤーから鳴いたかに応じて横向きにする位置を決定
     // fromPlayer: 1=下家(右), 2=対面, 3=上家(左) from human player perspective
@@ -276,11 +269,40 @@ function shouldTileBeYoko(meld: Meld, tileIndex: number): boolean {
       default:
         return false
     }
-  } else if (meld.type === 'pon' || meld.type === 'kan') {
-    // ポン・カンの場合、鳴いた牌を横向きにする
+  } else if (meld.type === 'pon') {
+    // ポンの場合、鳴いた牌を横向きにする
+    const tile = meld.tiles[tileIndex]
+    const isCalledTile = tile.id === meld.calledTile.id
     return isCalledTile
+  } else if (meld.type === 'kan') {
+    // カンの場合の横向き表示ルール
+    if (meld.fromPlayer === 0) {
+      // 暗槓の場合：横向きなし（1枚目と4枚目は裏向き）
+      return false
+    } else {
+      // 明槓の場合：プレイヤーに応じて横向き位置を決定
+      switch (meld.fromPlayer) {
+        case 1: // 右からのミンカン → 4枚目を横向き
+          return tileIndex === 3
+        case 2: // 上からのミンカン → 3枚目を横向き  
+          return tileIndex === 2
+        case 3: // 左からのミンカン → 1枚目を横向き
+          return tileIndex === 0
+        default:
+          return false
+      }
+    }
   }
   
+  return false
+}
+
+// 裏向き表示を判定する関数
+function shouldTileBeBack(meld: Meld, tileIndex: number): boolean {
+  if (meld.type === 'kan' && meld.fromPlayer === 0) {
+    // 暗槓の場合：1枚目と4枚目を裏向き
+    return tileIndex === 0 || tileIndex === 3
+  }
   return false
 }
 </script>

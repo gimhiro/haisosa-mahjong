@@ -44,6 +44,29 @@
           </div>
         </div>
         
+        <!-- 鳴き牌表示 -->
+        <div v-if="winData.winner.melds && winData.winner.melds.length > 0" class="melds-section">
+          <h4>鳴き牌</h4>
+          <div class="melds-display">
+            <div 
+              v-for="(meld, index) in winData.winner.melds"
+              :key="index"
+              class="meld-group"
+            >
+              <MahjongTile
+                v-for="(tile, tileIndex) in meld.tiles"
+                :key="tile.id"
+                :tile="tile"
+                size="medium"
+                :is-draggable="false"
+                :is-yoko="shouldTileBeYoko(meld, tileIndex)"
+                :is-back="shouldTileBeBack(meld, tileIndex)"
+                :is-dora="isDoraTile(tile)"
+              />
+            </div>
+          </div>
+        </div>
+        
         <!-- 得点情報 -->
         <div class="score-info">
           <v-row>
@@ -144,7 +167,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Tile, Player } from '../stores/fourPlayerMahjong'
+import type { Tile, Player, Meld } from '../stores/fourPlayerMahjong'
 import MahjongTile from './MahjongTile.vue'
 
 export interface WinData {
@@ -243,6 +266,58 @@ const convertTileToNumber = (tile: any) => {
   if (tile.suit === 'sou') return tile.rank + 17
   if (tile.suit === 'honor') return tile.rank + 26
   return 0
+}
+
+// 横向き表示を判定する関数
+const shouldTileBeYoko = (meld: Meld, tileIndex: number): boolean => {
+  if (meld.type === 'chi') {
+    // チーの場合、どのプレイヤーから鳴いたかに応じて横向きにする位置を決定
+    // fromPlayer: 1=下家(右), 2=対面, 3=上家(左) from human player perspective
+    switch (meld.fromPlayer) {
+      case 1: // 右のプレイヤーからチー → 一番右の牌を横向き
+        return tileIndex === meld.tiles.length - 1
+      case 2: // 対面のプレイヤーからチー → 真ん中の牌を横向き
+        return tileIndex === Math.floor(meld.tiles.length / 2)
+      case 3: // 左のプレイヤーからチー → 一番左の牌を横向き
+        return tileIndex === 0
+      default:
+        return false
+    }
+  } else if (meld.type === 'pon') {
+    // ポンの場合、鳴いた牌を横向きにする
+    const tile = meld.tiles[tileIndex]
+    const isCalledTile = tile.id === meld.calledTile.id
+    return isCalledTile
+  } else if (meld.type === 'kan') {
+    // カンの場合の横向き表示ルール
+    if (meld.fromPlayer === 0) {
+      // 暗槓の場合：横向きなし（1枚目と4枚目は裏向き）
+      return false
+    } else {
+      // 明槓の場合：プレイヤーに応じて横向き位置を決定
+      switch (meld.fromPlayer) {
+        case 1: // 右からのミンカン → 4枚目を横向き
+          return tileIndex === 3
+        case 2: // 上からのミンカン → 3枚目を横向き  
+          return tileIndex === 2
+        case 3: // 左からのミンカン → 1枚目を横向き
+          return tileIndex === 0
+        default:
+          return false
+      }
+    }
+  }
+  
+  return false
+}
+
+// 裏向き表示を判定する関数
+const shouldTileBeBack = (meld: Meld, tileIndex: number): boolean => {
+  if (meld.type === 'kan' && meld.fromPlayer === 0) {
+    // 暗槓の場合：1枚目と4枚目を裏向き
+    return tileIndex === 0 || tileIndex === 3
+  }
+  return false
 }
 </script>
 
@@ -367,5 +442,30 @@ const convertTileToNumber = (tile: any) => {
   text-align: center;
   font-weight: bold;
   color: #4caf50;
+}
+
+/* メルド表示 */
+.melds-section {
+  margin-bottom: 20px;
+}
+
+.melds-section h4 {
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.melds-display {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.meld-group {
+  display: flex;
+  gap: 2px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
 }
 </style>
