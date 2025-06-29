@@ -13,7 +13,7 @@ from playwright.async_api import async_playwright
 async def test_haitei_junchan_sanshoku(base_url: str, headless: bool = True):
     """ハイテイツモ・純チャン・三色同刻テスト（最新レコード通り）"""
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=headless)
         page = await browser.new_page()
         
         # コンソールログを出力
@@ -195,7 +195,7 @@ async def main():
     args = parser.parse_args()
     
     print(f"🚀 ハイテイツモ・純チャン・三色同刻テスト開始: {args.url}")
-    success = await test_haitei_junchan_sanshoku(args.url, True)
+    success = await test_haitei_junchan_sanshoku(args.url, args.headless)
     
     if success:
         print("🎉 テスト成功: ハイテイツモ関連役が検出されました")
