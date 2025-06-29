@@ -10,6 +10,7 @@ export interface ScoringInput {
   uradoraIndicators: Tile[]
   isDealer: boolean
   isIppatsu?: boolean
+  isHaitei?: boolean
   melds?: Array<{
     type: 'pon' | 'kan' | 'chi'
     tiles: Tile[]
@@ -352,6 +353,7 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       aka_count: akaCount,
       riichi: input.isRiichi,
       ippatsu: input.isIppatsu || false,
+      last_tile: input.isHaitei || false,  // ハイテイツモ/ハイテイロン
       bakaze,
       jikaze,
       allow_kuitan: true,

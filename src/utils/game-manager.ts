@@ -144,6 +144,13 @@ export class GameManager {
     return Math.max(0, this._wall.length - 14)
   }
 
+  /**
+   * ハイテイ（最後の1枚）かどうかを判定
+   */
+  isHaitei(): boolean {
+    return this.wallRemaining === 0
+  }
+
   get kyotaku(): number {
     return this._kyotaku
   }
@@ -245,6 +252,10 @@ export class GameManager {
     if (this._testMode.isActive) {
       const testTile = this.getTestDrawTile(playerIndex)
       if (testTile) {
+        // テストモード時でも牌山から1枚除去して数値を正しく表示
+        if (this._wall.length > 14) {
+          this._wall.shift() // 実際の山から1枚除去
+        }
         this._currentDrawnTile = testTile
         return testTile
       }
@@ -558,7 +569,8 @@ export class GameManager {
         uradoraIndicators,
         isDealer,                  // Pass dealer status for accurate scoring
         this._ippatsuFlags[playerIndex], // 一発フラグ
-        player.melds               // プレイヤーのメルド情報
+        player.melds,              // プレイヤーのメルド情報
+        this.isHaitei()            // ハイテイフラグ
       )
 
       if (winResult.isWin) {

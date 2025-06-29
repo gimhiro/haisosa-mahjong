@@ -45,7 +45,8 @@ export const YAKU_NAMES: Record<string, string> = {
   'yakuhai': '役牌',
   'pinfu': '平和',
   'iipeikou': '一盃口',
-  'haiteiRaoyue': '海底撈月',
+  'haiteiRaoyue': '海底撈月',  // ハイテイロン
+  'haiteiMoyue': '海底摸月',   // ハイテイツモ
   'houteiRaoyui': '河底撈魚',
   'rinshanKaihou': '嶺上開花',
   'chankan': '槍槓',
@@ -95,7 +96,8 @@ export const YAKU_NAME_TO_KEY: Record<string, string> = {
   '役牌': 'yakuhai',
   '平和': 'pinfu',
   '一盃口': 'iipeikou',
-  '海底撈月': 'haiteiRaoyue',
+  '海底撈月': 'haiteiRaoyue',  // ハイテイロン
+  '海底摸月': 'haiteiMoyue',   // ハイテイツモ
   '河底撈魚': 'houteiRaoyui',
   '嶺上開花': 'rinshanKaihou',
   '槍槓': 'chankan',
@@ -132,7 +134,7 @@ export const YAKU_NAME_TO_KEY: Record<string, string> = {
 export const YAKU_BY_HAN = {
   1: [
     'riichi', 'ippatsu', 'menzenTsumo', 'tanyao', 'yakuhai', 'pinfu', 'iipeikou',
-    'haiteiRaoyue', 'houteiRaoyui', 'rinshanKaihou', 'chankan'
+    'haiteiRaoyue', 'haiteiMoyue', 'houteiRaoyui', 'rinshanKaihou', 'chankan'
   ],
   2: [
     'doubleRiichi', 'chiitoi', 'chanta', 'ittsu', 'sanshokuDoujun', 'sanshokuDoukou',
