@@ -210,6 +210,39 @@ export function canRiichi(tiles: Tile[] | FourPlayerTile[], discards?: Tile[] | 
   return false
 }
 
+// 鳴き牌を考慮したリーチ判定
+export function canRiichiWithMelds(tiles: Tile[] | FourPlayerTile[], melds: Array<{type: 'pon' | 'kan' | 'chi', tiles: Tile[]}> = []): boolean {
+  // 暗カンのみの鳴きであればリーチ可能
+  const hasOpenMelds = melds.some(meld => meld.type !== 'kan')
+  if (hasOpenMelds) {
+    return false
+  }
+  
+  // 鳴き牌を考慮した実効手牌枚数を計算
+  const meldTiles = melds.reduce((total, meld) => total + 3, 0) // カンは3枚として扱う
+  const effectiveHandSize = tiles.length + meldTiles
+  
+  
+  // 実効手牌が14枚（13枚+ツモ牌1枚）の場合にリーチ判定
+  if (effectiveHandSize === 14) {
+    // 各牌を1枚ずつ取り除いて、残り牌でテンパイ（シャンテン0）になるかチェック
+    for (let i = 0; i < tiles.length; i++) {
+      const testTiles = [...tiles]
+      testTiles.splice(i, 1) // i番目の牌を除去
+      
+      // 実効手牌13枚でテンパイ判定
+      if (testTiles.length + meldTiles === 13) {
+        const shanten = calculateShanten(testTiles)
+        if (shanten === 0) {
+          return true
+        }
+      }
+    }
+  }
+  
+  return false
+}
+
 // 役判定の基本的な実装 (簡易版)
 export function checkBasicYaku(tiles: Tile[], winTile: Tile, isTsumo: boolean): string[] {
   const yaku: string[] = []

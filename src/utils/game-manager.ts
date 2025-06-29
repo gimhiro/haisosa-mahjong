@@ -82,6 +82,40 @@ export class GameManager {
     return this._doraIndicators
   }
 
+  /**
+   * カン時に新しいドラ表示牌を追加する
+   */
+  addKanDoraIndicator(): void {
+    if (this._wall.length > 0 && this._doraIndicators.length < 5) {
+      // 王牌（リンシャン牌）からドラ表示牌を取得
+      const newDoraIndicator = this._wall.pop()!
+      this._doraIndicators.push(newDoraIndicator)
+      console.log(`カンドラ追加: ${newDoraIndicator.suit}${newDoraIndicator.rank}`)
+    }
+  }
+
+  /**
+   * リーチ時の裏ドラ表示牌を表ドラ数と同数取得する
+   */
+  getUradoraIndicators(): Tile[] {
+    if (this._wall.length < this._doraIndicators.length) {
+      return []
+    }
+    
+    const uradoraIndicators: Tile[] = []
+    const doraCount = this._doraIndicators.length
+    
+    // 表ドラと同数の裏ドラを山の後方から取得
+    for (let i = 0; i < doraCount; i++) {
+      const uradoraIndex = this._wall.length - 2 - i
+      if (uradoraIndex >= 0) {
+        uradoraIndicators.push(this._wall[uradoraIndex])
+      }
+    }
+    
+    return uradoraIndicators
+  }
+
   get currentDrawnTile(): Tile | null {
     return this._currentDrawnTile
   }
@@ -509,8 +543,8 @@ export class GameManager {
     
 
 
-    // 裏ドラ指示牌は山の後方から2番目の牌（ドラ指示牌の下）
-    const uradoraIndicators = player.riichi && this._wall.length >= 2 ? [this._wall[this._wall.length - 2]] : []
+    // 裏ドラ指示牌を表ドラと同数取得
+    const uradoraIndicators = player.riichi ? this.getUradoraIndicators() : []
 
     try {
       const isDealer = playerIndex === this._dealer

@@ -161,14 +161,14 @@ watch(show, (newValue) => {
     
     // デフォルト値を設定（空の場合）
     if (testData.value.players[0].tilesInput === '') {
-      testData.value.players[0].tilesInput = '1m 2m 3m 4m 5m 6m 7m 8m 9m 1p 2p 3p 4p'
+      testData.value.players[0].tilesInput = '1m 1m 1m 1m 2m 3m 4m 5m 6m 7m 8m 9m 1p'
       testData.value.players[0].drawTilesInput = '5p 6p 7p 8p 9p'
-      testData.value.players[1].tilesInput = '1s 2s 3s 4s 5s 6s 7s 8s 9s ton nan sha pei'
+      testData.value.players[1].tilesInput = '1m 2m 3m 1p 2p 3p 1s 2s 3s ton nan sha pei'
       testData.value.players[1].drawTilesInput = 'haku hatsu chun'
-      testData.value.players[2].tilesInput = '1m 1m 2m 2m 3m 3m 4m 4m 5m 5m 6m 6m 7m'
-      testData.value.players[2].drawTilesInput = '7m 8m 9m'
-      testData.value.players[3].tilesInput = '1p 1p 2p 2p 3p 3p 4p 4p 5p 5p 6p 6p 7p'
-      testData.value.players[3].drawTilesInput = '7p 8p 9p'
+      testData.value.players[2].tilesInput = '1m 2m 3m 1p 2p 3p 1s 2s 3s ton nan sha pei'
+      testData.value.players[2].drawTilesInput = 'haku hatsu chun'
+      testData.value.players[3].tilesInput = '1m 2m 3m 1p 2p 3p 1s 2s 3s ton nan sha pei'
+      testData.value.players[3].drawTilesInput = 'haku hatsu chun'
     }
   }
 })

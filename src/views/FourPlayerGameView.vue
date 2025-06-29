@@ -904,7 +904,7 @@ function declareTsumo() {
         yakuman: winResult.result.yakuman,
         doraIndicators: doraIndicators.value,
         doraCount: winResult.result.doraCount,
-        uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
+        uradoraIndicators: player.riichi ? gameManager.value.getUradoraIndicators() : [],
         uradoraCount: winResult.result.uradoraCount
       }
       
@@ -953,7 +953,7 @@ function declareRon() {
         yakuman: winResult.result.yakuman,
         doraIndicators: doraIndicators.value,
         doraCount: winResult.result.doraCount,
-        uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
+        uradoraIndicators: player.riichi ? gameManager.value.getUradoraIndicators() : [],
         uradoraCount: winResult.result.uradoraCount
       }
       
@@ -1071,6 +1071,9 @@ function declareKan() {
     
     // カン後は嶺上牌を引く
     const kanTile = gameManager.value.drawTileAndKeepSeparate(0)
+    
+    // カンドラを追加
+    gameManager.value.addKanDoraIndicator()
     
     // 手牌をソート
     gameManager.value.sortPlayerHand(humanPlayer)
@@ -1191,6 +1194,9 @@ function declareAnkan() {
     
     // 暗カン後は嶺上牌を引く
     const kanTile = gameManager.value.drawTileAndKeepSeparate(0)
+    
+    // カンドラを追加
+    gameManager.value.addKanDoraIndicator()
     
     // 手牌をソート
     gameManager.value.sortPlayerHand(humanPlayer)
@@ -1366,7 +1372,7 @@ function handleCpuWinWithResult(playerIndex: number, winTile: any, isTsumo: bool
     yakuman: winResult.yakuman,
     doraIndicators: doraIndicators.value,
     doraCount: winResult.doraCount,
-    uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
+    uradoraIndicators: player.riichi ? gameManager.value.getUradoraIndicators() : [],
     uradoraCount: winResult.uradoraCount
   }
   
@@ -1418,7 +1424,7 @@ function handleCpuWin(playerIndex: number, winTile: any, isTsumo: boolean) {
       yakuman: winResult.yakuman,
       doraIndicators: doraIndicators.value,
       doraCount: winResult.doraCount,
-      uradoraIndicators: player.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
+      uradoraIndicators: player.riichi ? gameManager.value.getUradoraIndicators() : [],
       uradoraCount: winResult.uradoraCount
     }
     
@@ -1668,7 +1674,7 @@ async function handleCpuRon(winnerIndex: number, loserIndex: number, winTile: an
       yakuman: winResult.result.yakuman,
       doraIndicators: doraIndicators.value,
       doraCount: winResult.result.doraCount,
-      uradoraIndicators: winner.riichi && gameManager.value.wall.length >= 2 ? [gameManager.value.wall[gameManager.value.wall.length - 2]] : [],
+      uradoraIndicators: winner.riichi ? gameManager.value.getUradoraIndicators() : [],
       uradoraCount: winResult.result.uradoraCount
     }
     
