@@ -59,7 +59,10 @@ vite.config.ts.timestamp-*
 # Testing
 coverage
 *.lcov
-screenshots
+# Screenshot directories and contents
+screenshots/
+**/screenshots/
+**/*screenshot*/
 
 # Temporary files
 *.tmp
