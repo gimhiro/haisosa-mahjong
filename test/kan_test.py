@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 カン機能統合テスト
-1. 暗カン実行
-2. カン新ドラ追加確認
-3. リーチ宣言
-4. ツモ上がり
-5. 裏ドラが表ドラと同数表示されることを確認
+1. 1pツモ
+2. 1m暗カン実行
+3. カン新ドラ追加確認
+4. リンシャン牌で9pツモ（嶺上開花）
+5. Win Modal確認
 6. 次の局へボタンクリック
 
-kan_dora_test.py と uradora_test.py の機能を統合した包括的テスト
+暗カン→リンシャンツモのテスト
 """
 
 import asyncio
@@ -16,7 +16,7 @@ import argparse
 from playwright.async_api import async_playwright
 
 async def test_kan_comprehensive(base_url: str, headless: bool = True):
-    """カン機能統合テスト: 暗カン→カンドラ確認→リーチ→ツモ上がり→裏ドラ確認"""
+    """カン機能統合テスト: 1pツモ→1m暗カン→カンドラ確認→リンシャンツモ（9p）"""
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)  # WSL環境では常にheadless
         page = await browser.new_page()
@@ -44,7 +44,7 @@ async def test_kan_comprehensive(base_url: str, headless: bool = True):
             await test_mock_button.click()
             await page.wait_for_timeout(1000)
             
-            # 手牌設定（カン→リーチ→ツモ上がり可能な形）
+            # 手牌設定（カン→リンシャンツモ上がり可能な形）
             hand_textbox = page.get_by_role("textbox", name="手牌 (13枚または14枚) 手牌 (13枚または14枚)")
             await hand_textbox.click()
             await hand_textbox.fill("1m 1m 1m 1m 2p 3p 4p 5p 6p 7p 8p 9p 9p")
@@ -86,114 +86,69 @@ async def test_kan_comprehensive(base_url: str, headless: bool = True):
                 
                 print("🔍 カン後の状態を調査...")
                 
-                # テストモード停止
-                stop_test_button = page.locator('button:has-text("テストモード停止")')
-                if await stop_test_button.is_visible():
-                    print("🔄 テストモード停止...")
-                    await stop_test_button.click()
-                    await page.wait_for_timeout(2000)
+                # カン後、すぐにリンシャンツモできるか確認
+                await page.wait_for_timeout(2000)
                 
-                # CPUのターンが終わるまで待つ
-                await page.wait_for_timeout(8000)
+                # ツモボタンの確認（リンシャンツモ）
+                tsumo_button = page.get_by_role("button", name="ツモ")
+                tsumo_visible = await tsumo_button.is_visible()
+                print(f"📊 リンシャンツモボタン表示: {tsumo_visible}")
                 
-                # リーチボタンの表示確認
-                riichi_button = page.get_by_role("button", name="リーチ")
-                riichi_visible = await riichi_button.is_visible()
-                print(f"📊 リーチボタン表示: {riichi_visible}")
-                
-                if riichi_visible:
-                    print("✅ リーチボタンが表示されています！")
+                if tsumo_visible:
+                    print("✅ リンシャンツモボタンが表示されています！")
                     
-                    # リーチを実行
-                    print("🎯 リーチを実行...")
-                    await riichi_button.click()
-                    await page.wait_for_timeout(2000)
-                    print("✅ リーチ宣言完了")
-                    
-                    # 1pを捨てる（リーチ後自動打牌）
-                    tile_1p = page.get_by_role("button", name="1筒").first
-                    if await tile_1p.is_visible():
-                        print("🎯 1筒を捨てます...")
-                        await tile_1p.click()
-                        await page.wait_for_timeout(2000)
-                        print("✅ 1筒打牌完了")
-                    
-                    # CPUのターンを待つ
+                    # リンシャンツモを実行
+                    print("🎯 リンシャンツモ（9p）を実行...")
+                    await tsumo_button.click()
                     await page.wait_for_timeout(3000)
                     
-                    # ツモまで待機（最大3回の循環）
-                    max_attempts = 3
-                    for attempt in range(max_attempts):
-                        print(f"🔍 ツモボタン確認 (試行 {attempt + 1}/{max_attempts})...")
+                    # Win Modal確認と裏ドラ数検証
+                    win_modal = page.locator('.modal-container, .v-dialog')
+                    win_modal_visible = await win_modal.is_visible()
+                    print(f"📊 Win Modal表示: {win_modal_visible}")
+                    
+                    if win_modal_visible:
+                        print("✅ Win Modalが表示されました")
                         
-                        # ツモボタンの確認
-                        tsumo_button = page.get_by_role("button", name="ツモ")
-                        tsumo_visible = await tsumo_button.is_visible()
-                        print(f"📊 ツモボタン表示: {tsumo_visible}")
+                        # 裏ドラ数確認（リンシャンツモの場合、リーチしていないので裏ドラは0）
+                        uradora_count = await count_uradora_in_modal(page, win_modal)
+                        print(f"📊 Win Modal内の裏ドラ表示数: {uradora_count}")
+                        print(f"📊 リンシャンツモ（リーチなし）のため、裏ドラは0が期待されます")
                         
-                        if tsumo_visible:
-                            print("✅ ツモボタンが表示されています！")
-                            
-                            # ツモを実行
-                            print("🎯 ツモを実行...")
-                            await tsumo_button.click()
-                            await page.wait_for_timeout(3000)
-                            
-                            # Win Modal確認と裏ドラ数検証
-                            win_modal = page.locator('.modal-container, .v-dialog')
-                            win_modal_visible = await win_modal.is_visible()
-                            print(f"📊 Win Modal表示: {win_modal_visible}")
-                            
-                            if win_modal_visible:
-                                print("✅ Win Modalが表示されました")
-                                
-                                # 裏ドラ数確認
-                                uradora_count = await count_uradora_in_modal(page, win_modal)
-                                print(f"📊 Win Modal内の裏ドラ表示数: {uradora_count}")
-                                print(f"📊 期待される裏ドラ数（表ドラと同数）: {post_kan_dora_count}")
-                                
-                                if uradora_count == post_kan_dora_count:
-                                    print("✅ 裏ドラ数が表ドラ数と一致しています！")
-                                    print("   - カン新ドラ追加: 正常")
-                                    print("   - カン→リーチ→ツモ: 正常")
-                                    print("   - 裏ドラ数表示: 正常")
-                                else:
-                                    print(f"❌ 裏ドラ数が一致しません (期待:{post_kan_dora_count}, 実際:{uradora_count})")
-                                
-                                # 次の局へボタンを確認・クリック
-                                next_game_button = page.get_by_role("button", name="次の局へ")
-                                if await next_game_button.is_visible():
-                                    print("🎯 次の局へボタンをクリック...")
-                                    
-                                    # 成功時のスクリーンショットを撮影
-                                    import os
-                                    os.makedirs('test/screenshots', exist_ok=True)
-                                    await page.screenshot(path='test/screenshots/kan_comprehensive_test.png')
-                                    print("📸 カン統合テストのスクリーンショットを保存")
-                                    
-                                    await next_game_button.click()
-                                    await page.wait_for_timeout(2000)
-                                    print("✅ 次の局への遷移が完了しました！")
-                                    print("🎉 カン統合テスト成功：暗カン→カンドラ追加→リーチ→ツモ→裏ドラ同数表示→次の局へ")
-                                    return True  # 成功時は処理終了
-                                else:
-                                    print("❌ 次の局へボタンが見つかりません")
-                                    await debug_buttons(page)
-                                    return False
-                            else:
-                                print("❌ Win Modalが表示されていません")
-                                await debug_buttons(page)
-                                return False
+                        if uradora_count == 0:
+                            print("✅ 裏ドラなし（リーチしていないため正常）")
+                            print("   - カン新ドラ追加: 正常")
+                            print("   - カン→リンシャンツモ: 正常")
+                            print("   - 嶺上開花: 正常")
                         else:
-                            if attempt < max_attempts - 1:
-                                print("🔄 次のツモを待機中...")
-                                await page.wait_for_timeout(6000)  # CPUターンを待つ
-                            else:
-                                print("❌ ツモボタンが表示されませんでした")
-                                await debug_buttons(page)
-                                return False
+                            print(f"❌ リーチしていないのに裏ドラが表示されています (実際:{uradora_count})")
+                        
+                        # 次の局へボタンを確認・クリック
+                        next_game_button = page.get_by_role("button", name="次の局へ")
+                        if await next_game_button.is_visible():
+                            print("🎯 次の局へボタンをクリック...")
+                            
+                            # 成功時のスクリーンショットを撮影
+                            import os
+                            os.makedirs('test/screenshots', exist_ok=True)
+                            await page.screenshot(path='test/screenshots/kan_comprehensive_test.png')
+                            print("📸 カン統合テストのスクリーンショットを保存")
+                            
+                            await next_game_button.click()
+                            await page.wait_for_timeout(2000)
+                            print("✅ 次の局への遷移が完了しました！")
+                            print("🎉 カン統合テスト成功：暗カン→カンドラ追加→リンシャンツモ（嶺上開花）→次の局へ")
+                            return True  # 成功時は処理終了
+                        else:
+                            print("❌ 次の局へボタンが見つかりません")
+                            await debug_buttons(page)
+                            return False
+                    else:
+                        print("❌ Win Modalが表示されていません")
+                        await debug_buttons(page)
+                        return False
                 else:
-                    print("❌ リーチボタンが表示されていません")
+                    print("❌ リンシャンツモボタンが表示されていません")
                     await debug_buttons(page)
                     await debug_game_state(page)
                     return False

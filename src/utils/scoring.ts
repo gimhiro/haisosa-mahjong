@@ -11,6 +11,8 @@ export interface ScoringInput {
   isDealer: boolean
   isIppatsu?: boolean
   isHaitei?: boolean
+  isDoubleRiichi?: boolean
+  isRinshanKaihou?: boolean
   melds?: Array<{
     type: 'pon' | 'kan' | 'chi'
     tiles: Tile[]
@@ -352,8 +354,10 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       dora: allDoraNumbers as any,
       aka_count: akaCount,
       riichi: input.isRiichi,
+      double_riichi: input.isDoubleRiichi || false,  // ダブルリーチ
       ippatsu: input.isIppatsu || false,
       last_tile: input.isHaitei || false,  // ハイテイツモ/ハイテイロン
+      after_kan: input.isRinshanKaihou || false,  // 嶺上開花/槍槓
       bakaze,
       jikaze,
       allow_kuitan: true,

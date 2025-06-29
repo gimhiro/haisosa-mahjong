@@ -659,6 +659,9 @@ async function onHumanTileDiscard(tileId: string) {
     return
   }
   
+  // 打牌時に嶺上開花フラグをリセット
+  gameManager.value.resetAfterKan()
+  
   const success = gameManager.value.discardTile(0, tileId)
   
   if (success) {
@@ -1070,10 +1073,13 @@ function declareKan() {
     })
     
     // カン後は嶺上牌を引く
-    const kanTile = gameManager.value.drawTileAndKeepSeparate(0)
+    const kanTile = gameManager.value.drawKanTile(0)
     
     // カンドラを追加
     gameManager.value.addKanDoraIndicator()
+    
+    // 嶺上開花フラグを設定
+    gameManager.value.setAfterKan(0)
     
     // 手牌をソート
     gameManager.value.sortPlayerHand(humanPlayer)
@@ -1083,6 +1089,9 @@ function declareKan() {
     
     // フラグリセット
     resetActionFlags()
+    
+    // 再度暗カン可能な牌をチェック
+    checkAnkanOptions()
   }
 }
 
@@ -1193,10 +1202,13 @@ function declareAnkan() {
     })
     
     // 暗カン後は嶺上牌を引く
-    const kanTile = gameManager.value.drawTileAndKeepSeparate(0)
+    const kanTile = gameManager.value.drawKanTile(0)
     
     // カンドラを追加
     gameManager.value.addKanDoraIndicator()
+    
+    // 嶺上開花フラグを設定
+    gameManager.value.setAfterKan(0)
     
     // 手牌をソート
     gameManager.value.sortPlayerHand(humanPlayer)
@@ -1738,6 +1750,11 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
     const expectedHandTiles = 13 - meldTileCount
     
     if (player.tiles.length !== expectedHandTiles) {
+      return
+    }
+    
+    // カン直後の場合は追加のツモを行わない（既にリンシャン牌を引いているため）
+    if (gameManager.value.currentDrawnTile && gameManager.value.isRinshanKaihou(newIndex)) {
       return
     }
     

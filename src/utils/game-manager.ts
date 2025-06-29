@@ -19,6 +19,9 @@ export class GameManager {
   private _renchan: boolean = false // 上がり連荘設定
   private _kyotaku: number = 0 // 供託の本数
   private _ippatsuFlags: boolean[] = [false, false, false, false] // 各プレイヤーの一発フラグ
+  private _riichiTurnNumbers: (number | null)[] = [null, null, null, null] // 各プレイヤーがリーチした巡数
+  private _lastKanPlayerIndex: number | null = null // 直前にカンしたプレイヤー
+  private _afterKan: boolean = false // 直前にカンが行われたかどうか
   private _enhancedDraw: EnhancedDraw
   private _gameSettings: { cpuStrengths: string[], gameType: string, agariRenchan: boolean, hakoshita: boolean }
   private _currentTurn: number = 0 // 現在の巡目
@@ -151,6 +154,41 @@ export class GameManager {
     return this.wallRemaining === 0
   }
 
+  /**
+   * ダブルリーチかどうかを判定
+   * @param playerIndex プレイヤーのインデックス
+   */
+  isDoubleRiichi(playerIndex: number): boolean {
+    const riichiTurn = this._riichiTurnNumbers[playerIndex]
+    // 1巡目（_currentTurnが0または1）のリーチをダブルリーチとする
+    return riichiTurn === 0 || riichiTurn === 1
+  }
+
+  /**
+   * 嶺上開花（カン後のツモ和了）かどうかを判定
+   * @param playerIndex プレイヤーのインデックス
+   */
+  isRinshanKaihou(playerIndex: number): boolean {
+    return this._afterKan && this._lastKanPlayerIndex === playerIndex
+  }
+
+  /**
+   * カン後の状態を設定（嶺上開花判定用）
+   * @param kanPlayerIndex カンを行ったプレイヤーのインデックス
+   */
+  setAfterKan(kanPlayerIndex: number): void {
+    this._afterKan = true
+    this._lastKanPlayerIndex = kanPlayerIndex
+  }
+
+  /**
+   * カン後の状態をリセット（打牌やロンなどで呼び出し）
+   */
+  resetAfterKan(): void {
+    this._afterKan = false
+    this._lastKanPlayerIndex = null
+  }
+
   get kyotaku(): number {
     return this._kyotaku
   }
@@ -261,6 +299,30 @@ export class GameManager {
       }
       // テストデータが尽きた場合は通常のドローに戻る
     }
+
+    return this.drawTileInternal(playerIndex)
+  }
+
+  // カン後のリンシャン牌を引く（テストモードではツモインデックスをインクリメントしない）
+  drawKanTile(playerIndex: number): Tile | null {
+    // テストモードの場合は専用の処理
+    if (this._testMode.isActive) {
+      const testTile = this.getTestKanTile(playerIndex)
+      if (testTile) {
+        // テストモード時でも牌山から1枚除去して数値を正しく表示
+        if (this._wall.length > 14) {
+          this._wall.shift() // 実際の山から1枚除去
+        }
+        this._currentDrawnTile = testTile
+        return testTile
+      }
+      // テストデータが尽きた場合は通常のドローに戻る
+    }
+
+    return this.drawTileInternal(playerIndex)
+  }
+
+  private drawTileInternal(playerIndex: number): Tile | null {
 
     // 14枚残しで終了
     if (this._wall.length <= 14) return null
@@ -520,6 +582,7 @@ export class GameManager {
       player.score -= 1000
       this._kyotaku++
       this._ippatsuFlags[playerIndex] = true // 一発フラグを設定
+      this._riichiTurnNumbers[playerIndex] = this._currentTurn // リーチした巡数を記録
       return true
     }
     return false
@@ -570,7 +633,9 @@ export class GameManager {
         isDealer,                  // Pass dealer status for accurate scoring
         this._ippatsuFlags[playerIndex], // 一発フラグ
         player.melds,              // プレイヤーのメルド情報
-        this.isHaitei()            // ハイテイフラグ
+        this.isHaitei(),           // ハイテイフラグ
+        this.isDoubleRiichi(playerIndex), // ダブルリーチフラグ
+        this.isRinshanKaihou(playerIndex) // 嶺上開花フラグ
       )
 
       if (winResult.isWin) {
@@ -1024,28 +1089,39 @@ export class GameManager {
 
   // テストモードでの手牌設定
   setTestHands() {
+    console.log(`[setTestHands] テストモード開始: isActive=${this._testMode.isActive}, testDataLength=${this._testMode.testData.length}`)
+    
     if (!this._testMode.isActive || this._testMode.testData.length === 0) {
+      console.log(`[setTestHands] テストモード無効またはテストデータなし`)
       return
     }
 
     for (let i = 0; i < 4; i++) {
       const testData = this._testMode.testData[i]
+      console.log(`[setTestHands] プレイヤー${i}のテストデータ:`, testData)
       
       if (testData && testData.tiles.length > 0) {
+        console.log(`[setTestHands] プレイヤー${i}の手牌設定開始: ${testData.tiles.join(', ')}`)
+        
         // テスト用の牌データを実際のTileオブジェクトに変換
         const newTiles = testData.tiles.map((tileStr, index) => {
           return this.parseTileString(tileStr, `test_${i}_${index}`)
         }).filter(tile => tile !== null) as Tile[]
         
+        console.log(`[setTestHands] プレイヤー${i}の変換後手牌:`, newTiles)
         this._players[i].tiles = newTiles
       }
       
       // ツモ牌リストの最初の牌を自動的にツモる（人間プレイヤーのみ）
       if (i === 0 && testData && testData.drawTiles.length > 0) {
+        console.log(`[setTestHands] プレイヤー${i}の最初のツモ牌設定: ${testData.drawTiles[0]}`)
         const firstDrawTile = this.parseTileString(testData.drawTiles[0], `test_draw_${i}_0`)
         if (firstDrawTile) {
+          console.log(`[setTestHands] 最初のツモ牌変換結果:`, firstDrawTile)
           this._currentDrawnTile = firstDrawTile
           this._testDrawIndices[i] = 1 // 次回のツモは2番目から
+        } else {
+          console.log(`[setTestHands] 最初のツモ牌変換失敗: ${testData.drawTiles[0]}`)
         }
       }
     }
@@ -1053,8 +1129,13 @@ export class GameManager {
 
   // 牌文字列をTileオブジェクトに変換
   private parseTileString(tileStr: string, id: string): Tile | null {
+    console.log(`[parseTileString] 入力文字列: '${tileStr}', ID: '${id}'`)
+    
     // 牌の文字列をパース（例: "1m", "2p", "3s", "ton", "nan", "sha", "pei", "haku", "hatsu", "chun"）
-    if (!tileStr || tileStr.length === 0) return null
+    if (!tileStr || tileStr.length === 0) {
+      console.log(`[parseTileString] 空の文字列またはnull: '${tileStr}'`)
+      return null
+    }
 
     let suit: 'man' | 'pin' | 'sou' | 'honor'
     let rank: number
@@ -1068,6 +1149,21 @@ export class GameManager {
     } else if (tileStr.endsWith('s')) {
       suit = 'sou'
       rank = parseInt(tileStr.slice(0, -1))
+    } else if (tileStr.endsWith('w')) {
+      // 風牌：1-4w
+      suit = 'honor'
+      rank = parseInt(tileStr.slice(0, -1))
+      if (rank < 1 || rank > 4) return null
+    } else if (tileStr.endsWith('d')) {
+      // 三元牌：1-3d
+      suit = 'honor'
+      const originalRank = parseInt(tileStr.slice(0, -1))
+      rank = originalRank + 4 // 5-7に変換
+      console.log(`[parseTileString] 三元牌変換: '${tileStr}' -> originalRank: ${originalRank}, rank: ${rank}`)
+      if (rank < 5 || rank > 7) {
+        console.log(`[parseTileString] 三元牌範囲外エラー: rank=${rank}, 期待範囲: 5-7`)
+        return null
+      }
     } else {
       suit = 'honor'
       switch (tileStr) {
@@ -1082,10 +1178,18 @@ export class GameManager {
       }
     }
 
-    if (suit !== 'honor' && (rank < 1 || rank > 9)) return null
-    if (suit === 'honor' && (rank < 1 || rank > 7)) return null
+    if (suit !== 'honor' && (rank < 1 || rank > 9)) {
+      console.log(`[parseTileString] 数牌範囲外エラー: suit=${suit}, rank=${rank}`)
+      return null
+    }
+    if (suit === 'honor' && (rank < 1 || rank > 7)) {
+      console.log(`[parseTileString] 字牌範囲外エラー: suit=${suit}, rank=${rank}`)
+      return null
+    }
 
-    return { id, suit, rank, isRed: false }
+    const result = { id, suit, rank, isRed: false }
+    console.log(`[parseTileString] 変換結果:`, result)
+    return result
   }
 
   // テストモードでのツモ牌制御
@@ -1101,5 +1205,21 @@ export class GameManager {
     this._testDrawIndices[playerIndex]++
 
     return this.parseTileString(tileStr, `test_draw_${playerIndex}_${drawIndex}`)
+  }
+
+  // テストモードでのリンシャン牌制御
+  private getTestKanTile(playerIndex: number): Tile | null {
+    if (!this._testMode.isActive || !this._testMode.testData[playerIndex]) return null
+
+    const testData = this._testMode.testData[playerIndex]
+    const drawIndex = this._testDrawIndices[playerIndex]
+
+    if (drawIndex >= testData.drawTiles.length) return null
+
+    const tileStr = testData.drawTiles[drawIndex]
+    // カン時もインデックスをインクリメントして、連続カン時の正しい順序を保つ
+    this._testDrawIndices[playerIndex]++
+
+    return this.parseTileString(tileStr, `test_kan_${playerIndex}_${drawIndex}`)
   }
 }

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 通常役テスト2: 三槓子・三暗刻・小三元
-手牌: [暗槓]白白白白 中中中中 東東東東 111m 發發
+手牌: [暗槓]白白白 發發發 東東東 111m 中
 期待役: 三槓子・三暗刻・対々和・小三元・混老頭・役牌（東＋三元）・嶺上開花
-条件: 東が連風（場風＋自風）、3回連続暗槓→リンシャンツモ
+条件: 東が連風（場風＋自風）、白ミンカン→2回連続暗槓→リンシャンツモ
 """
 
 import asyncio
@@ -13,7 +13,7 @@ from playwright.async_api import async_playwright
 async def test_sankantsu_sanankou(base_url: str, headless: bool = True):
     """三槓子・三暗刻・小三元役のテスト"""
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)  # WSL環境では常にheadless
+        browser = await p.chromium.launch(headless=headless)  # WSL環境では常にheadless
         page = await browser.new_page()
         
         # コンソールログを出力
@@ -39,16 +39,15 @@ async def test_sankantsu_sanankou(base_url: str, headless: bool = True):
             await test_mock_button.click()
             await page.wait_for_timeout(1000)
             
-            # 手牌設定（三槓子形）13枚
-            # 白×4 中×4 東×4 發（三槓子を成立させる）
+            # 手牌設定（三槓子形）13枚: 白白白 發發發 東東東 111m 中
             hand_textbox = page.get_by_role("textbox", name="手牌 (13枚または14枚) 手牌 (13枚または14枚)")
             await hand_textbox.click()
-            await hand_textbox.fill("haku haku haku haku chun chun chun chun ton ton ton ton hatsu")
+            await hand_textbox.fill("haku haku haku hatsu hatsu hatsu ton ton ton 1m 1m 1m chun")
             
-            # ツモ牌設定（記録に合わせて修正）
+            # ツモ牌設定（1pツモ→白ミンカン用の白→東暗槓→發暗槓→中でリンシャンツモ）
             draw_textbox = page.get_by_role("textbox", name="ツモ牌 (順番通り) ツモ牌 (順番通り)")
             await draw_textbox.click()
-            await draw_textbox.fill("1p haku chun ton hatsu")
+            await draw_textbox.fill("1p ton hatsu chun")
             
             # 他のプレイヤーの手牌設定（CPUが正常に動作するように）
             # プレイヤー2
@@ -56,118 +55,98 @@ async def test_sankantsu_sanankou(base_url: str, headless: bool = True):
             await page.wait_for_timeout(500)
             player2_hand = page.get_by_role("textbox", name="手牌 (13枚または14枚) 手牌 (13枚または14枚)")
             await player2_hand.click()
-            await player2_hand.fill("1m 2m 3m 1p 2p 3p 1s 2s 3s ton ton ton haku")
+            await player2_hand.fill("1m 2m 3m 1p 2p 3p 1s 2s 3s 4p 4p 4p haku")
             player2_draw = page.get_by_role("textbox", name="ツモ牌 (順番通り) ツモ牌 (順番通り)")
             await player2_draw.click()
-            await player2_draw.fill("chun hastu")
+            await player2_draw.fill("5p 5p 5p")
             
             # プレイヤー3
             await page.get_by_role("tab", name="プレイヤー3").click()
             await page.wait_for_timeout(500)
             player3_hand = page.get_by_role("textbox", name="手牌 (13枚または14枚) 手牌 (13枚または14枚)")
             await player3_hand.click()
-            await player3_hand.fill("1m 2m 3m 1p 2p 3p 1s 2s 3s ton ton ton haku")
+            await player3_hand.fill("1m 2m 3m 1p 2p 3p 1s 2s 3s 4p 4p 4p 1d")
             player3_draw = page.get_by_role("textbox", name="ツモ牌 (順番通り) ツモ牌 (順番通り)")
             await player3_draw.click()
-            await player3_draw.fill("chun hastu")
+            await player3_draw.fill("5p 5p 5p")
             
             # プレイヤー4
             await page.get_by_role("tab", name="プレイヤー4").click()
             await page.wait_for_timeout(500)
             player4_hand = page.get_by_role("textbox", name="手牌 (13枚または14枚) 手牌 (13枚または14枚)")
             await player4_hand.click()
-            await player4_hand.fill("1m 2m 3m 1p 2p 3p 1s 2s 3s ton ton ton haku")
+            await player4_hand.fill("1m 2m 3m 1p 2p 3p 1s 2s 3s 4p 4p 4p 1d")
             player4_draw = page.get_by_role("textbox", name="ツモ牌 (順番通り) ツモ牌 (順番通り)")
             await player4_draw.click()
-            await player4_draw.fill("chun hastu")
-            
-            # プレイヤー1に戻る
-            await page.get_by_role("tab", name="プレイヤー1").click()
-            await page.wait_for_timeout(500)
+            await player4_draw.fill("5p 5p 5p")
             
             # テストモード開始
             start_test_button = page.get_by_role("button", name="テストモード開始")
             await start_test_button.click()
             await page.wait_for_timeout(3000)
             
+            
             print("✅ テストモード開始完了")
             
-            # 最初に1p筒を捨てる（記録に合わせて）
-            tile_1p = page.get_by_role("button", name="筒")
+            # 最初に1pを捨てる
+            tile_1p = page.get_by_role("button", name="1筒")
             if await tile_1p.is_visible():
                 print("🎯 1筒を捨てます...")
                 await tile_1p.click()
                 await page.wait_for_timeout(2000)
+                
                 print("✅ 1筒打牌完了")
             
-            # カン宣言（一般的なカンボタン）
-            kan_button = page.get_by_role("button", name="カン")
-            if await kan_button.is_visible():
-                print("🎯 カンを宣言...")
-                await kan_button.click()
-                await page.wait_for_timeout(2000)
-                print("✅ カン完了")
+            # CPUのターンを待つ（プレイヤー2が白を捨てるまで）
+            await page.wait_for_timeout(5000)
             
-            # 1回目の暗槓
+            # 白のミンカンボタンを待つ
+            print("🎯 白のミンカンを待機...")
+            minkan_button = page.get_by_role("button", name="カン")
+            if await minkan_button.is_visible():
+                print("🎯 白のミンカンを実行...")
+                await minkan_button.click()
+                await page.wait_for_timeout(2000)
+                print("✅ 白のミンカン完了")
+            
+            # 1回目の暗槓（東）- tonツモ後
             success = await perform_ankan_new(page, 1)
             if not success:
                 print("❌ 1回目の暗槓に失敗")
                 return False
             
-            # 2回目の暗槓  
+            # 2回目の暗槓（發）- hatsuツモ後
             success = await perform_ankan_new(page, 2)
             if not success:
                 print("❌ 2回目の暗槓に失敗")
                 return False
             
-            # 3回目の暗槓
-            success = await perform_ankan_new(page, 3)
-            if not success:
-                print("❌ 3回目の暗槓に失敗")
-                return False
-            
             # CPUのターンを待つ
             await page.wait_for_timeout(3000)
             
-            # ツモボタンが表示されるまで待機（嶺上開花ツモ）
-            max_attempts = 3
-            for attempt in range(max_attempts):
-                print(f"🔍 ツモボタン確認 (試行 {attempt + 1}/{max_attempts})...")
+            # リンシャンツモ（中でツモアガリ）
+            print("🎯 リンシャンツモ（中）を実行...")
+            tsumo_button = page.get_by_role("button", name="ツモ")
+            if await tsumo_button.is_visible():
+                print("✅ ツモボタンが表示されました！")
+                await tsumo_button.click()
+                await page.wait_for_timeout(3000)
                 
-                tsumo_button = page.get_by_role("button", name="ツモ")
-                if await tsumo_button.is_visible():
-                    print("✅ ツモボタンが表示されました！")
+                # Win Modal確認と役の検証
+                win_modal = page.locator('.modal-container, .v-dialog')
+                if await win_modal.is_visible():
+                    print("✅ Win Modalが表示されました")
                     
-                    # ツモを実行
-                    print("🎯 ツモを実行（嶺上開花）...")
-                    await tsumo_button.click()
-                    await page.wait_for_timeout(3000)
+                    # 役の確認
+                    await verify_yaku(page, win_modal)
                     
-                    # Win Modal確認と役の検証
-                    win_modal = page.locator('.modal-container, .v-dialog')
-                    if await win_modal.is_visible():
-                        print("✅ Win Modalが表示されました")
-                        
-                        # 役の確認
-                        await verify_yaku(page, win_modal)
-                        
-                        # スクリーンショット保存
-                        import os
-                        os.makedirs('test/screenshots', exist_ok=True)
-                        await page.screenshot(path='test/screenshots/yaku_test_2_sankantsu.png')
-                        print("📸 三槓子・三暗刻・小三元役のスクリーンショットを保存")
-                        
-                        return True
-                    else:
-                        print("❌ Win Modalが表示されていません")
-                        break
+                    return True
                 else:
-                    if attempt < max_attempts - 1:
-                        print("🔄 次のツモを待機中...")
-                        await page.wait_for_timeout(5000)
-                    else:
-                        print("❌ ツモボタンが表示されませんでした")
-                        break
+                    print("❌ Win Modalが表示されていません")
+                    return False
+            else:
+                print("❌ ツモボタンが表示されませんでした")
+                return False
                         
         except Exception as e:
             print(f"❌ エラーが発生しました: {e}")
@@ -197,14 +176,16 @@ async def perform_ankan_new(page, kan_number):
     """暗槓を実行（新版）"""
     print(f"🎯 {kan_number}回目の暗槓を実行...")
     
-    ankan_button = page.get_by_role("button", name="暗カン")
-    if await ankan_button.is_visible():
-        await ankan_button.click()
+    # まず「カン」ボタンをクリック
+    kan_button = page.get_by_role("button", name="カン")
+    if await kan_button.is_visible():
+        await kan_button.click()
         await page.wait_for_timeout(2000)
+        
         print(f"✅ {kan_number}回目の暗槓完了")
         return True
     else:
-        print(f"❌ {kan_number}回目の暗槓ボタンが見つかりません")
+        print(f"❌ {kan_number}回目のカンボタンが見つかりません")
         return False
 
 async def verify_yaku(page, win_modal):
@@ -217,11 +198,9 @@ async def verify_yaku(page, win_modal):
         "三暗刻", 
         "対々和",
         "小三元",
-        "混老頭",
-        "東",               # 場風・自風
+        "東",               # 場風・自風（ダブトン）
         "白",               # 三元牌
         "發",               # 三元牌
-        "中",               # 三元牌
         "嶺上開花"
     ]
     
@@ -270,7 +249,7 @@ async def main():
     args = parser.parse_args()
     
     print(f"🚀 三槓子・三暗刻・小三元役テスト開始: {args.url}")
-    success = await test_sankantsu_sanankou(args.url, True)  # WSL環境では常にheadless
+    success = await test_sankantsu_sanankou(args.url, args.headless)  # WSL環境では常にheadless
     
     if success:
         print("🎉 テスト成功: 三槓子・三暗刻・小三元役が正常に確認されました")

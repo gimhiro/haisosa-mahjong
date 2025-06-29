@@ -56,30 +56,30 @@ async def test_chinitsu_ryanpeikou(base_url: str, headless: bool = True):
             await page.wait_for_timeout(500)
             player2_hand = page.get_by_role("textbox", name="手牌 (13枚または14枚) 手牌 (13枚または14枚)")
             await player2_hand.click()
-            await player2_hand.fill("1m 2m 3m 1p 2p 3p 1s 2s 3s ton nan sha pei")
+            await player2_hand.fill("1m 2m 3m 1p 2p 3p 1s 2s 3s 1w 2w 3w 4w")
             player2_draw = page.get_by_role("textbox", name="ツモ牌 (順番通り) ツモ牌 (順番通り)")
             await player2_draw.click()
-            await player2_draw.fill("haku hatsu chun haku hatsu chun haku hatsu chun haku hatsu chun haku hatsu chun")
+            await player2_draw.fill("1d 2d 3d 1d 2d 3d 1d 2d 3d 1d 2d 3d 1d 2d 3d")
             
             # プレイヤー3
             await page.get_by_role("tab", name="プレイヤー3").click()
             await page.wait_for_timeout(500)
             player3_hand = page.get_by_role("textbox", name="手牌 (13枚または14枚) 手牌 (13枚または14枚)")
             await player3_hand.click()
-            await player3_hand.fill("1m 2m 3m 1p 2p 3p 1s 2s 3s ton nan sha pei")
+            await player3_hand.fill("1m 2m 3m 1p 2p 3p 1s 2s 3s 1w 2w 3w 4w")
             player3_draw = page.get_by_role("textbox", name="ツモ牌 (順番通り) ツモ牌 (順番通り)")
             await player3_draw.click()
-            await player3_draw.fill("haku hatsu chun haku hatsu chun haku hatsu chun haku hatsu chun haku hatsu chun")
+            await player3_draw.fill("1d 2d 3d 1d 2d 3d 1d 2d 3d 1d 2d 3d 1d 2d 3d")
             
             # プレイヤー4
             await page.get_by_role("tab", name="プレイヤー4").click()
             await page.wait_for_timeout(500)
             player4_hand = page.get_by_role("textbox", name="手牌 (13枚または14枚) 手牌 (13枚または14枚)")
             await player4_hand.click()
-            await player4_hand.fill("1m 2m 3m 1p 2p 3p 1s 2s 3s ton nan sha pei")
+            await player4_hand.fill("1m 2m 3m 1p 2p 3p 1s 2s 3s 1w 2w 3w 4w")
             player4_draw = page.get_by_role("textbox", name="ツモ牌 (順番通り) ツモ牌 (順番通り)")
             await player4_draw.click()
-            await player4_draw.fill("haku hatsu chun haku hatsu chun haku hatsu chun haku hatsu chun haku hatsu chun")
+            await player4_draw.fill("1d 2d 3d 1d 2d 3d 1d 2d 3d 1d 2d 3d 1d 2d 3d")
             
             # プレイヤー1に戻る
             await page.get_by_role("tab", name="プレイヤー1").click()
