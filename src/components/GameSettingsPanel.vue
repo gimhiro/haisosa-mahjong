@@ -35,32 +35,6 @@
         @update:model-value="updateSettings({ showAcceptanceHighlight: $event })"
       />
       
-      <!-- 牌操作率設定 -->
-      <div class="setting-group">
-        <div class="setting-label">牌操作率</div>
-        <v-select
-          v-model="settings.manipulationRate"
-          :items="manipulationRateOptions"
-          density="compact"
-          variant="outlined"
-          hide-details
-          @update:model-value="updateSettings({ manipulationRate: $event })"
-        />
-      </div>
-      
-      <!-- 手牌の良さ設定 -->
-      <div class="setting-group">
-        <div class="setting-label">手牌の良さ</div>
-        <v-select
-          v-model="settings.handQuality"
-          :items="handQualityOptions"
-          density="compact"
-          variant="outlined"
-          hide-details
-          @update:model-value="updateSettings({ handQuality: $event })"
-        />
-      </div>
-      
       <v-btn
         v-if="settings.testMode"
         :color="settings.testMode.isActive ? 'success' : 'warning'"
@@ -85,17 +59,6 @@ const emit = defineEmits<{
   openTestDialog: []
 }>()
 
-const manipulationRateOptions = [
-  { title: '0%', value: 0 },
-  { title: '40%', value: 40 },
-  { title: '80%', value: 80 }
-]
-
-const handQualityOptions = [
-  { title: '普通', value: 'normal' },
-  { title: '良い', value: 'good' },
-  { title: '最高', value: 'excellent' }
-]
 
 const handleTestModeToggle = () => {
   if (!settings.value.testMode) {

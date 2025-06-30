@@ -77,6 +77,28 @@
               </div>
             </div>
           </div>
+
+          <!-- 牌操作・配牌設定 -->
+          <div class="setting-section">
+            <div class="section-header">
+              <v-icon class="section-icon">mdi-shuffle-variant</v-icon>
+              <h3 class="section-title">牌操作・配牌設定</h3>
+            </div>
+            <div class="setting-values">
+              <div class="manipulation-setting">
+                <span class="setting-label">牌操作率:</span>
+                <v-chip color="primary" class="ml-2">
+                  {{ gameplaySettings.manipulationRate }}%
+                </v-chip>
+              </div>
+              <div class="hand-quality-setting">
+                <span class="setting-label">手牌の良さ:</span>
+                <v-chip color="secondary" class="ml-2">
+                  {{ getHandQualityText(gameplaySettings.handQuality) }}
+                </v-chip>
+              </div>
+            </div>
+          </div>
         </div>
       </v-card-text>
       
@@ -116,6 +138,11 @@ const settings = ref({
   hakoshita: true
 })
 
+const gameplaySettings = ref({
+  manipulationRate: 80,
+  handQuality: 'good'
+})
+
 // 設定を読み込み
 function loadSettings() {
   try {
@@ -131,6 +158,20 @@ function loadSettings() {
     }
   } catch (error) {
     console.error('設定の読み込みに失敗しました:', error)
+  }
+
+  // ゲーム中設定も読み込み
+  try {
+    const gameplaySettingsData = localStorage.getItem('mahjong-game-settings')
+    if (gameplaySettingsData) {
+      const parsed = JSON.parse(gameplaySettingsData)
+      gameplaySettings.value = {
+        manipulationRate: parsed.manipulationRate || 80,
+        handQuality: parsed.handQuality || 'good'
+      }
+    }
+  } catch (error) {
+    console.error('ゲーム中設定の読み込みに失敗しました:', error)
   }
 }
 
@@ -159,6 +200,15 @@ function getCpuStrengthColor(strength: string): string {
     super: 'error'
   }
   return colorMap[strength] || 'primary'
+}
+
+function getHandQualityText(handQuality: string): string {
+  const qualityMap: Record<string, string> = {
+    normal: '普通',
+    good: '良い',
+    excellent: '最高'
+  }
+  return qualityMap[handQuality] || '良い'
 }
 
 function closeModal() {
@@ -260,6 +310,19 @@ function closeModal() {
 .rule-status.disabled {
   color: #6b7280;
   background: rgba(107, 114, 128, 0.1);
+}
+
+.manipulation-setting,
+.hand-quality-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.setting-label {
+  font-weight: 500;
+  color: #475569;
 }
 
 @media (max-width: 768px) {

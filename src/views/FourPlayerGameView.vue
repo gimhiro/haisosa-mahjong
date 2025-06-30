@@ -150,12 +150,12 @@
               </v-btn>
               <v-btn
                 v-else
-                color="error"
+                :color="isMuted ? 'error' : 'primary'"
                 size="small"
                 block
-                @click="resetGame"
+                @click="toggleMute"
               >
-                リセット
+                <v-icon>{{ isMuted ? 'mdi-volume-off' : 'mdi-volume-high' }}</v-icon>
               </v-btn>
             </div>
           </v-card-text>
@@ -454,6 +454,7 @@ import TestModeDialog from '../components/TestModeDialog.vue'
 import AcceptancePopup from '../components/AcceptancePopup.vue'
 import { useRouter } from 'vue-router'
 import { useGameSettings } from '../utils/useGameSettings'
+import { SoundManager } from '../utils/sound-manager'
 
 const gameManager = ref(new GameManager())
 const router = useRouter()
@@ -496,6 +497,9 @@ const mouseY = ref(0)
 const currentShanten = ref(8)
 const isUsefulTilesMode = ref(false)
 const isCalculatingAcceptance = ref(false)
+
+// Sound mute state
+const isMuted = ref(false)
 
 const winModalData = ref<WinData>({
   winner: gameManager.value.players[0],
@@ -671,6 +675,9 @@ function getDealerText(): string {
 }
 
 function startGame() {
+  // 音声ファイルを事前ロード
+  SoundManager.preloadSounds()
+  
   // テストモードが有効な場合はGameManagerに設定を送信
   if (settings.value.testMode.isActive) {
     gameManager.value.setTestMode(true, settings.value.testMode.players)
@@ -713,6 +720,11 @@ function resetGame() {
   gameManager.value.resetGame()
 }
 
+// ミュート状態を切り替え
+function toggleMute() {
+  isMuted.value = SoundManager.toggleMute()
+}
+
 // テストモード適用イベントハンドラ
 function onTestModeApplied() {
   if (settings.value.testMode.isActive) {
@@ -744,6 +756,9 @@ async function onHumanTileDiscard(tileId: string) {
   const success = gameManager.value.discardTile(0, tileId)
   
   if (success) {
+    // 打牌音を再生
+    SoundManager.playDiscardSound()
+    
     // プレイヤーが牌を捨てた後、CPUのロン判定を行う
     const cpuRonOccurred = await checkCpuRon(0)
     
@@ -804,6 +819,9 @@ async function processCpuTurn() {
         const riichiSuccess = gameManager.value.declareRiichi(currentIndex)
         
         if (riichiSuccess) {
+          // リーチ宣言音を再生
+          SoundManager.playRiichiSound()
+          
           // リーチ宣言と同時に決定した牌を捨てる
           const discardSuccess = gameManager.value.discardTile(currentIndex, riichiDiscardTile, true)
           
@@ -834,6 +852,8 @@ async function processCpuTurn() {
       // 通常の捨て牌
       const success = gameManager.value.discardTile(currentIndex, decision.tileId)
       if (success) {
+        // 打牌音を再生
+        SoundManager.playDiscardSound()
         // CPUが牌を捨てた後、人間プレイヤーがロン可能かチェック
         if (gameManager.value.canHumanRon()) {
           // ロンボタンが表示されるので、ここでは次のターンに進まない
@@ -958,6 +978,8 @@ function confirmRiichiAndDiscard(tileId: string) {
   if (canDeclareRiichi.value) {
     gameManager.value.declareRiichi(0)
     
+    // リーチ宣言音を再生
+    SoundManager.playRiichiSound()
   }
 
   // プレビューモードを解除
