@@ -62,7 +62,8 @@ export class RecordsManager {
     humanPlayerScore: number,
     isWin: boolean,
     winPoints?: number,
-    winTurns?: number
+    winTurns?: number,
+    isGameCompleted: boolean = false
   ): void {
     const records = this.loadRecords()
     
@@ -76,20 +77,55 @@ export class RecordsManager {
 
     const stats = records.gameStats[gameMode]
     
-    // 総ゲーム数を増加
-    stats.totalGames++
+    // ゲーム終了時は必ず総ゲーム数を増加
+    if (isGameCompleted) {
+      stats.totalGames++
+    }
 
     // 最高持ち点を更新
     if (humanPlayerScore > stats.maxPoints) {
       stats.maxPoints = humanPlayerScore
     }
 
-    // 上がりの場合の記録
+    // 上がりの場合の記録（上がり回数と関連情報のみ）
     if (isWin && winPoints !== undefined && winTurns !== undefined) {
       stats.winCount++
       stats.totalWinPoints += winPoints
       stats.totalWinTurns += winTurns
     }
+
+    this.saveRecords(records)
+  }
+
+  // 上がり記録専用メソッド（ゲーム終了を伴わない場合）
+  static recordWin(
+    gameType: 'tonpuusen' | 'tonnanssen',
+    agariRenchan: boolean,
+    humanPlayerScore: number,
+    winPoints: number,
+    winTurns: number
+  ): void {
+    const records = this.loadRecords()
+    
+    // ゲームモードを決定
+    let gameMode: keyof GameRecords['gameStats']
+    if (gameType === 'tonpuusen') {
+      gameMode = agariRenchan ? 'tonpuusenRenchan' : 'tonpuusenNoRenchan'
+    } else {
+      gameMode = agariRenchan ? 'tonnansenRenchan' : 'tonnansenNoRenchan'
+    }
+
+    const stats = records.gameStats[gameMode]
+    
+    // 最高持ち点を更新
+    if (humanPlayerScore > stats.maxPoints) {
+      stats.maxPoints = humanPlayerScore
+    }
+
+    // 上がり情報のみ記録
+    stats.winCount++
+    stats.totalWinPoints += winPoints
+    stats.totalWinTurns += winTurns
 
     this.saveRecords(records)
   }

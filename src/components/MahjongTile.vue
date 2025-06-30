@@ -6,6 +6,8 @@
     @touchend="handleTouchEnd"
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
     :aria-label="tileText"
     :aria-selected="props.isSelected"
     role="button"
@@ -35,6 +37,10 @@
       <div v-if="isDora && !isBack" class="dora-mask" @click.stop>
       </div>
       
+      <!-- 受け入れハイライトマスク -->
+      <div v-if="isAcceptanceHighlight && !isBack" class="acceptance-mask" @click.stop>
+      </div>
+      
       <!-- ツモ切りマスク -->
       <div v-if="isTsumoDiscard && !isBack" class="tsumo-discard-mask" @click.stop></div>
     </div>
@@ -57,6 +63,7 @@ interface Props {
   isYoko?: boolean
   isWinningTile?: boolean
   isDora?: boolean
+  isAcceptanceHighlight?: boolean
   isTsumoDiscard?: boolean
   isRiichiDeclaration?: boolean
   disabled?: boolean
@@ -71,6 +78,7 @@ const props = withDefaults(defineProps<Props>(), {
   isYoko: false,
   isWinningTile: false,
   isDora: false,
+  isAcceptanceHighlight: false,
   isTsumoDiscard: false,
   isRiichiDeclaration: false,
   disabled: false
@@ -81,6 +89,8 @@ const emit = defineEmits<{
   select: [tile: Tile]
   dragStart: [tile: Tile]
   dragEnd: [tile: Tile]
+  mouseenter: [tile: Tile]
+  mouseleave: [tile: Tile]
 }>()
 
 const touchStartTime = ref(0)
@@ -148,6 +158,14 @@ function handleDragStart() {
 
 function handleDragEnd() {
   emit('dragEnd', props.tile)
+}
+
+function handleMouseEnter() {
+  emit('mouseenter', props.tile)
+}
+
+function handleMouseLeave() {
+  emit('mouseleave', props.tile)
 }
 
 function logDoraRender() {
@@ -276,6 +294,21 @@ function logDoraRender() {
   pointer-events: none;
   z-index: 10;
   /* box-shadow: 0 0 6px rgba(255, 215, 0, 0.8); */
+}
+
+/* 受け入れハイライトマスク */
+.acceptance-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px solid #8e24aa;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 10;
+  background: rgba(142, 36, 170, 0.2);
+  box-shadow: 0 0 6px rgba(142, 36, 170, 0.6);
 }
 
 @keyframes dora-glow {

@@ -13,6 +13,8 @@ export interface ScoringInput {
   isHaitei?: boolean
   isDoubleRiichi?: boolean
   isRinshanKaihou?: boolean
+  isTenho?: boolean
+  isChiho?: boolean
   melds?: Array<{
     type: 'pon' | 'kan' | 'chi'
     tiles: Tile[]
@@ -358,6 +360,7 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       ippatsu: input.isIppatsu || false,
       last_tile: input.isHaitei || false,  // ハイテイツモ/ハイテイロン
       after_kan: input.isRinshanKaihou || false,  // 嶺上開花/槍槓
+      first_take: input.isTenho || input.isChiho || false,  // 天和・地和
       bakaze,
       jikaze,
       allow_kuitan: true,

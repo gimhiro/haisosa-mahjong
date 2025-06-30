@@ -467,5 +467,6 @@ const shouldTileBeBack = (meld: Meld, tileIndex: number): boolean => {
   padding: 8px;
   background: rgba(0, 0, 0, 0.05);
   border-radius: 8px;
+  align-items: flex-end; /* 下揃え */
 }
 </style>

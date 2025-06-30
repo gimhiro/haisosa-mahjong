@@ -1,5 +1,5 @@
 import type { Tile, Player, GamePhase } from '../stores/fourPlayerMahjong'
-import { canRiichi, canRiichiWithMelds, checkWinCondition, calculateShanten } from './mahjong-logic'
+import { canRiichi, canRiichiWithMelds, checkWinCondition, calculateShanten, isFuriten } from './mahjong-logic'
 import { EnhancedDraw } from './enhanced-draw'
 import { RecordsManager } from './records-manager'
 import { type PlayerTestData } from './useGameSettings'
@@ -31,6 +31,7 @@ export class GameManager {
     testData: []
   }
   private _testDrawIndices: number[] = [0, 0, 0, 0] // 各プレイヤーのツモ牌インデックス
+  private _firstTakeFlags: boolean[] = [true, true, true, true] // 各プレイヤーの第一ツモフラグ
 
   constructor() {
     this._enhancedDraw = new EnhancedDraw({ boostProbability: 0.8 })
@@ -93,7 +94,6 @@ export class GameManager {
       // 王牌（リンシャン牌）からドラ表示牌を取得
       const newDoraIndicator = this._wall.pop()!
       this._doraIndicators.push(newDoraIndicator)
-      console.log(`カンドラ追加: ${newDoraIndicator.suit}${newDoraIndicator.rank}`)
     }
   }
 
@@ -255,15 +255,15 @@ export class GameManager {
   }
 
   dealInitialHands(): void {
-    for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
-      const player = this._players[playerIndex]
-
-      for (let i = 0; i < 13; i++) {
-        if (this._wall.length > 0) {
-          const tile = this._wall.shift()!
-          player.tiles.push(tile)
-        }
-      }
+    // 手牌の良さ設定を取得
+    const handQualitySetting = this.getHandQualitySetting()
+    
+    // 人間プレイヤーの手牌を配牌
+    this.dealPlayerHand(0, handQualitySetting)
+    
+    // CPUプレイヤーの手牌を通常配牌
+    for (let playerIndex = 1; playerIndex < 4; playerIndex++) {
+      this.dealPlayerHand(playerIndex, 'normal')
     }
 
     if (this._wall.length > 0) {
@@ -273,6 +273,142 @@ export class GameManager {
     this._players.forEach(player => {
       this.sortPlayerHand(player)
     })
+  }
+
+  private getHandQualitySetting(): string {
+    try {
+      const gameSettings = localStorage.getItem('mahjong-game-settings')
+      if (gameSettings) {
+        const settings = JSON.parse(gameSettings)
+        return settings.handQuality || 'good'
+      }
+    } catch (error) {
+      console.error('Failed to load hand quality setting:', error)
+    }
+    return 'good'
+  }
+
+  private dealPlayerHand(playerIndex: number, handQuality: string): void {
+    const player = this._players[playerIndex]
+    
+    if (handQuality === 'normal') {
+      // 通常配牌（現在と同じ）
+      for (let i = 0; i < 13; i++) {
+        if (this._wall.length > 0) {
+          const tile = this._wall.shift()!
+          player.tiles.push(tile)
+        }
+      }
+    } else {
+      // 複数候補から最適な手牌を選択
+      const candidates = handQuality === 'good' ? 2 : 5
+      const bestHand = this.selectBestHand(candidates)
+      
+      // 選択された手牌を配牌
+      bestHand.forEach(tile => {
+        const wallIndex = this._wall.findIndex(t => t.id === tile.id)
+        if (wallIndex !== -1) {
+          this._wall.splice(wallIndex, 1)
+          player.tiles.push(tile)
+        }
+      })
+    }
+  }
+
+  private selectBestHand(candidates: number): Tile[] {
+    let bestHand: Tile[] = []
+    let bestScore = -1
+    
+    for (let i = 0; i < candidates; i++) {
+      const candidateHand: Tile[] = []
+      const wallCopy = [...this._wall]
+      
+      // 13枚の候補手牌を生成
+      for (let j = 0; j < 13; j++) {
+        if (wallCopy.length > 0) {
+          const randomIndex = Math.floor(Math.random() * wallCopy.length)
+          candidateHand.push(wallCopy.splice(randomIndex, 1)[0])
+        }
+      }
+      
+      // 手牌を評価
+      const score = this.evaluateHand(candidateHand)
+      
+      if (score > bestScore) {
+        bestScore = score
+        bestHand = candidateHand
+      }
+    }
+    
+    return bestHand
+  }
+
+  private evaluateHand(hand: Tile[]): number {
+    let score = 0
+    
+    // シャンテン数による評価
+    const shanten = calculateShanten(hand)
+    score += (8 - shanten) * 100 // シャンテン数が少ないほど高スコア
+    
+    // ドラ牌による評価
+    if (this._doraIndicators.length > 0) {
+      const doraCount = this.countDoraTiles(hand)
+      score += doraCount * 20
+    }
+    
+    return score
+  }
+
+  private countDoraTiles(hand: Tile[]): number {
+    if (this._doraIndicators.length === 0) return 0
+    
+    let count = 0
+    const doraIndicator = this._doraIndicators[0]
+    const doranumber = this.getNextTileNumber(doraIndicator)
+    
+    hand.forEach(tile => {
+      const tileNumber = this.convertTileToNumber(tile)
+      if (tileNumber === doranumber) {
+        count++
+      }
+    })
+    
+    return count
+  }
+
+  private getNextTileNumber(tile: Tile): number {
+    if (tile.suit === 'man' || tile.suit === 'pin' || tile.suit === 'sou') {
+      const nextRank = tile.rank === 9 ? 1 : tile.rank + 1
+      const offset = tile.suit === 'man' ? 0 : tile.suit === 'pin' ? 9 : 18
+      return offset + nextRank - 1
+    } else if (tile.suit === 'honor') {
+      const honorOrder = [1, 2, 3, 4, 5, 6, 7]
+      const currentIndex = honorOrder.indexOf(tile.rank)
+      const nextRank = honorOrder[(currentIndex + 1) % honorOrder.length]
+      return 27 + nextRank - 1
+    }
+    return 0
+  }
+
+  private convertTileToNumber(tile: Tile): number {
+    if (tile.suit === 'man') return tile.rank - 1
+    if (tile.suit === 'pin') return tile.rank + 8
+    if (tile.suit === 'sou') return tile.rank + 17
+    if (tile.suit === 'honor') return tile.rank + 26
+    return 0
+  }
+
+  private getManipulationRate(): number {
+    try {
+      const gameSettings = localStorage.getItem('mahjong-game-settings')
+      if (gameSettings) {
+        const settings = JSON.parse(gameSettings)
+        return settings.manipulationRate || 80
+      }
+    } catch (error) {
+      console.error('Failed to load manipulation rate setting:', error)
+    }
+    return 80
   }
 
   sortPlayerHand(player: Player): void {
@@ -350,6 +486,12 @@ export class GameManager {
       if (player.difficulty === 'hard') {
         boostProbability = 0.3 // hardAIは30%
       }
+      
+      // 人間プレイヤーの場合は牌操作率設定を適用
+      if (playerIndex === 0) {
+        const manipulationRate = this.getManipulationRate()
+        boostProbability = manipulationRate / 100
+      }
 
       // 一時的にブースト確率を変更
       const originalProbability = this._enhancedDraw['options'].boostProbability
@@ -377,6 +519,8 @@ export class GameManager {
 
     if (tile) {
       this._currentDrawnTile = tile
+      // 第一ツモフラグをクリア（天和・地和判定のため）
+      this.clearFirstTakeFlag(playerIndex)
       return tile
     }
 
@@ -467,6 +611,7 @@ export class GameManager {
     this._discardOrder = 0
     this._ippatsuFlags = [false, false, false, false]
     this._currentTurn = 1 // 巡目をリセット
+    this.resetFirstTakeFlags() // 天和・地和判定のため第一ツモフラグをリセット
 
     this.generateWall()
     this.dealInitialHands()
@@ -495,6 +640,7 @@ export class GameManager {
     this._currentPlayerIndex = this._dealer
     this._currentDrawnTile = null
     this._currentTurn = 1 // 巡目をリセット
+    this.resetFirstTakeFlags() // 天和・地和判定のため第一ツモフラグをリセット
 
     this.generateWall()
     this.dealInitialHands()
@@ -613,6 +759,11 @@ export class GameManager {
     } else {
       // ロンの場合：勝利牌を追加
       allTiles = [...player.tiles, winTile]
+      
+      // ロンの場合はフリテンチェック
+      if (isFuriten(player.tiles, player.discards)) {
+        return { isWin: false } // フリテンの場合はロン不可
+      }
     }
 
 
@@ -635,7 +786,9 @@ export class GameManager {
         player.melds,              // プレイヤーのメルド情報
         this.isHaitei(),           // ハイテイフラグ
         this.isDoubleRiichi(playerIndex), // ダブルリーチフラグ
-        this.isRinshanKaihou(playerIndex) // 嶺上開花フラグ
+        this.isRinshanKaihou(playerIndex), // 嶺上開花フラグ
+        this.isTenho(playerIndex, isTsumo), // 天和フラグ
+        this.isChiho(playerIndex, isTsumo)  // 地和フラグ
       )
 
       if (winResult.isWin) {
@@ -765,6 +918,11 @@ export class GameManager {
       return false
     }
 
+    // フリテンチェック
+    if (isFuriten(this.humanPlayer.tiles, this.humanPlayer.discards)) {
+      return false // フリテンの場合はロン不可
+    }
+
     // まず簡単なシャンテン数チェックで和了可能性を確認
     const allTiles = [...this.humanPlayer.tiles, this._lastDiscardedTile]
     const convertedTiles = allTiles.map(t => ({ id: t.id, suit: t.suit, rank: t.rank, isRed: t.isRed }))
@@ -787,7 +945,12 @@ export class GameManager {
         this.humanPlayer.riichi && this._wall.length >= 2 ? [this._wall[this._wall.length - 2]] : [],
         isDealer,                  // Pass dealer status for accurate scoring
         this._ippatsuFlags[0],     // 人間プレイヤーの一発フラグ
-        this.humanPlayer.melds     // 人間プレイヤーのメルド情報
+        this.humanPlayer.melds,    // 人間プレイヤーのメルド情報
+        this.isHaitei(),           // ハイテイフラグ
+        this.isDoubleRiichi(0),    // ダブルリーチフラグ
+        this.isRinshanKaihou(0),   // 嶺上開花フラグ
+        false,                     // 天和フラグ（ロンでは不可）
+        false                      // 地和フラグ（ロンでは不可）
       )
       // 上がり形かつ点数が0より大きい場合のみロン可能
       return winResult.isWin && winResult.totalPoints > 0
@@ -975,11 +1138,11 @@ export class GameManager {
   checkGameEnd(): { isGameEnd: boolean, gameEndData?: any } {
     const settings = this._gameSettings
 
-    // 箱下チェック（箱下がありの場合）
+    // トビ終了チェック（トビ終了がありの場合）
     if (settings.hakoshita) {
       const hasNegativeScore = this._players.some(player => player.score < 0)
       if (hasNegativeScore) {
-        return this.createGameEndData('箱下終了')
+        return this.createGameEndData('トビ終了')
       }
     }
 
@@ -1012,6 +1175,14 @@ export class GameManager {
       scoreDiff: player.score - 25000, // 初期点数との差
       originalPosition: player.id
     }))
+
+    // 規定局数完了による自然終了かどうかを判定
+    const isNaturalEnd = endReason.includes('終了') && !endReason.includes('トビ')
+
+    // 自然終了の場合は記録に追加
+    if (isNaturalEnd) {
+      this.recordGameEnd(true) // 完了したゲームとして記録
+    }
 
     return {
       isGameEnd: true,
@@ -1049,28 +1220,43 @@ export class GameManager {
   }
 
   // 人間プレイヤーの上がりを記録
-  recordHumanWin(yakuList: string[], totalPoints: number): void {
+  recordHumanWin(yakuList: string[], totalPoints: number, isGameEnding: boolean = false): void {
     // 役の記録
     RecordsManager.recordYaku(yakuList)
 
-    // ゲーム統計の記録
-    RecordsManager.recordGameEnd(
-      this._gameSettings.gameType as 'tonpuusen' | 'tonnanssen',
-      this._gameSettings.agariRenchan,
-      this._players[0].score,
-      true,
-      totalPoints,
-      this._currentTurn
-    )
+    if (isGameEnding) {
+      // ゲーム終了を伴う上がりの場合
+      RecordsManager.recordGameEnd(
+        this._gameSettings.gameType as 'tonpuusen' | 'tonnanssen',
+        this._gameSettings.agariRenchan,
+        this._players[0].score,
+        true,
+        totalPoints,
+        this._currentTurn,
+        true // ゲーム完了
+      )
+    } else {
+      // ゲーム継続中の上がりの場合
+      RecordsManager.recordWin(
+        this._gameSettings.gameType as 'tonpuusen' | 'tonnanssen',
+        this._gameSettings.agariRenchan,
+        this._players[0].score,
+        totalPoints,
+        this._currentTurn
+      )
+    }
   }
 
   // ゲーム終了時の記録（上がりなし）
-  recordGameEnd(): void {
+  recordGameEnd(isGameCompleted: boolean = false): void {
     RecordsManager.recordGameEnd(
       this._gameSettings.gameType as 'tonpuusen' | 'tonnanssen',
       this._gameSettings.agariRenchan,
       this._players[0].score,
-      false
+      false,
+      undefined,
+      undefined,
+      isGameCompleted
     )
   }
 
@@ -1089,39 +1275,31 @@ export class GameManager {
 
   // テストモードでの手牌設定
   setTestHands() {
-    console.log(`[setTestHands] テストモード開始: isActive=${this._testMode.isActive}, testDataLength=${this._testMode.testData.length}`)
 
     if (!this._testMode.isActive || this._testMode.testData.length === 0) {
-      console.log(`[setTestHands] テストモード無効またはテストデータなし`)
       return
     }
 
     for (let i = 0; i < 4; i++) {
       const testData = this._testMode.testData[i]
-      console.log(`[setTestHands] プレイヤー${i}のテストデータ:`, testData)
 
       if (testData && testData.tiles.length > 0) {
-        console.log(`[setTestHands] プレイヤー${i}の手牌設定開始: ${testData.tiles.join(', ')}`)
 
         // テスト用の牌データを実際のTileオブジェクトに変換
         const newTiles = testData.tiles.map((tileStr, index) => {
           return this.parseTileString(tileStr, `test_${i}_${index}`)
         }).filter(tile => tile !== null) as Tile[]
 
-        console.log(`[setTestHands] プレイヤー${i}の変換後手牌:`, newTiles)
         this._players[i].tiles = newTiles
       }
 
       // ツモ牌リストの最初の牌を自動的にツモる（人間プレイヤーのみ）
       if (i === 0 && testData && testData.drawTiles.length > 0) {
-        console.log(`[setTestHands] プレイヤー${i}の最初のツモ牌設定: ${testData.drawTiles[0]}`)
         const firstDrawTile = this.parseTileString(testData.drawTiles[0], `test_draw_${i}_0`)
         if (firstDrawTile) {
-          console.log(`[setTestHands] 最初のツモ牌変換結果:`, firstDrawTile)
           this._currentDrawnTile = firstDrawTile
           this._testDrawIndices[i] = 1 // 次回のツモは2番目から
         } else {
-          console.log(`[setTestHands] 最初のツモ牌変換失敗: ${testData.drawTiles[0]}`)
         }
       }
     }
@@ -1129,11 +1307,9 @@ export class GameManager {
 
   // 牌文字列をTileオブジェクトに変換
   private parseTileString(tileStr: string, id: string): Tile | null {
-    console.log(`[parseTileString] 入力文字列: '${tileStr}', ID: '${id}'`)
 
     // 牌の文字列をパース（例: "1m", "2p", "3s", "ton", "nan", "sha", "pei", "haku", "hatsu", "chun"）
     if (!tileStr || tileStr.length === 0) {
-      console.log(`[parseTileString] 空の文字列またはnull: '${tileStr}'`)
       return null
     }
 
@@ -1159,9 +1335,7 @@ export class GameManager {
       suit = 'honor'
       const originalRank = parseInt(tileStr.slice(0, -1))
       rank = originalRank + 4 // 5-7に変換
-      console.log(`[parseTileString] 三元牌変換: '${tileStr}' -> originalRank: ${originalRank}, rank: ${rank}`)
       if (rank < 5 || rank > 7) {
-        console.log(`[parseTileString] 三元牌範囲外エラー: rank=${rank}, 期待範囲: 5-7`)
         return null
       }
     } else {
@@ -1179,16 +1353,13 @@ export class GameManager {
     }
 
     if (suit !== 'honor' && (rank < 1 || rank > 9)) {
-      console.log(`[parseTileString] 数牌範囲外エラー: suit=${suit}, rank=${rank}`)
       return null
     }
     if (suit === 'honor' && (rank < 1 || rank > 7)) {
-      console.log(`[parseTileString] 字牌範囲外エラー: suit=${suit}, rank=${rank}`)
       return null
     }
 
     const result = { id, suit, rank, isRed: false }
-    console.log(`[parseTileString] 変換結果:`, result)
     return result
   }
 
@@ -1221,5 +1392,35 @@ export class GameManager {
     this._testDrawIndices[playerIndex]++
 
     return this.parseTileString(tileStr, `test_kan_${playerIndex}_${drawIndex}`)
+  }
+
+  // 天和判定（親が配牌で上がり）
+  private isTenho(playerIndex: number, isTsumo: boolean): boolean {
+    const isDealer = playerIndex === this._dealer
+    // 天和は配牌時点での上がりなので、誰も牌を捨てていない状態で判定
+    const noDiscards = this._players.every(player => player.discards.length === 0)
+    
+    // 親 && ツモ && 誰も捨て牌がない
+    return isDealer && isTsumo && noDiscards
+  }
+
+  // 地和判定（子が第一ツモで上がり）
+  private isChiho(playerIndex: number, isTsumo: boolean): boolean {
+    const isDealer = playerIndex === this._dealer
+    // 地和は子の第一ツモでの上がりなので、自分が一枚も牌を捨てていない状態で判定
+    const playerDiscardCount = this._players[playerIndex].discards.length
+    
+    // 子 && ツモ && 自分が捨て牌なし
+    return !isDealer && isTsumo && playerDiscardCount === 0
+  }
+
+  // 第一ツモフラグをクリアする（ツモ時に呼ぶ）
+  clearFirstTakeFlag(playerIndex: number): void {
+    this._firstTakeFlags[playerIndex] = false
+  }
+
+  // ゲーム開始時に第一ツモフラグをリセット
+  resetFirstTakeFlags(): void {
+    this._firstTakeFlags = [true, true, true, true]
   }
 }

@@ -1,5 +1,5 @@
 import type { Tile, Player } from '../stores/fourPlayerMahjong'
-import { calculateShanten, getUsefulTiles, checkWinCondition } from './mahjong-logic'
+import { calculateShanten, getUsefulTiles, checkWinCondition, calculateAcceptance, findBestAcceptanceTiles, getTileRemainingCount, getTileIndex } from './mahjong-logic'
 
 export class CpuAI {
   private difficulty: 'easy' | 'medium' | 'hard' | 'super'
@@ -226,13 +226,17 @@ export class CpuAI {
   }
 
   /**
-   * 上級AI: より複雑な戦略
+   * 上級AI: より複雑な戦略（受け入れ計算を含む）
    */
   private hardAIDiscard(tiles: Tile[]): string {
     // allTilesの最後がツモ牌なので、これを除いた13枚でシャンテン数を計算
     const handTiles = tiles.slice(0, -1) // 最後のツモ牌を除いた13枚
     const currentShanten = calculateShanten(handTiles)
-    const candidates: { tileId: string, shanten: number, score: number }[] = []
+    const candidates: { tileId: string, shanten: number, score: number, acceptanceCount?: number }[] = []
+
+    // 14枚の手牌で受け入れ計算を実行
+    const acceptanceInfos = calculateAcceptance(tiles, tiles) // 見える牌として手牌を渡す
+    const bestAcceptanceTiles = findBestAcceptanceTiles(acceptanceInfos)
 
     for (const tile of tiles) {
       const remainingTiles = tiles.filter(t => t.id !== tile.id)
@@ -245,6 +249,23 @@ export class CpuAI {
         // シャンテン数改善への大きなボーナス
         if (newShanten < currentShanten) {
           score += 300
+        }
+
+        // 受け入れ計算による評価（hard以上のみ）
+        const tileIndex = getTileIndex(tile)
+        const acceptanceInfo = acceptanceInfos.find(info => info.tileIndex === tileIndex)
+        let acceptanceCount = 0
+        
+        if (acceptanceInfo) {
+          acceptanceCount = acceptanceInfo.totalAcceptance
+          
+          // 最良の受け入れ牌（最小シャンテン数 + 最大受け入れ枚数）の場合は大きなボーナス
+          if (bestAcceptanceTiles.includes(tileIndex)) {
+            score += 400 // 受け入れ計算による最高評価
+          } else if (acceptanceCount > 0) {
+            // その他の受け入れ牌にも小さなボーナス
+            score += Math.min(acceptanceCount * 10, 100)
+          }
         }
 
         // 孤立牌を最優先で捨てる
@@ -283,7 +304,7 @@ export class CpuAI {
           }
         }
 
-        candidates.push({ tileId: tile.id, shanten: newShanten, score })
+        candidates.push({ tileId: tile.id, shanten: newShanten, score, acceptanceCount })
       }
     }
 

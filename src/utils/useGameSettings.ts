@@ -13,6 +13,10 @@ interface TestModeData {
 interface GameSettings {
   disableMeld: boolean
   autoWin: boolean
+  showAcceptance: boolean
+  showAcceptanceHighlight: boolean
+  manipulationRate: number
+  handQuality: 'normal' | 'good' | 'excellent'
   testMode: TestModeData
 }
 
@@ -21,6 +25,10 @@ const STORAGE_KEY = 'mahjong-game-settings'
 const defaultSettings: GameSettings = {
   disableMeld: false,
   autoWin: false,
+  showAcceptance: false,
+  showAcceptanceHighlight: false,
+  manipulationRate: 80,
+  handQuality: 'good',
   testMode: {
     isActive: false,
     players: [
@@ -42,11 +50,15 @@ export function useGameSettings() {
         if (savedSettings) {
           const parsed = JSON.parse(savedSettings)
           // 古い設定形式の場合は新しい形式にマイグレーション
-          if (!parsed.testMode) {
+          if (!parsed.testMode || parsed.showAcceptance === undefined || parsed.showAcceptanceHighlight === undefined || parsed.manipulationRate === undefined || parsed.handQuality === undefined) {
             return {
               disableMeld: parsed.disableMeld || false,
               autoWin: parsed.autoWin || false,
-              testMode: defaultSettings.testMode
+              showAcceptance: parsed.showAcceptance || false,
+              showAcceptanceHighlight: parsed.showAcceptanceHighlight || false,
+              manipulationRate: parsed.manipulationRate || 80,
+              handQuality: parsed.handQuality || 'good',
+              testMode: parsed.testMode || defaultSettings.testMode
             }
           }
           return parsed

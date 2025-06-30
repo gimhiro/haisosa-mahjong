@@ -29,8 +29,8 @@
                       <span class="stat-value">{{ records.gameStats.tonpuusenNoRenchan.totalGames }}回</span>
                     </div>
                     <div class="stat-item">
-                      <span class="stat-label">上がり回数:</span>
-                      <span class="stat-value">{{ records.gameStats.tonpuusenNoRenchan.winCount }}回</span>
+                      <span class="stat-label">平均上がり回数:</span>
+                      <span class="stat-value">{{ getAverageWinCount('tonpuusenNoRenchan') }}回</span>
                     </div>
                     <div class="stat-item">
                       <span class="stat-label">平均上がり点:</span>
@@ -59,8 +59,8 @@
                       <span class="stat-value">{{ records.gameStats.tonpuusenRenchan.totalGames }}回</span>
                     </div>
                     <div class="stat-item">
-                      <span class="stat-label">上がり回数:</span>
-                      <span class="stat-value">{{ records.gameStats.tonpuusenRenchan.winCount }}回</span>
+                      <span class="stat-label">平均上がり回数:</span>
+                      <span class="stat-value">{{ getAverageWinCount('tonpuusenRenchan') }}回</span>
                     </div>
                     <div class="stat-item">
                       <span class="stat-label">平均上がり点:</span>
@@ -89,8 +89,8 @@
                       <span class="stat-value">{{ records.gameStats.tonnansenNoRenchan.totalGames }}回</span>
                     </div>
                     <div class="stat-item">
-                      <span class="stat-label">上がり回数:</span>
-                      <span class="stat-value">{{ records.gameStats.tonnansenNoRenchan.winCount }}回</span>
+                      <span class="stat-label">平均上がり回数:</span>
+                      <span class="stat-value">{{ getAverageWinCount('tonnansenNoRenchan') }}回</span>
                     </div>
                     <div class="stat-item">
                       <span class="stat-label">平均上がり点:</span>
@@ -119,8 +119,8 @@
                       <span class="stat-value">{{ records.gameStats.tonnansenRenchan.totalGames }}回</span>
                     </div>
                     <div class="stat-item">
-                      <span class="stat-label">上がり回数:</span>
-                      <span class="stat-value">{{ records.gameStats.tonnansenRenchan.winCount }}回</span>
+                      <span class="stat-label">平均上がり回数:</span>
+                      <span class="stat-value">{{ getAverageWinCount('tonnansenRenchan') }}回</span>
                     </div>
                     <div class="stat-item">
                       <span class="stat-label">平均上がり点:</span>
@@ -353,6 +353,13 @@ function getAverageWinTurns(gameMode: keyof GameRecords['gameStats']): string {
   const stats = records.value.gameStats[gameMode]
   if (stats.winCount === 0) return '---'
   return (stats.totalWinTurns / stats.winCount).toFixed(1)
+}
+
+// 平均上がり回数を計算（上がり回数 / 対戦回数）
+function getAverageWinCount(gameMode: keyof GameRecords['gameStats']): string {
+  const stats = records.value.gameStats[gameMode]
+  if (stats.totalGames === 0) return '---'
+  return (stats.winCount / stats.totalGames).toFixed(2)
 }
 
 // 役の上がり回数を取得

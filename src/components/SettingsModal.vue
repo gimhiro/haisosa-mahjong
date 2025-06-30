@@ -70,7 +70,7 @@
                 <v-icon :color="settings.hakoshita ? 'success' : 'grey'">
                   {{ settings.hakoshita ? 'mdi-check-circle' : 'mdi-close-circle' }}
                 </v-icon>
-                <span class="rule-label">箱下</span>
+                <span class="rule-label">トビ終了</span>
                 <span :class="['rule-status', settings.hakoshita ? 'enabled' : 'disabled']">
                   {{ settings.hakoshita ? '有効' : '無効' }}
                 </span>

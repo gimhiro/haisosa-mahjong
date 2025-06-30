@@ -188,8 +188,14 @@
           :game-manager="gameManager"
           :is-riichi-preview-mode="riichiPreviewMode && !humanPlayer.riichi"
           :riichi-disabled-tiles="humanPlayer.riichi ? getPostRiichiDisabledTiles() : getRiichiDisabledTiles()"
+          :show-acceptance-highlight="settings.showAcceptanceHighlight"
+          :best-acceptance-tiles="bestAcceptanceTiles"
+          :show-acceptance-tooltip="settings.showAcceptance"
+          :acceptance-infos="acceptanceInfos"
           @tile-discarded="onHumanTileDiscard"
           @riichi-confirmed="confirmRiichiAndDiscard"
+          @tile-hover="(tile, mouseX, mouseY) => onTileHover(tile, mouseX, mouseY)"
+          @tile-leave="onTileLeave"
         />
         <!-- Debug: GameManager info -->
       </div>
@@ -217,6 +223,18 @@
               @click="declareTsumo"
             >
               ツモ
+            </v-btn>
+
+            <!-- キャンセルボタン（ツモ可能時） -->
+            <v-btn
+              v-if="canTsumo && humanPlayer.riichi"
+              color="grey"
+              size="small"
+              block
+              class="action-btn"
+              @click="cancelTsumo"
+            >
+              キャンセル
             </v-btn>
 
             <!-- ロンボタン -->
@@ -404,6 +422,17 @@
       v-model="showTestDialog"
       @test-mode-applied="onTestModeApplied"
     />
+
+    <!-- 受け入れ情報ポップアップ -->
+    <AcceptancePopup
+      v-model="showAcceptancePopup"
+      :tile-acceptance-info="currentHoveredTileAcceptance"
+      :mouse-x="mouseX"
+      :mouse-y="mouseY"
+      :is-useful-tiles="isUsefulTilesMode"
+      :is-calculating="isCalculatingAcceptance"
+      :is-fixed-position="true"
+    />
   </div>
 </template>
 
@@ -411,7 +440,7 @@
 import { computed, ref, watch, onMounted } from 'vue'
 import { GameManager } from '../utils/game-manager'
 import { cpuAIs } from '../utils/cpu-ai'
-import { calculateShanten, calculateShantenWithMelds, canRiichi, checkWinCondition } from '../utils/mahjong-logic'
+import { calculateShanten, calculateShantenWithMelds, canRiichi, checkWinCondition, calculateAcceptance, findBestAcceptanceTiles, getTileIndex, getUsefulTiles, getTileRemainingCount, createTileFromIndex, isFuriten, type AcceptanceInfo } from '../utils/mahjong-logic'
 import { defaultEnhancedDraw } from '../utils/enhanced-draw'
 import type { Tile } from '../stores/fourPlayerMahjong'
 import PlayerArea from '../components/PlayerArea.vue'
@@ -422,6 +451,7 @@ import DrawModal, { type DrawData } from '../components/DrawModal.vue'
 import GameEndModal, { type GameEndData } from '../components/GameEndModal.vue'
 import GameSettingsPanel from '../components/GameSettingsPanel.vue'
 import TestModeDialog from '../components/TestModeDialog.vue'
+import AcceptancePopup from '../components/AcceptancePopup.vue'
 import { useRouter } from 'vue-router'
 import { useGameSettings } from '../utils/useGameSettings'
 
@@ -455,6 +485,17 @@ const gameEndModalData = ref<GameEndData | null>(null)
 
 // Test mode dialog state
 const showTestDialog = ref(false)
+
+// Acceptance popup state
+const showAcceptancePopup = ref(false)
+const acceptanceInfos = ref<AcceptanceInfo[]>([])
+const bestAcceptanceTiles = ref<number[]>([])
+const currentHoveredTileAcceptance = ref<AcceptanceInfo | null>(null)
+const mouseX = ref(0)
+const mouseY = ref(0)
+const currentShanten = ref(8)
+const isUsefulTilesMode = ref(false)
+const isCalculatingAcceptance = ref(false)
 
 const winModalData = ref<WinData>({
   winner: gameManager.value.players[0],
@@ -575,7 +616,13 @@ const shantenColor = computed(() => {
 
 const shantenText = computed(() => {
   if (humanShanten.value === -1) return 'アガリ'
-  if (humanShanten.value === 0) return 'テンパイ'
+  if (humanShanten.value === 0) {
+    // テンパイ時はフリテンチェック
+    if (isFuriten(humanPlayer.value.tiles, humanPlayer.value.discards)) {
+      return 'テンパイ(フリテン)'
+    }
+    return 'テンパイ'
+  }
   if (humanShanten.value >= 8) return '計算不可'
   return `${humanShanten.value}シャンテン`
 })
@@ -593,6 +640,28 @@ watch([canTsumo, canRon], ([newCanTsumo, newCanRon]) => {
     } else if (newCanRon) {
       declareRon()
     }
+  }
+})
+
+// 受け入れ情報更新のwatcher（ツモ牌がある場合のみ）
+watch([currentDrawnTile, () => settings.value.showAcceptance, () => settings.value.showAcceptanceHighlight], () => {
+  if (isHumanTurn.value && currentDrawnTile.value) {
+    updateAcceptanceInfo()
+  } else if (!isHumanTurn.value) {
+    // 人間プレイヤーのターンでない場合は受け入れマスクを消去
+    acceptanceInfos.value = []
+    bestAcceptanceTiles.value = []
+    isUsefulTilesMode.value = false
+  }
+}, { deep: true })
+
+// プレイヤーターンの変更を監視
+watch(currentPlayerIndex, (newPlayerIndex) => {
+  if (newPlayerIndex !== 0) {
+    // 人間プレイヤー以外のターンになったら受け入れマスクを消去
+    acceptanceInfos.value = []
+    bestAcceptanceTiles.value = []
+    isUsefulTilesMode.value = false
   }
 })
 
@@ -636,6 +705,11 @@ function startGame() {
 }
 
 function resetGame() {
+  // ゲームリセット時に受け入れマスクを消去
+  acceptanceInfos.value = []
+  bestAcceptanceTiles.value = []
+  isUsefulTilesMode.value = false
+  
   gameManager.value.resetGame()
 }
 
@@ -658,6 +732,11 @@ async function onHumanTileDiscard(tileId: string) {
   if (!isHumanTurn.value) {
     return
   }
+  
+  // 打牌時に受け入れマスクを消去
+  acceptanceInfos.value = []
+  bestAcceptanceTiles.value = []
+  isUsefulTilesMode.value = false
   
   // 打牌時に嶺上開花フラグをリセット
   gameManager.value.resetAfterKan()
@@ -870,6 +949,11 @@ function confirmRiichiAndDiscard(tileId: string) {
     return
   }
 
+  // リーチ宣言時に受け入れマスクを消去
+  acceptanceInfos.value = []
+  bestAcceptanceTiles.value = []
+  isUsefulTilesMode.value = false
+
   // リーチを宣言
   if (canDeclareRiichi.value) {
     gameManager.value.declareRiichi(0)
@@ -883,6 +967,14 @@ function confirmRiichiAndDiscard(tileId: string) {
   const success = gameManager.value.discardTile(0, tileId, true)
   if (success) {
     gameManager.value.nextTurn()
+  }
+}
+
+function cancelTsumo() {
+  // ツモをキャンセルして牌を捨てる必要がある
+  // リーチ後はツモ切りのみ可能
+  if (humanPlayer.value.riichi && currentDrawnTile.value) {
+    onHumanTileDiscard(currentDrawnTile.value.id)
   }
 }
 
@@ -922,10 +1014,15 @@ function declareTsumo() {
         true // isTsumo
       )
       
+      // ゲーム終了判定
+      const gameEndCheck = gameManager.value.checkGameEnd()
+      const isGameEnding = gameEndCheck.isGameEnd
+      
       // 人間プレイヤーの上がりを記録
       gameManager.value.recordHumanWin(
         winResult.result.yaku.map(y => y.name),
-        winResult.result.totalPoints
+        winResult.result.totalPoints,
+        isGameEnding
       )
       
       // ゲーム状態を終了に変更
@@ -972,10 +1069,15 @@ function declareRon() {
         gameManager.value.lastDiscardPlayerIndex ?? undefined // ron target
       )
       
+      // ゲーム終了判定
+      const gameEndCheck = gameManager.value.checkGameEnd()
+      const isGameEnding = gameEndCheck.isGameEnd
+      
       // 人間プレイヤーの上がりを記録
       gameManager.value.recordHumanWin(
         winResult.result.yaku.map(y => y.name),
-        winResult.result.totalPoints
+        winResult.result.totalPoints,
+        isGameEnding
       )
       
       // ゲーム状態を終了に変更
@@ -1258,13 +1360,19 @@ function checkHumanMeldActions(discardPlayerIndex: number) {
     return
   }
 
+  const humanPlayer = gameManager.value.humanPlayer
+
+  // リーチ後は暗カン以外の鳴きができない
+  if (humanPlayer.riichi) {
+    return
+  }
+
   // 最後に捨てられた牌を取得
   const discardedTile = gameManager.value.lastDiscardedTile
   if (!discardedTile) {
     return
   }
 
-  const humanPlayer = gameManager.value.humanPlayer
   lastDiscardedTile.value = discardedTile
 
   // ポンの判定：同じ牌が2枚以上手牌にある
@@ -1630,6 +1738,316 @@ function checkForDraw() {
   }
 }
 
+// 受け入れ表示関連関数（非同期で最適化）
+async function updateAcceptanceInfo() {
+  if (!settings.value.showAcceptance && !settings.value.showAcceptanceHighlight) {
+    acceptanceInfos.value = []
+    bestAcceptanceTiles.value = []
+    return
+  }
+
+  const player = humanPlayer.value
+  if (!player || !currentDrawnTile.value) {
+    acceptanceInfos.value = []
+    bestAcceptanceTiles.value = []
+    return
+  }
+
+  // 14枚の手牌（手牌13枚 + ツモ牌1枚）
+  const allTiles = [...player.tiles, currentDrawnTile.value]
+  if (allTiles.length !== 14) {
+    acceptanceInfos.value = []
+    bestAcceptanceTiles.value = []
+    return
+  }
+
+  // 計算開始
+  isCalculatingAcceptance.value = true
+  
+  try {
+    // 現在のシャンテン数をチェック
+    const shantenNum = calculateShanten(allTiles)
+    currentShanten.value = shantenNum
+    
+    // アガリ（シャンテン数-1）の場合は表示しない
+    if (shantenNum === -1) {
+      acceptanceInfos.value = []
+      bestAcceptanceTiles.value = []
+      isUsefulTilesMode.value = false
+      return
+    }
+
+    // 見えている牌を収集（手牌 + ツモ牌 + 河 + ドラ表示牌）
+    const visibleTiles = [...allTiles]
+    
+    // 全プレイヤーの河を追加
+    for (const p of players.value) {
+      visibleTiles.push(...p.discards)
+    }
+    
+    // ドラ表示牌を追加
+    visibleTiles.push(...doraIndicators.value)
+
+    if (shantenNum === 0) {
+      // テンパイの場合：各牌を切った時の受け入れ計算
+      acceptanceInfos.value = await calculateAcceptanceOptimized(allTiles, visibleTiles)
+      isUsefulTilesMode.value = false
+    } else {
+      // シャンテン数1以上の場合：有効牌計算
+      acceptanceInfos.value = await calculateUsefulTilesInfoOptimized(allTiles, visibleTiles)
+      isUsefulTilesMode.value = true
+    }
+    
+    bestAcceptanceTiles.value = findBestAcceptanceTiles(acceptanceInfos.value)
+  } finally {
+    isCalculatingAcceptance.value = false
+  }
+}
+
+// 最適化されたテンパイ時の受け入れ計算
+async function calculateAcceptanceOptimized(allTiles: any[], visibleTiles: any[]): Promise<AcceptanceInfo[]> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const results = calculateAcceptance(allTiles, visibleTiles)
+      resolve(results)
+    }, 0)
+  })
+}
+
+// 最適化された有効牌計算（シャンテン数1以上）
+async function calculateUsefulTilesInfoOptimized(allTiles: any[], visibleTiles: any[]): Promise<AcceptanceInfo[]> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const results: AcceptanceInfo[] = []
+      
+      // forloop1: 手牌の切る牌→ 残り13枚を temp_tiles とします
+      for (let i = 0; i < allTiles.length; i++) {
+        const tileToDiscard = allTiles[i]
+        const tempTiles = [...allTiles]
+        tempTiles.splice(i, 1) // i番目の牌を切る
+        
+        if (tempTiles.length === 13) {
+          const currentShanten = calculateShanten(tempTiles)
+          const usefulTileIndices: number[] = []
+          const remainingCounts: number[] = []
+          
+          // forloop2: すべての牌種（34種類）
+          for (let tileIndex = 0; tileIndex < 34; tileIndex++) {
+            // 孤立牌の場合、絶対に不要なので以降の処理をスキップ
+            if (isIsolatedTile(tempTiles, tileIndex)) {
+              continue
+            }
+            
+            // そうでない場合、有効牌かどうか判定
+            const testTile = createTileFromIndex(tileIndex, 'test')
+            const testTiles = [...tempTiles, testTile]
+            const newShanten = calculateShanten(testTiles)
+            
+            if (newShanten < currentShanten) {
+              usefulTileIndices.push(tileIndex)
+              remainingCounts.push(getTileRemainingCount(tileIndex, visibleTiles))
+            }
+          }
+          
+          const totalUseful = remainingCounts.reduce((sum, count) => sum + count, 0)
+          
+          if (usefulTileIndices.length > 0) {
+            results.push({
+              tileIndex: getTileIndex(tileToDiscard),
+              tile: tileToDiscard,
+              acceptanceTiles: usefulTileIndices,
+              remainingCounts,
+              totalAcceptance: totalUseful,
+              shantenAfterDiscard: currentShanten
+            })
+          }
+        }
+      }
+      
+      resolve(results)
+    }, 0)
+  })
+}
+
+// 孤立牌かどうかの判定（最適化のため）
+function isIsolatedTile(tiles: any[], tileIndex: number): boolean {
+  const testTile = createTileFromIndex(tileIndex, 'test')
+  
+  // 字牌の場合
+  if (testTile.suit === 'honor') {
+    // 同じ字牌が手牌にあるかチェック
+    const sameHonorCount = tiles.filter(t => 
+      t.suit === 'honor' && t.rank === testTile.rank
+    ).length
+    return sameHonorCount === 0
+  }
+  
+  // 数牌の場合、隣接する牌があるかチェック
+  const suitTiles = tiles.filter(t => t.suit === testTile.suit)
+  const ranks = suitTiles.map(t => t.rank)
+  
+  // 同じ牌があるか
+  if (ranks.includes(testTile.rank)) {
+    return false
+  }
+  
+  // 隣接する牌があるか（-2, -1, +1, +2の範囲）
+  for (let offset = -2; offset <= 2; offset++) {
+    if (offset === 0) continue
+    const adjacentRank = testTile.rank + offset
+    if (adjacentRank >= 1 && adjacentRank <= 9 && ranks.includes(adjacentRank)) {
+      return false
+    }
+  }
+  
+  return true
+}
+
+// ホバー時のツールチップ表示処理
+async function onTileHover(tile: Tile, x: number, y: number) {
+  if (!settings.value.showAcceptance) {
+    return
+  }
+
+  // ツールチップ位置をプレイヤー操作エリアの上部に固定
+  const playerBottomArea = document.querySelector('.player-bottom')
+  if (playerBottomArea) {
+    const rect = playerBottomArea.getBoundingClientRect()
+    // ツールチップの左端をプレイヤーエリアの左端に合わせる
+    let tooltipX = rect.left
+    // プレイヤーエリアの上部に十分な余白を取って配置（手牌に被らないように）
+    let tooltipY = rect.top - 300 // より上に配置
+    
+    // 画面左端からはみ出さないように調整
+    if (tooltipX < 10) {
+      tooltipX = 10
+    }
+    
+    // 画面右端からはみ出さないように調整（ツールチップ幅400px想定）
+    if (tooltipX + 400 > window.innerWidth) {
+      tooltipX = window.innerWidth - 410
+    }
+    
+    // 画面上端からはみ出さないように調整
+    if (tooltipY < 10) {
+      // 上に十分なスペースがない場合は、プレイヤーエリアの下に表示
+      tooltipY = rect.bottom + 10
+    }
+    
+    mouseX.value = tooltipX
+    mouseY.value = tooltipY
+  } else {
+    mouseX.value = x
+    mouseY.value = y
+  }
+
+  // 計算中の場合はローディング表示
+  if (isCalculatingAcceptance.value) {
+    currentHoveredTileAcceptance.value = null
+    showAcceptancePopup.value = true
+    return
+  }
+
+  const tileIndex = getTileIndex(tile)
+  let acceptanceInfo = acceptanceInfos.value.find(info => info.tileIndex === tileIndex)
+  
+  // リーチプレビューモード時は、テンパイを維持する牌のみ表示
+  if (riichiPreviewMode.value) {
+    const validTiles = getRiichiValidTiles()
+    if (!validTiles.includes(tile.id)) {
+      return // 無効牌の場合は表示しない
+    }
+  }
+  
+  // テンパイ時で該当する受け入れ情報がない場合、動的に計算
+  if (!acceptanceInfo && currentShanten.value === 0) {
+    acceptanceInfo = await calculateSingleTileAcceptance(tile)
+  }
+  
+  if (acceptanceInfo) {
+    currentHoveredTileAcceptance.value = acceptanceInfo
+    showAcceptancePopup.value = true
+  }
+}
+
+// テンパイ時の単一牌受け入れ計算
+async function calculateSingleTileAcceptance(tile: Tile): Promise<AcceptanceInfo | null> {
+  const player = humanPlayer.value
+  if (!player || !currentDrawnTile.value) {
+    return null
+  }
+
+  const allTiles = [...player.tiles, currentDrawnTile.value]
+  const tileIndex = getTileIndex(tile)
+  
+  // この牌を切った後の手牌を作成
+  const tileToDiscardIndex = allTiles.findIndex(t => getTileIndex(t) === tileIndex)
+  if (tileToDiscardIndex === -1) {
+    return null
+  }
+  
+  const remainingTiles = [...allTiles]
+  remainingTiles.splice(tileToDiscardIndex, 1)
+  
+  if (remainingTiles.length !== 13) {
+    return null
+  }
+  
+  // この牌を切った後のシャンテン数を計算
+  const shantenAfterDiscard = calculateShanten(remainingTiles)
+  
+  // 見えている牌を収集
+  const visibleTiles = [...allTiles]
+  for (const p of players.value) {
+    visibleTiles.push(...p.discards)
+  }
+  visibleTiles.push(...doraIndicators.value)
+  
+  let acceptanceTiles: number[] = []
+  let remainingCounts: number[] = []
+  
+  if (shantenAfterDiscard === 0) {
+    // テンパイを維持する場合、受け入れ牌を計算
+    acceptanceTiles = getUsefulTiles(remainingTiles)
+    remainingCounts = acceptanceTiles.map(tileIdx => 
+      getTileRemainingCount(tileIdx, visibleTiles)
+    )
+  } else {
+    // シャンテン数が上がる場合、有効牌を計算
+    for (let tileIdx = 0; tileIdx < 34; tileIdx++) {
+      if (isIsolatedTile(remainingTiles, tileIdx)) {
+        continue
+      }
+      
+      const testTile = createTileFromIndex(tileIdx, 'test')
+      const testTiles = [...remainingTiles, testTile]
+      const newShanten = calculateShanten(testTiles)
+      
+      if (newShanten < shantenAfterDiscard) {
+        acceptanceTiles.push(tileIdx)
+        remainingCounts.push(getTileRemainingCount(tileIdx, visibleTiles))
+      }
+    }
+  }
+  
+  const totalAcceptance = remainingCounts.reduce((sum, count) => sum + count, 0)
+  
+  return {
+    tileIndex,
+    tile,
+    acceptanceTiles,
+    remainingCounts,
+    totalAcceptance,
+    shantenAfterDiscard
+  }
+}
+
+// ホバー終了時の処理
+function onTileLeave() {
+  showAcceptancePopup.value = false
+  currentHoveredTileAcceptance.value = null
+}
+
 async function checkCpuRon(discardPlayerIndex: number): Promise<boolean> {
   if (!gameManager.value.lastDiscardedTile) {
     return false
@@ -1775,6 +2193,9 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
     } else if (players.value[newIndex].type === 'human') {
       // 人間プレイヤーのターン開始：暗カン可能な牌をチェック
       checkAnkanOptions()
+      
+      // 受け入れ計算とハイライト処理
+      updateAcceptanceInfo()
     }
   }
 })

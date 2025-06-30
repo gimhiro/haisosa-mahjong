@@ -75,16 +75,21 @@ export const YAKU_NAMES: Record<string, string> = {
   // 役満
   'tenhou': '天和',
   'chihou': '地和',
+  'renhou': '人和',
   'daisangen': '大三元',
   'suuankou': '四暗刻',
+  'suuankouTanki': '四暗刻単騎',
   'tsuuiisou': '字一色',
   'ryuuiisou': '緑一色',
   'chinroutou': '清老頭',
   'kokushimusou': '国士無双',
+  'kokushimusou13Sides': '国士無双十三面',
   'shousuushii': '小四喜',
   'daisuushii': '大四喜',
   'suukantsu': '四槓子',
-  'chuurenpoutou': '九蓮宝燈'
+  'chuurenpoutou': '九蓮宝燈',
+  'chuurenpoutou9Sides': '九蓮宝燈九面',
+  'daisharin': '大車輪'
 }
 
 // 日本語名から英語キーへの逆引きマップ
@@ -118,16 +123,21 @@ export const YAKU_NAME_TO_KEY: Record<string, string> = {
   '清一色': 'chinitsu',
   '天和': 'tenhou',
   '地和': 'chihou',
+  '人和': 'renhou',
   '大三元': 'daisangen',
   '四暗刻': 'suuankou',
+  '四暗刻単騎': 'suuankouTanki',
   '字一色': 'tsuuiisou',
   '緑一色': 'ryuuiisou',
   '清老頭': 'chinroutou',
   '国士無双': 'kokushimusou',
+  '国士無双十三面': 'kokushimusou13Sides',
   '小四喜': 'shousuushii',
   '大四喜': 'daisuushii',
   '四槓子': 'suukantsu',
-  '九蓮宝燈': 'chuurenpoutou'
+  '九蓮宝燈': 'chuurenpoutou',
+  '九蓮宝燈九面': 'chuurenpoutou9Sides',
+  '大車輪': 'daisharin'
 }
 
 // ハン数別役分類
@@ -143,7 +153,8 @@ export const YAKU_BY_HAN = {
   3: ['ryanpeikou', 'junchan', 'honitsu'],
   6: ['chinitsu'],
   yakuman: [
-    'tenhou', 'chihou', 'daisangen', 'suuankou', 'tsuuiisou', 'ryuuiisou',
-    'chinroutou', 'kokushimusou', 'shousuushii', 'daisuushii', 'suukantsu', 'chuurenpoutou'
+    'tenhou', 'chihou', 'renhou', 'daisangen', 'suuankou', 'suuankouTanki', 
+    'tsuuiisou', 'ryuuiisou', 'chinroutou', 'kokushimusou', 'kokushimusou13Sides',
+    'shousuushii', 'daisuushii', 'suukantsu', 'chuurenpoutou', 'chuurenpoutou9Sides', 'daisharin'
   ]
 }

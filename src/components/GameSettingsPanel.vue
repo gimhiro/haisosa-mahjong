@@ -18,6 +18,49 @@
         hide-details
         @update:model-value="updateSettings({ autoWin: $event })"
       />
+      <v-switch
+        v-model="settings.showAcceptance"
+        label="受け入れ表示"
+        color="primary"
+        density="compact"
+        hide-details
+        @update:model-value="updateSettings({ showAcceptance: $event })"
+      />
+      <v-switch
+        v-model="settings.showAcceptanceHighlight"
+        label="受け入れハイライト"
+        color="primary"
+        density="compact"
+        hide-details
+        @update:model-value="updateSettings({ showAcceptanceHighlight: $event })"
+      />
+      
+      <!-- 牌操作率設定 -->
+      <div class="setting-group">
+        <div class="setting-label">牌操作率</div>
+        <v-select
+          v-model="settings.manipulationRate"
+          :items="manipulationRateOptions"
+          density="compact"
+          variant="outlined"
+          hide-details
+          @update:model-value="updateSettings({ manipulationRate: $event })"
+        />
+      </div>
+      
+      <!-- 手牌の良さ設定 -->
+      <div class="setting-group">
+        <div class="setting-label">手牌の良さ</div>
+        <v-select
+          v-model="settings.handQuality"
+          :items="handQualityOptions"
+          density="compact"
+          variant="outlined"
+          hide-details
+          @update:model-value="updateSettings({ handQuality: $event })"
+        />
+      </div>
+      
       <v-btn
         v-if="settings.testMode"
         :color="settings.testMode.isActive ? 'success' : 'warning'"
@@ -42,6 +85,18 @@ const emit = defineEmits<{
   openTestDialog: []
 }>()
 
+const manipulationRateOptions = [
+  { title: '0%', value: 0 },
+  { title: '40%', value: 40 },
+  { title: '80%', value: 80 }
+]
+
+const handQualityOptions = [
+  { title: '普通', value: 'normal' },
+  { title: '良い', value: 'good' },
+  { title: '最高', value: 'excellent' }
+]
+
 const handleTestModeToggle = () => {
   if (!settings.value.testMode) {
     console.error('testMode設定が見つかりません')
@@ -63,7 +118,7 @@ const handleTestModeToggle = () => {
   padding: 8px !important;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .v-switch {
@@ -92,6 +147,19 @@ const handleTestModeToggle = () => {
 
 .v-switch :deep(.v-input__control) {
   min-height: auto;
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.setting-label {
+  font-size: 0.85rem;
+  color: rgba(var(--v-theme-on-surface), 0.7);
+  font-weight: 500;
 }
 
 .test-mode-btn {

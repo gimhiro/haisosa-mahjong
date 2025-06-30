@@ -49,8 +49,11 @@
           :size="tileSize"
           :is-draggable="isCurrent && showTiles && position === 'bottom'"
           :is-dora="checkIsDora(tile)"
+          :is-acceptance-highlight="checkIsAcceptanceHighlight(tile)"
           :disabled="(isRiichiPreviewMode || player.riichi) && riichiDisabledTiles.includes(tile.id)"
           @click="onTileClick"
+          @mouseenter="(event) => onTileHover(tile, event)"
+          @mouseleave="onTileLeave"
         />
         
         <!-- ツモ牌エリア（常に表示） -->
@@ -61,8 +64,11 @@
             :size="tileSize"
             :is-draggable="isCurrent && showTiles && position === 'bottom'"
             :is-dora="checkIsDora(drawnTile)"
+            :is-acceptance-highlight="checkIsAcceptanceHighlight(drawnTile)"
             :disabled="(isRiichiPreviewMode || player.riichi) && riichiDisabledTiles.includes(drawnTile.id)"
             @click="onTileClick"
+            @mouseenter="(event) => onTileHover(drawnTile, event)"
+            @mouseleave="onTileLeave"
           />
           <div
             v-else
@@ -132,6 +138,7 @@ import { computed } from 'vue'
 import type { Player, Meld } from '../stores/fourPlayerMahjong'
 import type { Tile } from '../stores/fourPlayerMahjong'
 import type { GameManager } from '../utils/game-manager'
+import { getTileIndex } from '../utils/mahjong-logic'
 import MahjongTile from './MahjongTile.vue'
 
 interface Props {
@@ -149,6 +156,10 @@ interface Props {
   cpuTilesVisible?: boolean
   isRiichiPreviewMode?: boolean
   riichiDisabledTiles?: string[]
+  showAcceptanceHighlight?: boolean
+  bestAcceptanceTiles?: number[]
+  showAcceptanceTooltip?: boolean
+  acceptanceInfos?: Array<any>
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -159,13 +170,19 @@ const props = withDefaults(defineProps<Props>(), {
   gameManager: undefined,
   cpuTilesVisible: false,
   isRiichiPreviewMode: false,
-  riichiDisabledTiles: () => []
+  riichiDisabledTiles: () => [],
+  showAcceptanceHighlight: false,
+  bestAcceptanceTiles: () => [],
+  showAcceptanceTooltip: false,
+  acceptanceInfos: () => []
 })
 
 const emit = defineEmits<{
   tileDiscarded: [tileId: string]
   riichiConfirmed: [tileId: string]
   toggleCpuTiles: []
+  tileHover: [tile: Tile, mouseX: number, mouseY: number]
+  tileLeave: []
 }>()
 
 const playerAreaClasses = computed(() => [
@@ -231,6 +248,15 @@ function checkIsDora(tile: Tile): boolean {
   return isDora
 }
 
+function checkIsAcceptanceHighlight(tile: Tile): boolean {
+  if (!props.showAcceptanceHighlight || !props.bestAcceptanceTiles) {
+    return false
+  }
+  
+  const tileIndex = getTileIndex(tile)
+  return props.bestAcceptanceTiles.includes(tileIndex)
+}
+
 function getTileSize() {
   // タイルサイズをposition に応じて決定
   switch (props.position) {
@@ -253,6 +279,20 @@ function onTileClick(tile: Tile) {
       emit('tileDiscarded', tile.id)
     }
   } 
+}
+
+function onTileHover(tile: Tile, event?: MouseEvent) {
+  if (props.showAcceptanceTooltip && props.position === 'bottom') {
+    const mouseX = event?.clientX || 0
+    const mouseY = event?.clientY || 0
+    emit('tileHover', tile, mouseX, mouseY)
+  }
+}
+
+function onTileLeave() {
+  if (props.showAcceptanceTooltip && props.position === 'bottom') {
+    emit('tileLeave')
+  }
 }
 
 function shouldTileBeYoko(meld: Meld, tileIndex: number): boolean {

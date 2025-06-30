@@ -6,31 +6,39 @@ const router = useRouter()
 
 // ゲーム設定
 const gameSettings = ref({
-  cpuStrengthPreset: 'normal', // 'normal', 'hard', 'super', 'custom'
+  cpuStrengthPreset: 'normal', // 'easy', 'normal', 'hard', 'super', 'custom'
   customCpuStrengths: ['normal', 'normal', 'normal'], // CPU1, CPU2, CPU3の個別設定
   gameType: 'tonpuusen', // 'tonpuusen' (東風戦) or 'tonnanssen' (東南戦)
   agariRenchan: false, // 上がり連荘
-  hakoshita: true // 箱下
+  hakoshita: false, // トビ終了
+  manipulationRate: 80, // 牌操作率
+  handQuality: 'good' // 手牌の良さ
 })
 
 
 const cpuPresetOptions = [
   { 
+    value: 'easy', 
+    title: 'Easy × 3', 
+    description: 'ランダム打牌',
+    detail: '基本的な判断のみ、初心者におすすめ'
+  },
+  { 
     value: 'normal', 
-    title: '普通 × 3', 
-    description: 'バランスの取れた難易度',
+    title: 'Normal × 3', 
+    description: 'ターツ構成を理解した打牌',
     detail: '適度な判断力で、初心者から中級者におすすめ'
   },
   { 
     value: 'hard', 
-    title: '難しい × 3', 
-    description: '上級者向け',
+    title: 'Hard × 3', 
+    description: '牌効率を考慮した打牌',
     detail: '高い判断力で効率的に打牌、中級者以上向け'
   },
   { 
     value: 'super', 
-    title: '超難しい × 3', 
-    description: '最高難易度',
+    title: 'Super × 3', 
+    description: '80% の牌操作',
     detail: '最適解に近い打牌、上級者向けの高難易度'
   },
   { 
@@ -42,10 +50,10 @@ const cpuPresetOptions = [
 ]
 
 const cpuStrengthOptions = [
-  { value: 'easy', title: '簡単', description: '基本的な判断のみ、初心者向け' },
-  { value: 'normal', title: '普通', description: 'バランスの取れた判断力' },
-  { value: 'hard', title: '難しい', description: '高い判断力で効率的な打牌' },
-  { value: 'super', title: '超難しい', description: '最適解に近い高度な判断' }
+  { value: 'easy', title: '簡単', description: 'ランダム打牌' },
+  { value: 'normal', title: '普通', description: 'ターツ構成を理解した打牌' },
+  { value: 'hard', title: '難しい', description: '牌効率を考慮した打牌' },
+  { value: 'super', title: '超難しい', description: '80% の牌操作' }
 ]
 
 const gameTypeOptions = [
@@ -63,6 +71,18 @@ const gameTypeOptions = [
   }
 ]
 
+const manipulationRateOptions = [
+  { value: 0, title: '0%', description: '完全ランダム' },
+  { value: 40, title: '40%', description: '軽微な操作' },
+  { value: 80, title: '80%', description: '高確率操作' }
+]
+
+const handQualityOptions = [
+  { value: 'normal', title: '普通', description: 'ランダム配牌' },
+  { value: 'good', title: '良い', description: '2候補から最良を選択' },
+  { value: 'excellent', title: '最高', description: '5候補から最良を選択' }
+]
+
 function startUkeireDemo() {
   router.push('/game')
 }
@@ -78,8 +98,28 @@ function startFourPlayerGame() {
     hakoshita: gameSettings.value.hakoshita
   }
   
+  // ゲーム中設定も保存
+  const gameplaySettings = {
+    disableMeld: false,
+    autoWin: false,
+    showAcceptance: false,
+    showAcceptanceHighlight: false,
+    manipulationRate: gameSettings.value.manipulationRate,
+    handQuality: gameSettings.value.handQuality,
+    testMode: {
+      isActive: false,
+      players: [
+        { tiles: [], drawTiles: [] },
+        { tiles: [], drawTiles: [] },
+        { tiles: [], drawTiles: [] },
+        { tiles: [], drawTiles: [] }
+      ]
+    }
+  }
+  
   // ローカルストレージに保存
   localStorage.setItem('mahjongGameSettings', JSON.stringify(settings))
+  localStorage.setItem('mahjong-game-settings', JSON.stringify(gameplaySettings))
   
   router.push('/four-player')
 }
@@ -109,12 +149,28 @@ function onPresetChange() {
     <div class="panel-container">
       <v-card class="game-settings-panel" elevation="12">
           <div class="panel-header">
-            <v-icon class="header-icon">mdi-gamepad-variant</v-icon>
-            <h2 class="panel-title">ゲーム設定</h2>
+            <div class="header-content">
+              <v-icon class="header-icon">mdi-gamepad-variant</v-icon>
+              <h2 class="panel-title">ゲーム設定</h2>
+            </div>
             <div class="header-decoration"></div>
           </div>
           
           <v-card-text class="pa-8">
+            <!-- ゲーム開始ボタン -->
+            <div class="start-button-container mb-6">
+              <v-btn
+                color="primary"
+                size="x-large"
+                elevation="8"
+                @click="startFourPlayerGame"
+                class="start-game-btn"
+              >
+                <v-icon start size="large">mdi-play</v-icon>
+                4人対戦を開始
+              </v-btn>
+            </div>
+            
             <v-row class="settings-grid">
               <!-- CPU強さ設定 -->
               <v-col cols="12">
@@ -232,7 +288,7 @@ function onPresetChange() {
                         ></v-switch>
                         <v-switch
                           v-model="gameSettings.hakoshita"
-                          label="箱下"
+                          label="トビ終了"
                           color="primary"
                           class="rule-switch"
                         ></v-switch>
@@ -241,21 +297,74 @@ function onPresetChange() {
                   </v-col>
                 </v-row>
               </v-col>
+              
+              <!-- 牌操作・配牌設定 -->
+              <v-col cols="12">
+                <v-row>
+                  <!-- 牌操作率設定 -->
+                  <v-col cols="12" sm="6">
+                    <div class="setting-section">
+                      <div class="section-header">
+                        <v-icon class="section-icon">mdi-shuffle-variant</v-icon>
+                        <h3 class="section-title">牌操作率</h3>
+                      </div>
+                      <div class="manipulation-grid">
+                        <div
+                          v-for="option in manipulationRateOptions"
+                          :key="option.value"
+                          :class="['manipulation-card', { 'manipulation-card--selected': gameSettings.manipulationRate === option.value }]"
+                          @click="gameSettings.manipulationRate = option.value"
+                        >
+                          <div class="manipulation-header">
+                            <v-icon 
+                              :class="['manipulation-icon', { 'manipulation-icon--selected': gameSettings.manipulationRate === option.value }]"
+                            >
+                              mdi-shuffle-variant
+                            </v-icon>
+                            <div class="manipulation-title">{{ option.title }}</div>
+                          </div>
+                          <div class="manipulation-description">{{ option.description }}</div>
+                          <div 
+                            :class="['manipulation-indicator', { 'manipulation-indicator--selected': gameSettings.manipulationRate === option.value }]"
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </v-col>
+                  
+                  <!-- 手牌の良さ設定 -->
+                  <v-col cols="12" sm="6">
+                    <div class="setting-section">
+                      <div class="section-header">
+                        <v-icon class="section-icon">mdi-cards</v-icon>
+                        <h3 class="section-title">手牌の良さ</h3>
+                      </div>
+                      <div class="hand-quality-grid">
+                        <div
+                          v-for="option in handQualityOptions"
+                          :key="option.value"
+                          :class="['hand-quality-card', { 'hand-quality-card--selected': gameSettings.handQuality === option.value }]"
+                          @click="gameSettings.handQuality = option.value"
+                        >
+                          <div class="hand-quality-header">
+                            <v-icon 
+                              :class="['hand-quality-icon', { 'hand-quality-icon--selected': gameSettings.handQuality === option.value }]"
+                            >
+                              mdi-cards
+                            </v-icon>
+                            <div class="hand-quality-title">{{ option.title }}</div>
+                          </div>
+                          <div class="hand-quality-description">{{ option.description }}</div>
+                          <div 
+                            :class="['hand-quality-indicator', { 'hand-quality-indicator--selected': gameSettings.handQuality === option.value }]"
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </v-col>
+                </v-row>
+              </v-col>
             </v-row>
-            
-            <!-- ゲーム開始ボタン -->
-            <div class="start-button-container">
-              <v-btn
-                color="primary"
-                size="x-large"
-                elevation="8"
-                @click="startFourPlayerGame"
-                class="start-game-btn"
-              >
-                <v-icon start size="large">mdi-play</v-icon>
-                4人対戦を開始
-              </v-btn>
-            </div>
           </v-card-text>
         </v-card>
       </div>
@@ -446,9 +555,16 @@ function onPresetChange() {
   opacity: 0.3;
 }
 
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
 .header-icon {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
+  font-size: 2.2rem;
   color: rgba(255, 255, 255, 0.9);
 }
 
@@ -456,8 +572,6 @@ function onPresetChange() {
   font-size: 1.8rem;
   font-weight: 700;
   margin: 0;
-  position: relative;
-  z-index: 1;
 }
 
 .header-decoration {
@@ -656,19 +770,19 @@ function onPresetChange() {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 3rem;
-  padding-top: 2rem;
-  border-top: 1px solid rgba(226, 232, 240, 0.6);
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .start-game-btn {
-  font-size: 1.2rem !important;
+  font-size: 1.1rem !important;
   font-weight: 700 !important;
-  padding: 18px 48px !important;
-  border-radius: 16px !important;
+  padding: 12px 32px !important;
+  border-radius: 12px !important;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   box-shadow: 
-    0 10px 25px rgba(102, 126, 234, 0.4),
+    0 6px 16px rgba(102, 126, 234, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
   transition: all 0.3s ease !important;
   display: flex !important;
@@ -684,9 +798,9 @@ function onPresetChange() {
 }
 
 .start-game-btn:hover {
-  transform: translateY(-2px) !important;
+  transform: translateY(-1px) !important;
   box-shadow: 
-    0 15px 35px rgba(102, 126, 234, 0.5),
+    0 8px 20px rgba(102, 126, 234, 0.4),
     0 0 0 1px rgba(255, 255, 255, 0.2) inset !important;
 }
 
@@ -780,10 +894,195 @@ function onPresetChange() {
 /* ルール設定 */
 .rule-switches {
   margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .rule-switch {
+  margin-bottom: 0;
+}
+
+.rule-switch :deep(.v-input__details) {
+  display: none;
+}
+
+.rule-switch :deep(.v-input__control) {
+  min-height: auto;
+}
+
+/* 牌操作率設定 */
+.manipulation-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.manipulation-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.manipulation-card:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.manipulation-card--selected {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+}
+
+.manipulation-header {
+  display: flex;
+  align-items: center;
   margin-bottom: 0.5rem;
+}
+
+.manipulation-icon {
+  font-size: 1.2rem;
+  color: #64748b;
+  margin-right: 0.5rem;
+  transition: color 0.3s ease;
+}
+
+.manipulation-icon--selected {
+  color: #667eea;
+}
+
+.manipulation-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+
+.manipulation-description {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.manipulation-indicator {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 16px 16px 0;
+  border-color: transparent rgba(226, 232, 240, 0.6) transparent transparent;
+  transition: all 0.3s ease;
+}
+
+.manipulation-indicator--selected {
+  border-color: transparent #667eea transparent transparent;
+}
+
+.manipulation-indicator--selected::after {
+  content: '✓';
+  position: absolute;
+  top: 1px;
+  right: -13px;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: bold;
+}
+
+/* 手牌の良さ設定 */
+.hand-quality-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.hand-quality-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.hand-quality-card:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.hand-quality-card--selected {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+}
+
+.hand-quality-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.hand-quality-icon {
+  font-size: 1.2rem;
+  color: #64748b;
+  margin-right: 0.5rem;
+  transition: color 0.3s ease;
+}
+
+.hand-quality-icon--selected {
+  color: #667eea;
+}
+
+.hand-quality-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+
+.hand-quality-description {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.hand-quality-indicator {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 16px 16px 0;
+  border-color: transparent rgba(226, 232, 240, 0.6) transparent transparent;
+  transition: all 0.3s ease;
+}
+
+.hand-quality-indicator--selected {
+  border-color: transparent #667eea transparent transparent;
+}
+
+.hand-quality-indicator--selected::after {
+  content: '✓';
+  position: absolute;
+  top: 1px;
+  right: -13px;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: bold;
 }
 
 /* 使い方セクション */
