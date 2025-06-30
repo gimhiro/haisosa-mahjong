@@ -83,9 +83,6 @@ const handQualityOptions = [
   { value: 'excellent', title: '最高', description: '5候補から最良を選択' }
 ]
 
-function startUkeireDemo() {
-  router.push('/game')
-}
 
 function startFourPlayerGame() {
   // ゲーム設定を保存してから遷移
@@ -412,38 +409,27 @@ function onPresetChange() {
         </v-card>
       </div>
 
-    <!-- その他のモード -->
-    <div class="other-modes-section">
-      <v-card class="other-modes-card" elevation="4">
-          <v-card-title class="other-modes-title">
-            <v-icon class="other-modes-icon">mdi-apps</v-icon>
-            その他のモード
+    <!-- バージョン履歴 -->
+    <div class="version-history-section">
+      <v-card class="version-history-card" elevation="4">
+          <v-card-title class="version-history-title">
+            <v-icon class="version-history-icon">mdi-history</v-icon>
+            バージョン履歴
           </v-card-title>
           <v-card-text>
-            <div class="other-modes-content">
-              <div class="mode-item">
-                <v-icon class="mode-icon">mdi-calculator-variant</v-icon>
-                <div class="mode-info">
-                  <h4>受け入れ計算デモ</h4>
-                  <p>2シャンテンからの受け入れ枚数を計算</p>
+            <div class="version-history-content">
+              <div class="version-item">
+                <div class="version-header">
+                  <div class="version-badge">v1.0.0</div>
+                  <h4 class="version-title">初回リリース</h4>
+                  <div class="version-date">2025-06-30</div>
                 </div>
-                <v-btn
-                  color="success"
-                  variant="outlined"
-                  @click="startUkeireDemo"
-                  class="mode-btn"
-                >
-                  開始
-                </v-btn>
-              </div>
-              
-              <v-divider class="my-4"></v-divider>
-              
-              <div class="tech-info">
-                <v-icon class="tech-icon">mdi-code-braces</v-icon>
-                <div class="tech-text">
-                  <h4>riichi-rs-bundlers 使用</h4>
-                  <p>Rust製の高速・高精度な麻雀ライブラリを採用</p>
+                <div class="version-description">
+                  <ul class="version-features">
+                    <li>4人対戦麻雀の実装</li>
+                    <li>牌操作機能による手牌品質調整</li>
+                    <li>受け入れ計算・ドラ表示機能</li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -482,7 +468,7 @@ function onPresetChange() {
 .title-section,
 .panel-container,
 .info-section,
-.other-modes-section {
+.version-history-section {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1rem;
@@ -502,7 +488,7 @@ function onPresetChange() {
   margin-bottom: 2rem;
 }
 
-.other-modes-section {
+.version-history-section {
   max-width: 800px;
 }
 
@@ -1132,62 +1118,75 @@ function onPresetChange() {
   margin: 0;
 }
 
-/* その他のモード */
-.other-modes-card {
+/* バージョン履歴 */
+.version-history-card {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
   border-radius: 16px !important;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.other-modes-title {
+.version-history-title {
   display: flex;
   align-items: center;
   font-weight: 600;
   color: #334155;
 }
 
-.other-modes-icon {
+.version-history-icon {
   margin-right: 0.75rem;
   color: #667eea;
 }
 
-.other-modes-content {
+.version-history-content {
   padding: 0.5rem 0;
 }
 
-.mode-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+.version-item {
   padding: 1rem 0;
 }
 
-.mode-icon {
-  font-size: 2rem;
-  color: #10b981;
-  flex-shrink: 0;
+.version-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.mode-info {
-  flex: 1;
-}
-
-.mode-info h4 {
-  margin: 0 0 0.25rem;
-  color: #334155;
+.version-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
   font-weight: 600;
-}
-
-.mode-info p {
-  margin: 0;
-  color: #64748b;
   font-size: 0.9rem;
 }
 
-.mode-btn {
-  border-radius: 8px !important;
-  font-weight: 600 !important;
+.version-title {
+  color: #334155;
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin: 0;
+  flex: 1;
+}
+
+.version-date {
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.version-features {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.version-features li {
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
 }
 
 .tech-info {
@@ -1224,7 +1223,7 @@ function onPresetChange() {
   .title-section,
   .panel-container,
   .info-section,
-  .other-modes-section {
+  .version-history-section {
     padding: 0 0.75rem;
   }
   
@@ -1243,19 +1242,13 @@ function onPresetChange() {
   .game-type-grid {
     grid-template-columns: 1fr;
   }
-  
-  .mode-item {
-    flex-direction: column;
-    text-align: center;
-    gap: 0.75rem;
-  }
 }
 
 @media (max-width: 480px) {
   .title-section,
   .panel-container,
   .info-section,
-  .other-modes-section {
+  .version-history-section {
     padding: 0 0.5rem;
   }
   

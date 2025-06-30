@@ -368,7 +368,7 @@
             </v-btn>
 
             <!-- デバッグ情報 -->
-            <div v-if="isHumanTurn" class="debug-info" style="font-size: 0.7rem; color: #666; margin-top: 8px;">
+            <div v-if="isHumanTurn && isDebugMode" class="debug-info" style="font-size: 0.7rem; color: #666; margin-top: 8px;">
               デバッグ: 手牌{{ humanPlayer.tiles.length }}枚, ツモ牌: {{ currentDrawnTile ? 'あり' : 'なし' }}, リーチ可能: {{ canDeclareRiichi }}, シャンテン: {{ humanShanten }}<br>
               リーチ済み: {{ humanPlayer.riichi }}, 点数: {{ humanPlayer.score }}, ゲーム状態: {{ gamePhase }}<br>
               ツモ可能: {{ canTsumo }}, ロン可能: {{ canRon }}, 自分のターン: {{ isHumanTurn }}<br>
@@ -455,6 +455,7 @@ import AcceptancePopup from '../components/AcceptancePopup.vue'
 import { useRouter } from 'vue-router'
 import { useGameSettings } from '../utils/useGameSettings'
 import { SoundManager } from '../utils/sound-manager'
+import { isDebugMode } from '../utils/env'
 
 const gameManager = ref(new GameManager())
 const router = useRouter()

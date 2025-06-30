@@ -36,7 +36,7 @@
       />
       
       <v-btn
-        v-if="settings.testMode"
+        v-if="settings.testMode && isDebugMode"
         :color="settings.testMode.isActive ? 'success' : 'warning'"
         variant="tonal"
         size="small"
@@ -52,6 +52,7 @@
 
 <script setup lang="ts">
 import { useGameSettings } from '../utils/useGameSettings'
+import { isDebugMode } from '../utils/env'
 
 const { settings, updateSettings, toggleTestMode } = useGameSettings()
 
@@ -62,7 +63,6 @@ const emit = defineEmits<{
 
 const handleTestModeToggle = () => {
   if (!settings.value.testMode) {
-    console.error('testMode設定が見つかりません')
     return
   }
   
