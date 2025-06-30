@@ -19,11 +19,11 @@ async def test_meld_displays(base_url: str, headless: bool = True):
         page = await browser.new_page()
         
         # コンソールログを出力
-        page.on("console", lambda msg: print(f"🖥️ CONSOLE: {msg.text}"))
+        page.on("console", lambda msg: print(f" CONSOLE: {msg.text}"))
         page.on("pageerror", lambda error: print(f"❌ PAGE ERROR: {error}"))
         
         try:
-            print("🎮 メルド表示テストを開始...")
+            print(" メルド表示テストを開始...")
             await page.goto(base_url)
             await page.wait_for_load_state('networkidle')
             
@@ -52,7 +52,7 @@ async def test_meld_displays(base_url: str, headless: bool = True):
 
 async def test_ankan_display(page):
     """暗カン表示テスト"""
-    print("🔍 暗カン表示テストを開始...")
+    print(" 暗カン表示テストを開始...")
     
     # テストモック起動
     test_mock_button = page.get_by_role("button", name="テストモック起動")
@@ -79,28 +79,28 @@ async def test_ankan_display(page):
     # 暗カン実行
     ankan_button = page.get_by_role("button", name="暗カン")
     if await ankan_button.is_visible():
-        print("🎯 暗カンを実行...")
+        print(" 暗カンを実行...")
         await ankan_button.click()
         await page.wait_for_timeout(2000)
         
         # 暗カン後のメルド表示確認
-        print("🔍 暗カン表示を確認...")
+        print(" 暗カン表示を確認...")
         
         # メルド表示をスクリーンショット
         import os
         os.makedirs('test/screenshots', exist_ok=True)
         await page.screenshot(path='test/screenshots/ankan_display.png')
-        print("📸 暗カン表示のスクリーンショットを保存: test/screenshots/ankan_display.png")
+        print(" 暗カン表示のスクリーンショットを保存: test/screenshots/ankan_display.png")
         
         # メルド牌の表示状態をチェック
         meld_tiles = page.locator('.meld-group .tile')
         meld_count = await meld_tiles.count()
-        print(f"📊 メルド牌数: {meld_count}")
+        print(f" メルド牌数: {meld_count}")
         
         # メルドグループの数をチェック
         meld_groups = page.locator('.meld-group')
         group_count = await meld_groups.count()
-        print(f"📊 メルドグループ数: {group_count}")
+        print(f" メルドグループ数: {group_count}")
         
         if group_count > 0:
             print("✅ 暗カンのメルド表示が確認できました")
@@ -118,21 +118,21 @@ async def test_ankan_display(page):
 
 async def test_win_modal_meld_display(page):
     """Win Modalでのメルド表示テスト"""
-    print("🔍 Win Modalでのメルド表示テストを開始...")
+    print(" Win Modalでのメルド表示テストを開始...")
     
     # 6筒を捨てる
     six_p_tiles = page.locator('.tile-draggable[aria-label="6筒"]')
     six_p_count = await six_p_tiles.count()
     
     if six_p_count > 0:
-        print("🎯 6筒を捨てる...")
+        print(" 6筒を捨てる...")
         await six_p_tiles.first.click()
         await page.wait_for_timeout(3000)
     
     # テストモード停止
     stop_test_button = page.locator('button:has-text("テストモード停止")')
     if await stop_test_button.is_visible():
-        print("🔄 テストモード停止...")
+        print(" テストモード停止...")
         await stop_test_button.click()
         await page.wait_for_timeout(2000)
     
@@ -142,7 +142,7 @@ async def test_win_modal_meld_display(page):
     # リーチ宣言
     riichi_button = page.get_by_role("button", name="リーチ")
     if await riichi_button.is_visible():
-        print("🎯 リーチを実行...")
+        print(" リーチを実行...")
         await riichi_button.click()
         await page.wait_for_timeout(2000)
         
@@ -152,14 +152,14 @@ async def test_win_modal_meld_display(page):
         # ツモボタンが表示されるまで待機
         max_attempts = 3
         for attempt in range(max_attempts):
-            print(f"🔍 ツモボタン確認 (試行 {attempt + 1}/{max_attempts})...")
+            print(f" ツモボタン確認 (試行 {attempt + 1}/{max_attempts})...")
             
             tsumo_button = page.get_by_role("button", name="ツモ")
             if await tsumo_button.is_visible():
                 print("✅ ツモボタンが表示されました！")
                 
                 # ツモを実行
-                print("🎯 ツモを実行...")
+                print(" ツモを実行...")
                 await tsumo_button.click()
                 await page.wait_for_timeout(3000)
                 
@@ -169,7 +169,7 @@ async def test_win_modal_meld_display(page):
                     print("✅ Win Modalが表示されました")
                     
                     # Win Modal内のメルド表示を確認
-                    print("🔍 Win Modal内のメルド表示を確認...")
+                    print(" Win Modal内のメルド表示を確認...")
                     
                     # メルドセクションの確認
                     melds_section = page.locator('.melds-section')
@@ -178,12 +178,12 @@ async def test_win_modal_meld_display(page):
                         
                         # メルド表示のスクリーンショット
                         await page.screenshot(path='test/screenshots/win_modal_with_melds.png')
-                        print("📸 Win Modalのメルド表示スクリーンショットを保存: test/screenshots/win_modal_with_melds.png")
+                        print(" Win Modalのメルド表示スクリーンショットを保存: test/screenshots/win_modal_with_melds.png")
                         
                         # メルドグループの確認
                         modal_meld_groups = win_modal.locator('.meld-group')
                         modal_group_count = await modal_meld_groups.count()
-                        print(f"📊 Win Modal内のメルドグループ数: {modal_group_count}")
+                        print(f" Win Modal内のメルドグループ数: {modal_group_count}")
                         
                         if modal_group_count > 0:
                             print("✅ Win Modal内でメルド表示が正常に動作しています")
@@ -193,7 +193,7 @@ async def test_win_modal_meld_display(page):
                         print("❌ Win Modal内にメルドセクションが見つかりません")
                         # メルドがない場合のスクリーンショットも保存
                         await page.screenshot(path='test/screenshots/win_modal_no_melds.png')
-                        print("📸 メルドなしWin Modalのスクリーンショットを保存: test/screenshots/win_modal_no_melds.png")
+                        print(" メルドなしWin Modalのスクリーンショットを保存: test/screenshots/win_modal_no_melds.png")
                     
                     return True
                 else:
@@ -201,7 +201,7 @@ async def test_win_modal_meld_display(page):
                     break
             else:
                 if attempt < max_attempts - 1:
-                    print("🔄 次のツモを待機中...")
+                    print(" 次のツモを待機中...")
                     await page.wait_for_timeout(6000)
                 else:
                     print("❌ ツモボタンが表示されませんでした")
@@ -211,22 +211,22 @@ async def test_win_modal_meld_display(page):
 
 async def debug_melds_display(page):
     """メルド表示のデバッグ"""
-    print("🔍 メルド表示のデバッグ情報:")
+    print(" メルド表示のデバッグ情報:")
     
     # メルドエリアの確認
     melds_areas = page.locator('.melds-area')
     melds_count = await melds_areas.count()
-    print(f"📊 メルドエリア数: {melds_count}")
+    print(f" メルドエリア数: {melds_count}")
     
     # メルドグループの確認
     meld_groups = page.locator('.meld-group')
     group_count = await meld_groups.count()
-    print(f"📊 メルドグループ数: {group_count}")
+    print(f" メルドグループ数: {group_count}")
     
     # タイルの確認
     all_tiles = page.locator('.tile')
     tile_count = await all_tiles.count()
-    print(f"📊 全タイル数: {tile_count}")
+    print(f" 全タイル数: {tile_count}")
 
 async def main():
     parser = argparse.ArgumentParser(description='メルド表示テスト')
@@ -237,9 +237,9 @@ async def main():
     
     args = parser.parse_args()
     
-    print(f"🚀 メルド表示テスト開始: {args.url}")
+    print(f" メルド表示テスト開始: {args.url}")
     await test_meld_displays(args.url, args.headless)
-    print("✨ テスト完了")
+    print(" テスト完了")
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -19,11 +19,11 @@ async def test_all_meld_types(base_url: str, headless: bool = True):
         page = await browser.new_page()
         
         # コンソールログを出力
-        page.on("console", lambda msg: print(f"🖥️ CONSOLE: {msg.text}"))
+        page.on("console", lambda msg: print(f" CONSOLE: {msg.text}"))
         page.on("pageerror", lambda error: print(f"❌ PAGE ERROR: {error}"))
         
         try:
-            print("🎮 全メルドタイプ表示テストを開始...")
+            print(" 全メルドタイプ表示テストを開始...")
             await page.goto(base_url)
             await page.wait_for_load_state('networkidle')
             
@@ -49,7 +49,7 @@ async def test_all_meld_types(base_url: str, headless: bool = True):
 
 async def test_ankan_detailed(page):
     """暗カンの詳細表示テスト"""
-    print("🔍 暗カンの詳細表示テストを開始...")
+    print(" 暗カンの詳細表示テストを開始...")
     
     # テストモック起動
     test_mock_button = page.get_by_role("button", name="テストモック起動")
@@ -74,7 +74,7 @@ async def test_ankan_detailed(page):
     # 暗カン実行
     ankan_button = page.get_by_role("button", name="暗カン")
     if await ankan_button.is_visible():
-        print("🎯 暗カンを実行...")
+        print(" 暗カンを実行...")
         await ankan_button.click()
         await page.wait_for_timeout(2000)
         
@@ -85,7 +85,7 @@ async def test_ankan_detailed(page):
         import os
         os.makedirs('test/screenshots', exist_ok=True)
         await page.screenshot(path='test/screenshots/ankan_detailed.png')
-        print("📸 暗カン詳細表示のスクリーンショットを保存")
+        print(" 暗カン詳細表示のスクリーンショットを保存")
         
         # メルドタイルの実際のクラス名と属性を確認
         await check_meld_tile_attributes(page)
@@ -95,12 +95,12 @@ async def test_ankan_detailed(page):
 
 async def analyze_meld_display(page, meld_type):
     """メルド表示を詳細分析"""
-    print(f"🔍 {meld_type}の表示を詳細分析...")
+    print(f" {meld_type}の表示を詳細分析...")
     
     # メルドエリアの存在確認
     melds_areas = page.locator('.melds-area')
     melds_area_count = await melds_areas.count()
-    print(f"📊 メルドエリア数: {melds_area_count}")
+    print(f" メルドエリア数: {melds_area_count}")
     
     if melds_area_count > 0:
         # 人間プレイヤーのメルドエリアを確認（player-bottomクラス）
@@ -113,14 +113,14 @@ async def analyze_meld_display(page, meld_type):
             # メルドグループの確認
             meld_groups = human_melds_area.locator('.meld-group')
             group_count = await meld_groups.count()
-            print(f"📊 メルドグループ数: {group_count}")
+            print(f" メルドグループ数: {group_count}")
             
             if group_count > 0:
                 # 最初のメルドグループを詳細確認
                 first_meld = meld_groups.first
                 meld_tiles = first_meld.locator('.tile')
                 tile_count = await meld_tiles.count()
-                print(f"📊 メルド内のタイル数: {tile_count}")
+                print(f" メルド内のタイル数: {tile_count}")
                 
                 # 各タイルの状態を確認
                 for i in range(tile_count):
@@ -154,12 +154,12 @@ async def analyze_meld_display(page, meld_type):
 
 async def check_meld_tile_attributes(page):
     """メルドタイルの属性を詳細チェック"""
-    print("🔍 メルドタイルの属性を詳細チェック...")
+    print(" メルドタイルの属性を詳細チェック...")
     
     # すべてのメルドタイルを取得
     meld_tiles = page.locator('.melds-area .tile')
     tile_count = await meld_tiles.count()
-    print(f"📊 見つかったメルドタイル数: {tile_count}")
+    print(f" 見つかったメルドタイル数: {tile_count}")
     
     for i in range(tile_count):
         tile = meld_tiles.nth(i)
@@ -189,9 +189,9 @@ async def main():
     
     args = parser.parse_args()
     
-    print(f"🚀 全メルドタイプ表示テスト開始: {args.url}")
+    print(f" 全メルドタイプ表示テスト開始: {args.url}")
     await test_all_meld_types(args.url, args.headless)
-    print("✨ テスト完了")
+    print(" テスト完了")
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -14,11 +14,11 @@ async def test_wall_count_reduction(base_url: str, headless: bool = True):
         page = await browser.new_page()
         
         # コンソールログを出力
-        page.on("console", lambda msg: print(f"🖥️ CONSOLE: {msg.text}"))
+        page.on("console", lambda msg: print(f" CONSOLE: {msg.text}"))
         page.on("pageerror", lambda error: print(f"❌ PAGE ERROR: {error}"))
         
         try:
-            print("🎮 牌山数値減少テストを開始...")
+            print(" 牌山数値減少テストを開始...")
             await page.goto(base_url)
             await page.wait_for_load_state('networkidle')
             
@@ -33,7 +33,7 @@ async def test_wall_count_reduction(base_url: str, headless: bool = True):
             
             # 初期牌山数値を記録
             initial_wall = await get_wall_count(page)
-            print(f"📊 初期牌山数値: {initial_wall}")
+            print(f" 初期牌山数値: {initial_wall}")
             
             # テストモック起動
             test_mock_button = page.get_by_role("button", name="テストモック起動")
@@ -59,7 +59,7 @@ async def test_wall_count_reduction(base_url: str, headless: bool = True):
             
             # テストモード開始後の牌山数値を記録
             after_start_wall = await get_wall_count(page)
-            print(f"📊 テストモード開始後牌山数値: {after_start_wall}")
+            print(f" テストモード開始後牌山数値: {after_start_wall}")
             
             # 複数回ツモを実行して牌山数値の変化を確認
             wall_counts = [after_start_wall]
@@ -77,7 +77,7 @@ async def test_wall_count_reduction(base_url: str, headless: bool = True):
                     # 牌山数値を確認
                     wall_count = await get_wall_count(page)
                     wall_counts.append(wall_count)
-                    print(f"📊 {i+1}回目ツモ後牌山数値: {wall_count}")
+                    print(f" {i+1}回目ツモ後牌山数値: {wall_count}")
                 
                 # テストモード停止・再開でCPUターンを進める
                 stop_test_button = page.locator('button:has-text("テストモード停止")')
@@ -87,7 +87,7 @@ async def test_wall_count_reduction(base_url: str, headless: bool = True):
                     
                     # 牌山数値を確認
                     wall_count = await get_wall_count(page)
-                    print(f"📊 CPU巡回後牌山数値: {wall_count}")
+                    print(f" CPU巡回後牌山数値: {wall_count}")
                     
                     # テストモード再開
                     test_mock_button = page.get_by_role("button", name="テストモック起動")
@@ -101,7 +101,7 @@ async def test_wall_count_reduction(base_url: str, headless: bool = True):
                             await page.wait_for_timeout(1000)
             
             # 結果の検証
-            print("\n📊 牌山数値変化の検証:")
+            print("\n 牌山数値変化の検証:")
             decreasing = True
             for i in range(1, len(wall_counts)):
                 if wall_counts[i] >= wall_counts[i-1]:
@@ -117,7 +117,7 @@ async def test_wall_count_reduction(base_url: str, headless: bool = True):
                 import os
                 os.makedirs('test/screenshots', exist_ok=True)
                 await page.screenshot(path='test/screenshots/wall_count_test.png')
-                print("📸 牌山数値テストのスクリーンショットを保存")
+                print(" 牌山数値テストのスクリーンショットを保存")
                 
                 return True
             else:
@@ -180,15 +180,15 @@ async def main():
     
     args = parser.parse_args()
     
-    print(f"🚀 牌山数値減少テスト開始: {args.url}")
+    print(f" 牌山数値減少テスト開始: {args.url}")
     success = await test_wall_count_reduction(args.url, True)
     
     if success:
-        print("🎉 テスト成功: 牌山数値が正常に減少しました")
+        print(" テスト成功: 牌山数値が正常に減少しました")
     else:
         print("❌ テスト失敗: 牌山数値減少に問題があります")
     
-    print("✨ テスト完了")
+    print(" テスト完了")
 
 if __name__ == "__main__":
     asyncio.run(main())

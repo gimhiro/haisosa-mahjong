@@ -17,11 +17,11 @@ async def test_chinitsu_ryanpeikou(base_url: str, headless: bool = True):
         page = await browser.new_page()
         
         # コンソールログを出力
-        page.on("console", lambda msg: print(f"🖥️ CONSOLE: {msg.text}"))
+        page.on("console", lambda msg: print(f" CONSOLE: {msg.text}"))
         page.on("pageerror", lambda error: print(f"❌ PAGE ERROR: {error}"))
         
         try:
-            print("🎮 清一色・リャンペーコー役テストを開始...")
+            print(" 清一色・リャンペーコー役テストを開始...")
             await page.goto(base_url)
             await page.wait_for_load_state('networkidle')
             
@@ -95,7 +95,7 @@ async def test_chinitsu_ryanpeikou(base_url: str, headless: bool = True):
             # 即リーチ宣言（配牌即リーチ）
             riichi_button = page.get_by_role("button", name="リーチ")
             if await riichi_button.is_visible():
-                print("🎯 配牌即リーチを宣言...")
+                print(" 配牌即リーチを宣言...")
                 await riichi_button.click()
                 await page.wait_for_timeout(2000)
                 print("✅ リーチ宣言完了（ダブルリーチ狙い）")
@@ -104,7 +104,7 @@ async def test_chinitsu_ryanpeikou(base_url: str, headless: bool = True):
                 # 記録では8筒を最初にクリックしているので、それに合わせる
                 tile_8p = page.get_by_role("button", name="8筒").first
                 if await tile_8p.is_visible():
-                    print("🎯 8筒を捨てます...")
+                    print(" 8筒を捨てます...")
                     await tile_8p.click()
                     await page.wait_for_timeout(2000)
                     print("✅ 8筒打牌完了")
@@ -115,14 +115,14 @@ async def test_chinitsu_ryanpeikou(base_url: str, headless: bool = True):
                 # ツモボタンが表示されるまで待機（一発ツモ）
                 max_attempts = 3
                 for attempt in range(max_attempts):
-                    print(f"🔍 ツモボタン確認 (試行 {attempt + 1}/{max_attempts})...")
+                    print(f" ツモボタン確認 (試行 {attempt + 1}/{max_attempts})...")
                     
                     tsumo_button = page.get_by_role("button", name="ツモ")
                     if await tsumo_button.is_visible():
                         print("✅ ツモボタンが表示されました！")
                         
                         # ツモを実行
-                        print("🎯 ツモを実行...")
+                        print(" ツモを実行...")
                         await tsumo_button.click()
                         await page.wait_for_timeout(3000)
                         
@@ -138,7 +138,7 @@ async def test_chinitsu_ryanpeikou(base_url: str, headless: bool = True):
                             import os
                             os.makedirs('test/screenshots', exist_ok=True)
                             await page.screenshot(path='test/screenshots/yaku_test_1_chinitsu.png')
-                            print("📸 清一色・リャンペーコー役のスクリーンショットを保存")
+                            print(" 清一色・リャンペーコー役のスクリーンショットを保存")
                             
                             return True
                         else:
@@ -146,7 +146,7 @@ async def test_chinitsu_ryanpeikou(base_url: str, headless: bool = True):
                             break
                     else:
                         if attempt < max_attempts - 1:
-                            print("🔄 次のツモを待機中...")
+                            print(" 次のツモを待機中...")
                             await page.wait_for_timeout(3000)
                         else:
                             print("❌ ツモボタンが表示されませんでした")
@@ -166,7 +166,7 @@ async def test_chinitsu_ryanpeikou(base_url: str, headless: bool = True):
 
 async def verify_yaku(page, win_modal):
     """役の検証"""
-    print("🔍 Win Modal内の役を確認...")
+    print(" Win Modal内の役を確認...")
     
     # 期待される役リスト
     expected_yaku = [
@@ -184,7 +184,7 @@ async def verify_yaku(page, win_modal):
     # 役一覧の取得
     yaku_elements = win_modal.locator('.yaku-list .yaku-item, .yaku-list li, .yaku-list div')
     yaku_count = await yaku_elements.count()
-    print(f"📊 表示された役数: {yaku_count}")
+    print(f" 表示された役数: {yaku_count}")
     
     found_yaku = []
     for i in range(yaku_count):
@@ -196,7 +196,7 @@ async def verify_yaku(page, win_modal):
                 print(f"  役{i+1}: {yaku_text.strip()}")
     
     # 役の検証
-    print("🔍 期待される役との照合:")
+    print(" 期待される役との照合:")
     for expected in expected_yaku:
         found = any(expected in yaku for yaku in found_yaku)
         # リーチの場合は別名も確認
@@ -209,13 +209,13 @@ async def verify_yaku(page, win_modal):
     score_elements = win_modal.locator('.score-value, .total-points')
     if await score_elements.count() > 0:
         score_text = await score_elements.first.text_content()
-        print(f"📊 獲得点数: {score_text}")
+        print(f" 獲得点数: {score_text}")
     
     # 翻数確認
     han_elements = win_modal.locator('.total-han, .han-count')
     if await han_elements.count() > 0:
         han_text = await han_elements.first.text_content()
-        print(f"📊 合計翻数: {han_text}")
+        print(f" 合計翻数: {han_text}")
     
     return found_yaku
 
@@ -228,15 +228,15 @@ async def main():
     
     args = parser.parse_args()
     
-    print(f"🚀 清一色・リャンペーコー役テスト開始: {args.url}")
+    print(f" 清一色・リャンペーコー役テスト開始: {args.url}")
     success = await test_chinitsu_ryanpeikou(args.url, True)  # WSL環境では常にheadless
     
     if success:
-        print("🎉 テスト成功: 清一色・リャンペーコー役が正常に確認されました")
+        print(" テスト成功: 清一色・リャンペーコー役が正常に確認されました")
     else:
         print("❌ テスト失敗: 期待される役が確認できませんでした")
     
-    print("✨ テスト完了")
+    print(" テスト完了")
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -17,11 +17,11 @@ async def test_haitei_junchan_sanshoku(base_url: str, headless: bool = True):
         page = await browser.new_page()
         
         # コンソールログを出力
-        page.on("console", lambda msg: print(f"🖥️ CONSOLE: {msg.text}"))
+        page.on("console", lambda msg: print(f" CONSOLE: {msg.text}"))
         page.on("pageerror", lambda error: print(f"❌ PAGE ERROR: {error}"))
         
         try:
-            print("🎮 ハイテイツモ・純チャン・三色同刻テストを開始...")
+            print(" ハイテイツモ・純チャン・三色同刻テストを開始...")
             
             # 最新レコード通りに実行
             await page.goto(f"{base_url}/#/")
@@ -56,7 +56,7 @@ async def test_haitei_junchan_sanshoku(base_url: str, headless: bool = True):
             await page.get_by_role("button", name="テストモード開始").click()
             await page.get_by_role("button", name="西").click()
             
-            print("🔄 西をツモ切りしてハイテイまで進める...")
+            print(" 西をツモ切りしてハイテイまで進める...")
             
             # 最新レコード通り: 最初は drawn-tile-bottom をクリック
             await page.locator(".drawn-tile.drawn-tile-bottom").click()
@@ -72,7 +72,7 @@ async def test_haitei_junchan_sanshoku(base_url: str, headless: bool = True):
                     print(f"   {i+2}回目: クリックエラー - {e}")
                     break
             
-            print("🎯 ハイテイツモ（9p）を実行...")
+            print(" ハイテイツモ（9p）を実行...")
             
             # ツモボタンをクリック
             try:
@@ -90,7 +90,7 @@ async def test_haitei_junchan_sanshoku(base_url: str, headless: bool = True):
                 
                 # 役一覧を取得
                 yaku_info = await get_yaku_list(page, win_modal)
-                print("📊 検出された役:")
+                print(" 検出された役:")
                 for yaku in yaku_info:
                     print(f"   - {yaku}")
                 
@@ -110,16 +110,16 @@ async def test_haitei_junchan_sanshoku(base_url: str, headless: bool = True):
                 import os
                 os.makedirs('test/screenshots', exist_ok=True)
                 await page.screenshot(path='test/screenshots/yaku_test_4_haitei.png')
-                print("📸 ハイテイツモテストのスクリーンショットを保存")
+                print(" ハイテイツモテストのスクリーンショットを保存")
                 
                 # 結果判定
                 if len(found_yaku) >= 2:  # 最低2つの役は欲しい
                     print("✅ テスト成功: 複数の役が検出されました")
                     if any("海底" in yaku for yaku in found_yaku):
-                        print("🎉 海底摸月（ハイテイツモ）も正常に検出されています")
+                        print(" 海底摸月（ハイテイツモ）も正常に検出されています")
                         return True
                     else:
-                        print("⚠️ 海底摸月が検出されていません（要実装確認）")
+                        print(" 海底摸月が検出されていません（要実装確認）")
                         return True  # 他の役があれば一応成功とする
                 else:
                     print("❌ テスト失敗: 期待される役が不足しています")
@@ -146,7 +146,7 @@ async def get_yaku_list(page, win_modal):
         # 他のテストと同じセレクタを使用
         yaku_elements = win_modal.locator('.yaku-list .yaku-item, .yaku-list li, .yaku-list div')
         yaku_count = await yaku_elements.count()
-        print(f"📊 表示された役数: {yaku_count}")
+        print(f" 表示された役数: {yaku_count}")
         
         for i in range(yaku_count):
             yaku_element = yaku_elements.nth(i)
@@ -158,7 +158,7 @@ async def get_yaku_list(page, win_modal):
         
         # 追加のセレクタでも確認
         if len(yaku_list) == 0:
-            print("🔍 別のセレクタで役を確認中...")
+            print(" 別のセレクタで役を確認中...")
             alternative_selectors = [
                 '.score-value, .total-points',
                 '.total-han, .han-count',
@@ -194,15 +194,15 @@ async def main():
     
     args = parser.parse_args()
     
-    print(f"🚀 ハイテイツモ・純チャン・三色同刻テスト開始: {args.url}")
+    print(f" ハイテイツモ・純チャン・三色同刻テスト開始: {args.url}")
     success = await test_haitei_junchan_sanshoku(args.url, args.headless)
     
     if success:
-        print("🎉 テスト成功: ハイテイツモ関連役が検出されました")
+        print(" テスト成功: ハイテイツモ関連役が検出されました")
     else:
         print("❌ テスト失敗: ハイテイツモ関連役に問題があります")
     
-    print("✨ テスト完了")
+    print(" テスト完了")
 
 if __name__ == "__main__":
     asyncio.run(main())

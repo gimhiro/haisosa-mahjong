@@ -17,11 +17,11 @@ async def test_sankantsu_sanankou(base_url: str, headless: bool = True):
         page = await browser.new_page()
         
         # コンソールログを出力
-        page.on("console", lambda msg: print(f"🖥️ CONSOLE: {msg.text}"))
+        page.on("console", lambda msg: print(f" CONSOLE: {msg.text}"))
         page.on("pageerror", lambda error: print(f"❌ PAGE ERROR: {error}"))
         
         try:
-            print("🎮 三槓子・三暗刻・小三元役テストを開始...")
+            print(" 三槓子・三暗刻・小三元役テストを開始...")
             await page.goto(base_url)
             await page.wait_for_load_state('networkidle')
             
@@ -91,7 +91,7 @@ async def test_sankantsu_sanankou(base_url: str, headless: bool = True):
             # 最初に1pを捨てる
             tile_1p = page.get_by_role("button", name="1筒")
             if await tile_1p.is_visible():
-                print("🎯 1筒を捨てます...")
+                print(" 1筒を捨てます...")
                 await tile_1p.click()
                 await page.wait_for_timeout(2000)
                 
@@ -101,10 +101,10 @@ async def test_sankantsu_sanankou(base_url: str, headless: bool = True):
             await page.wait_for_timeout(5000)
             
             # 白のミンカンボタンを待つ
-            print("🎯 白のミンカンを待機...")
+            print(" 白のミンカンを待機...")
             minkan_button = page.get_by_role("button", name="カン")
             if await minkan_button.is_visible():
-                print("🎯 白のミンカンを実行...")
+                print(" 白のミンカンを実行...")
                 await minkan_button.click()
                 await page.wait_for_timeout(2000)
                 print("✅ 白のミンカン完了")
@@ -125,7 +125,7 @@ async def test_sankantsu_sanankou(base_url: str, headless: bool = True):
             await page.wait_for_timeout(3000)
             
             # リンシャンツモ（中でツモアガリ）
-            print("🎯 リンシャンツモ（中）を実行...")
+            print(" リンシャンツモ（中）を実行...")
             tsumo_button = page.get_by_role("button", name="ツモ")
             if await tsumo_button.is_visible():
                 print("✅ ツモボタンが表示されました！")
@@ -160,7 +160,7 @@ async def test_sankantsu_sanankou(base_url: str, headless: bool = True):
 
 async def perform_ankan(page, tile_name, kan_number):
     """暗槓を実行"""
-    print(f"🎯 {kan_number}回目の暗槓（{tile_name}）を実行...")
+    print(f" {kan_number}回目の暗槓（{tile_name}）を実行...")
     
     ankan_button = page.get_by_role("button", name="暗カン")
     if await ankan_button.is_visible():
@@ -174,7 +174,7 @@ async def perform_ankan(page, tile_name, kan_number):
 
 async def perform_ankan_new(page, kan_number):
     """暗槓を実行（新版）"""
-    print(f"🎯 {kan_number}回目の暗槓を実行...")
+    print(f" {kan_number}回目の暗槓を実行...")
     
     # まず「カン」ボタンをクリック
     kan_button = page.get_by_role("button", name="カン")
@@ -190,7 +190,7 @@ async def perform_ankan_new(page, kan_number):
 
 async def verify_yaku(page, win_modal):
     """役の検証"""
-    print("🔍 Win Modal内の役を確認...")
+    print(" Win Modal内の役を確認...")
     
     # 期待される役リスト
     expected_yaku = [
@@ -207,7 +207,7 @@ async def verify_yaku(page, win_modal):
     # 役一覧の取得
     yaku_elements = win_modal.locator('.yaku-list .yaku-item, .yaku-list li, .yaku-list div')
     yaku_count = await yaku_elements.count()
-    print(f"📊 表示された役数: {yaku_count}")
+    print(f" 表示された役数: {yaku_count}")
     
     found_yaku = []
     for i in range(yaku_count):
@@ -219,7 +219,7 @@ async def verify_yaku(page, win_modal):
                 print(f"  役{i+1}: {yaku_text.strip()}")
     
     # 役の検証
-    print("🔍 期待される役との照合:")
+    print(" 期待される役との照合:")
     for expected in expected_yaku:
         found = any(expected in yaku for yaku in found_yaku)
         status = "✅" if found else "❌"
@@ -229,13 +229,13 @@ async def verify_yaku(page, win_modal):
     score_elements = win_modal.locator('.score-value, .total-points')
     if await score_elements.count() > 0:
         score_text = await score_elements.first.text_content()
-        print(f"📊 獲得点数: {score_text}")
+        print(f" 獲得点数: {score_text}")
     
     # 翻数確認
     han_elements = win_modal.locator('.total-han, .han-count')
     if await han_elements.count() > 0:
         han_text = await han_elements.first.text_content()
-        print(f"📊 合計翻数: {han_text}")
+        print(f" 合計翻数: {han_text}")
     
     return found_yaku
 
@@ -248,15 +248,15 @@ async def main():
     
     args = parser.parse_args()
     
-    print(f"🚀 三槓子・三暗刻・小三元役テスト開始: {args.url}")
+    print(f" 三槓子・三暗刻・小三元役テスト開始: {args.url}")
     success = await test_sankantsu_sanankou(args.url, args.headless)  # WSL環境では常にheadless
     
     if success:
-        print("🎉 テスト成功: 三槓子・三暗刻・小三元役が正常に確認されました")
+        print(" テスト成功: 三槓子・三暗刻・小三元役が正常に確認されました")
     else:
         print("❌ テスト失敗: 期待される役が確認できませんでした")
     
-    print("✨ テスト完了")
+    print(" テスト完了")
 
 if __name__ == "__main__":
     asyncio.run(main())

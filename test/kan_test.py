@@ -22,11 +22,11 @@ async def test_kan_comprehensive(base_url: str, headless: bool = True):
         page = await browser.new_page()
         
         # コンソールログを出力
-        page.on("console", lambda msg: print(f"🖥️ CONSOLE: {msg.text}"))
+        page.on("console", lambda msg: print(f" CONSOLE: {msg.text}"))
         page.on("pageerror", lambda error: print(f"❌ PAGE ERROR: {error}"))
         
         try:
-            print("🎮 カン機能統合テストを開始...")
+            print(" カン機能統合テストを開始...")
             await page.goto(base_url)
             await page.wait_for_load_state('networkidle')
             
@@ -63,19 +63,19 @@ async def test_kan_comprehensive(base_url: str, headless: bool = True):
             
             # 初期ドラ数確認
             initial_dora_count = await count_dora_indicators(page)
-            print(f"📊 初期ドラ表示数: {initial_dora_count}")
+            print(f" 初期ドラ表示数: {initial_dora_count}")
             
             # 暗カン実行
             ankan_button = page.get_by_role("button", name="暗カン")
             if await ankan_button.is_visible():
-                print("🎯 暗カンを実行...")
+                print(" 暗カンを実行...")
                 await ankan_button.click()
                 await page.wait_for_timeout(2000)
                 print("✅ 暗カン完了")
                 
                 # カン後のドラ数確認
                 post_kan_dora_count = await count_dora_indicators(page)
-                print(f"📊 カン後ドラ表示数: {post_kan_dora_count}")
+                print(f" カン後ドラ表示数: {post_kan_dora_count}")
                 
                 # 新ドラが追加されたかチェック
                 if post_kan_dora_count > initial_dora_count:
@@ -84,7 +84,7 @@ async def test_kan_comprehensive(base_url: str, headless: bool = True):
                     print(f"❌ カン新ドラが追加されていません (初期:{initial_dora_count}, カン後:{post_kan_dora_count})")
                     return False
                 
-                print("🔍 カン後の状態を調査...")
+                print(" カン後の状態を調査...")
                 
                 # カン後、すぐにリンシャンツモできるか確認
                 await page.wait_for_timeout(2000)
@@ -92,28 +92,28 @@ async def test_kan_comprehensive(base_url: str, headless: bool = True):
                 # ツモボタンの確認（リンシャンツモ）
                 tsumo_button = page.get_by_role("button", name="ツモ")
                 tsumo_visible = await tsumo_button.is_visible()
-                print(f"📊 リンシャンツモボタン表示: {tsumo_visible}")
+                print(f" リンシャンツモボタン表示: {tsumo_visible}")
                 
                 if tsumo_visible:
                     print("✅ リンシャンツモボタンが表示されています！")
                     
                     # リンシャンツモを実行
-                    print("🎯 リンシャンツモ（9p）を実行...")
+                    print(" リンシャンツモ（9p）を実行...")
                     await tsumo_button.click()
                     await page.wait_for_timeout(3000)
                     
                     # Win Modal確認と裏ドラ数検証
                     win_modal = page.locator('.modal-container, .v-dialog')
                     win_modal_visible = await win_modal.is_visible()
-                    print(f"📊 Win Modal表示: {win_modal_visible}")
+                    print(f" Win Modal表示: {win_modal_visible}")
                     
                     if win_modal_visible:
                         print("✅ Win Modalが表示されました")
                         
                         # 裏ドラ数確認（リンシャンツモの場合、リーチしていないので裏ドラは0）
                         uradora_count = await count_uradora_in_modal(page, win_modal)
-                        print(f"📊 Win Modal内の裏ドラ表示数: {uradora_count}")
-                        print(f"📊 リンシャンツモ（リーチなし）のため、裏ドラは0が期待されます")
+                        print(f" Win Modal内の裏ドラ表示数: {uradora_count}")
+                        print(f" リンシャンツモ（リーチなし）のため、裏ドラは0が期待されます")
                         
                         if uradora_count == 0:
                             print("✅ 裏ドラなし（リーチしていないため正常）")
@@ -126,18 +126,18 @@ async def test_kan_comprehensive(base_url: str, headless: bool = True):
                         # 次の局へボタンを確認・クリック
                         next_game_button = page.get_by_role("button", name="次の局へ")
                         if await next_game_button.is_visible():
-                            print("🎯 次の局へボタンをクリック...")
+                            print(" 次の局へボタンをクリック...")
                             
                             # 成功時のスクリーンショットを撮影
                             import os
                             os.makedirs('test/screenshots', exist_ok=True)
                             await page.screenshot(path='test/screenshots/kan_comprehensive_test.png')
-                            print("📸 カン統合テストのスクリーンショットを保存")
+                            print(" カン統合テストのスクリーンショットを保存")
                             
                             await next_game_button.click()
                             await page.wait_for_timeout(2000)
                             print("✅ 次の局への遷移が完了しました！")
-                            print("🎉 カン統合テスト成功：暗カン→カンドラ追加→リンシャンツモ（嶺上開花）→次の局へ")
+                            print(" カン統合テスト成功：暗カン→カンドラ追加→リンシャンツモ（嶺上開花）→次の局へ")
                             return True  # 成功時は処理終了
                         else:
                             print("❌ 次の局へボタンが見つかりません")
@@ -202,10 +202,10 @@ async def count_uradora_in_modal(page, win_modal):
             uradora_elements = win_modal.locator(selector)
             count = await uradora_elements.count()
             if count > 0:
-                print(f"🔍 裏ドラセレクタ '{selector}' で {count} 個発見")
+                print(f" 裏ドラセレクタ '{selector}' で {count} 個発見")
                 return count
         
-        print("🔍 Win Modal内に裏ドラ表示要素が見つかりませんでした")
+        print(" Win Modal内に裏ドラ表示要素が見つかりませんでした")
         return 0
         
     except Exception as e:
@@ -214,7 +214,7 @@ async def count_uradora_in_modal(page, win_modal):
 
 async def debug_buttons(page):
     """利用可能なボタンをデバッグ出力"""
-    print("🔍 利用可能なボタン一覧:")
+    print(" 利用可能なボタン一覧:")
     buttons = page.locator('button')
     button_count = await buttons.count()
     
@@ -227,7 +227,7 @@ async def debug_buttons(page):
 
 async def debug_game_state(page):
     """ゲーム状態をデバッグ出力"""
-    print("🔍 ゲーム状態の確認:")
+    print(" ゲーム状態の確認:")
     
     # 手牌枚数確認（複数のセレクタを試す）
     hand_tiles = page.locator('.player-area').nth(0).locator('.tile')
@@ -237,12 +237,12 @@ async def debug_game_state(page):
         hand_tiles = page.locator('.tile')
     
     hand_count = await hand_tiles.count()
-    print(f"📊 手牌枚数: {hand_count}")
+    print(f" 手牌枚数: {hand_count}")
     
     # 鳴き牌確認
     melds = page.locator('.meld')
     meld_count = await melds.count()
-    print(f"📊 鳴き牌数: {meld_count}")
+    print(f" 鳴き牌数: {meld_count}")
     
     # プレイヤーターン確認（より詳細に）
     turn_indicator = page.locator(':has-text("あなたのターン")')
@@ -252,7 +252,7 @@ async def debug_game_state(page):
         # 別のターン表示を確認
         player_turn = page.locator('.current-turn, .active-player, [class*="current"], [class*="active"]')
         turn_count = await player_turn.count()
-        print(f"📊 ターン表示要素数: {turn_count}")
+        print(f" ターン表示要素数: {turn_count}")
         
         # テキスト内容を確認
         turn_text_elements = page.locator(':has-text("ターン"), :has-text("あなた"), :has-text("CPU")')
@@ -262,13 +262,13 @@ async def debug_game_state(page):
             text = await element.text_content()
             print(f"  ターン関連テキスト{i+1}: '{text}'")
     
-    print(f"📊 現在のターン: {'あなた' if is_my_turn else 'CPU/不明'}")
+    print(f" 現在のターン: {'あなた' if is_my_turn else 'CPU/不明'}")
     
     # スクリーンショットを撮影
     import os
     os.makedirs('test/screenshots', exist_ok=True)
     await page.screenshot(path='test/screenshots/game_state_debug.png')
-    print("📸 スクリーンショットを保存しました: test/screenshots/game_state_debug.png")
+    print(" スクリーンショットを保存しました: test/screenshots/game_state_debug.png")
 
 async def main():
     parser = argparse.ArgumentParser(description='カン機能統合テスト')
@@ -279,15 +279,15 @@ async def main():
     
     args = parser.parse_args()
     
-    print(f"🚀 カン機能統合テスト開始: {args.url}")
+    print(f" カン機能統合テスト開始: {args.url}")
     success = await test_kan_comprehensive(args.url, True)  # WSL環境では常にheadless
     
     if success:
-        print("🎉 テスト成功: カン統合機能が正常に動作しました")
+        print(" テスト成功: カン統合機能が正常に動作しました")
     else:
         print("❌ テスト失敗: カン統合機能に問題があります")
     
-    print("✨ テスト完了")
+    print(" テスト完了")
 
 if __name__ == "__main__":
     asyncio.run(main())
