@@ -25,7 +25,7 @@
 - test/ フォルダにブラウザ操作を行うテストを記載しています。下記のコマンドで使用することができます。
 
 ```bash
-cd /home/szkhi/dev/mahjong/test
+cd /home/szkhi/dev/haisosa-mahjong/test
 source .venv/bin/activate &&  python3 kan_test.py http://localhost:5173 --headless
 ```
 

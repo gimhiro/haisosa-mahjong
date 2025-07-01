@@ -22,6 +22,9 @@
 import { computed } from 'vue'
 import { Tile } from 'riichi-rs-bundlers'
 
+// 画像を動的にインポート
+const tileImages = import.meta.glob<{ default: string }>('@/assets/tiles/*.png', { eager: true })
+
 interface Props {
   tileId: number
   size?: 'small' | 'medium' | 'large'
@@ -41,10 +44,18 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-// 牌IDから画像ファイル名を取得
+// 牌IDから画像URLを取得
 const tileImageSrc = computed(() => {
   const fileName = getTileFileName(props.tileId)
-  return new URL(`../assets/tiles/${fileName}`, import.meta.url).href
+  const path = `/src/assets/tiles/${fileName}`
+  const module = tileImages[path]
+  
+  if (module) {
+    return module.default
+  }
+  
+  console.warn('Image not found:', path)
+  return tileImages['/src/assets/tiles/m1.png']?.default || ''
 })
 
 // 牌IDから表示用テキストを取得

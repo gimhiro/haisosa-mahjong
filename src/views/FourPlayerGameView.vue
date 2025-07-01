@@ -5,20 +5,7 @@
     <div class="game-table">
       <!-- ドラ表示エリア -->
       <div class="dora-area">
-        <v-card class="dora-panel">
-          <v-card-title class="text-subtitle-2">ドラ表示牌</v-card-title>
-          <v-card-text class="dora-content">
-            <div class="dora-tiles">
-              <MahjongTile
-                v-for="dora in doraIndicators"
-                :key="dora.id"
-                :tile="dora"
-                size="small"
-                :is-draggable="false"
-              />
-            </div>
-          </v-card-text>
-        </v-card>
+        <DoraPanel :dora-indicators="doraIndicators" />
       </div>
 
       <!-- 上側プレイヤー（プレイヤー2） -->
@@ -96,22 +83,22 @@
             <!-- プレイヤー点数表示 -->
             <!-- 下側プレイヤー（人間）の点数 -->
             <div class="score-bottom">
-              {{ players[0].score.toLocaleString() }}点
+              <span class="score-number">{{ players[0].score.toLocaleString() }}</span><span class="score-unit">点</span>
             </div>
             
             <!-- 右側プレイヤーの点数 -->
             <div class="score-right">
-              {{ players[1].score.toLocaleString() }}点
+              <span class="score-number">{{ players[1].score.toLocaleString() }}</span><span class="score-unit">点</span>
             </div>
             
             <!-- 上側プレイヤーの点数 -->
             <div class="score-top">
-              {{ players[2].score.toLocaleString() }}点
+              <span class="score-number">{{ players[2].score.toLocaleString() }}</span><span class="score-unit">点</span>
             </div>
             
             <!-- 左側プレイヤーの点数 -->
             <div class="score-left">
-              {{ players[3].score.toLocaleString() }}点
+              <span class="score-number">{{ players[3].score.toLocaleString() }}</span><span class="score-unit">点</span>
             </div>
           </div>
         </div>
@@ -122,44 +109,15 @@
 
       <!-- ゲーム情報エリア -->
       <div class="game-info-area">
-        <v-card class="game-info-panel">
-          <v-card-title class="text-subtitle-2">ゲーム情報</v-card-title>
-          <v-card-text class="text-caption">
-            <div class="info-row">
-              <span class="info-label">局:</span>
-              <span class="info-value">{{ getDealerText() }}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">現在:</span>
-              <span class="info-value">{{ currentPlayer.name }}</span>
-              <!-- <span class="info-value">{{ isHumanTurn ? '(あなたのターン)' : '(CPUのターン)' }}</span> -->
-            </div>
-            <div class="info-row">
-              <span class="info-label">供託:</span>
-              <span class="info-value">{{ gameManager.kyotaku }}本</span>
-            </div>
-            <div class="game-controls">
-              <v-btn
-                v-if="gamePhase === 'waiting'"
-                color="success"
-                size="small"
-                block
-                @click="startGame"
-              >
-                ゲーム開始
-              </v-btn>
-              <v-btn
-                v-else
-                :color="isMuted ? 'error' : 'primary'"
-                size="small"
-                block
-                @click="toggleMute"
-              >
-                <v-icon>{{ isMuted ? 'mdi-volume-off' : 'mdi-volume-high' }}</v-icon>
-              </v-btn>
-            </div>
-          </v-card-text>
-        </v-card>
+        <GameInfoPanel
+          :dealer-text="getDealerText()"
+          :current-player-name="currentPlayer.name"
+          :kyotaku="gameManager.kyotaku"
+          :game-phase="gamePhase"
+          :is-muted="isMuted"
+          @start-game="startGame"
+          @toggle-mute="toggleMute"
+        />
       </div>
 
       <!-- 右側プレイヤー（プレイヤー1） -->
@@ -210,182 +168,41 @@
 
       <!-- アクションボタンエリア -->
       <div class="action-area">
-        <v-card class="action-panel">
-          <v-card-title class="text-subtitle-2">アクション</v-card-title>
-          <v-card-text class="action-content">
-            <!-- ツモボタン -->
-            <v-btn
-              v-if="canTsumo"
-              color="success"
-              size="small"
-              block
-              class="action-btn"
-              @click="declareTsumo"
-            >
-              ツモ
-            </v-btn>
-
-            <!-- キャンセルボタン（ツモ可能時） -->
-            <v-btn
-              v-if="canTsumo && humanPlayer.riichi"
-              color="grey"
-              size="small"
-              block
-              class="action-btn"
-              @click="cancelTsumo"
-            >
-              キャンセル
-            </v-btn>
-
-            <!-- ロンボタン -->
-            <v-btn
-              v-if="canRon"
-              color="error"
-              size="small"
-              block
-              class="action-btn"
-              @click="declareRon"
-            >
-              ロン
-            </v-btn>
-
-            <!-- リーチボタン -->
-            <v-btn
-              v-if="canDeclareRiichi && isHumanTurn && currentDrawnTile && !humanPlayer.riichi"
-              :color="riichiPreviewMode ? 'error' : 'warning'"
-              size="small"
-              block
-              class="action-btn"
-              @click="toggleRiichiPreview"
-            >
-              {{ riichiButtonText }}
-            </v-btn>
-
-            <!-- ポンボタン -->
-            <v-btn
-              v-if="canPon"
-              color="info"
-              size="small"
-              block
-              class="action-btn"
-              @click="declarePon"
-            >
-              ポン
-            </v-btn>
-
-            <!-- 明カンボタン -->
-            <v-btn
-              v-if="canKan"
-              color="warning"
-              size="small"
-              block
-              class="action-btn"
-              @click="declareKan"
-            >
-              カン
-            </v-btn>
-
-            <!-- 暗カンボタン -->
-            <v-btn
-              v-if="canAnkan"
-              color="orange"
-              size="small"
-              block
-              class="action-btn"
-              @click="declareAnkan"
-            >
-              暗カン
-            </v-btn>
-
-            <!-- チーボタン -->
-            <v-btn
-              v-if="canChi"
-              color="primary"
-              size="small"
-              block
-              class="action-btn"
-              @click="declareChi"
-            >
-              チー
-            </v-btn>
-
-            <!-- キャンセルボタン（ロンまたはポン・カン・チー表示時） -->
-            <v-btn
-              v-if="canRon || canPon || canKan || canChi"
-              color="grey"
-              size="small"
-              block
-              class="action-btn"
-              @click="cancelActions"
-            >
-              キャンセル
-            </v-btn>
-
-            <!-- 結果表示・次の局へボタン（モーダル閉じ後のみ） -->
-            <v-btn
-              v-if="showResultAndNextButtons && !showDrawResultButtons"
-              color="info"
-              size="small"
-              block
-              class="action-btn"
-              @click="reopenWinModal"
-            >
-              結果表示
-            </v-btn>
-
-            <v-btn
-              v-if="showResultAndNextButtons && !showDrawResultButtons"
-              color="primary"
-              size="small"
-              block
-              class="action-btn"
-              @click="onContinueGame"
-            >
-              次の局へ
-            </v-btn>
-
-            <!-- 流局結果表示・次の局へボタン（流局モーダル閉じ後のみ） -->
-            <v-btn
-              v-if="showDrawResultButtons"
-              color="info"
-              size="small"
-              block
-              class="action-btn"
-              @click="reopenDrawModal"
-            >
-              流局結果表示
-            </v-btn>
-
-            <v-btn
-              v-if="showDrawResultButtons"
-              color="primary"
-              size="small"
-              block
-              class="action-btn"
-              @click="onContinueFromDraw"
-            >
-              次の局へ
-            </v-btn>
-
-            <!-- デバッグ情報 -->
-            <div v-if="isHumanTurn && isDebugMode" class="debug-info" style="font-size: 0.7rem; color: #666; margin-top: 8px;">
-              デバッグ: 手牌{{ humanPlayer.tiles.length }}枚, ツモ牌: {{ currentDrawnTile ? 'あり' : 'なし' }}, リーチ可能: {{ canDeclareRiichi }}, シャンテン: {{ humanShanten }}<br>
-              リーチ済み: {{ humanPlayer.riichi }}, 点数: {{ humanPlayer.score }}, ゲーム状態: {{ gamePhase }}<br>
-              ツモ可能: {{ canTsumo }}, ロン可能: {{ canRon }}, 自分のターン: {{ isHumanTurn }}<br>
-              手牌内容: {{ humanPlayer.tiles.map(t => t.suit + t.rank).join(' ') }}{{ currentDrawnTile ? ' + ' + currentDrawnTile.suit + currentDrawnTile.rank : '' }}
-            </div>
-
-            <!-- 捨牌のヒント -->
-            <div v-if="isHumanTurn && humanPlayer.tiles.length === 13 && currentDrawnTile && !canTsumo && !canRon" class="discard-hint">
-              <span v-if="humanPlayer.riichi && currentDrawnTile">
-                リーチ中：ツモ牌のみ捨てることができます
-              </span>
-              <span v-else>
-                不要な牌をクリックして捨ててください
-              </span>
-            </div>
-          </v-card-text>
-        </v-card>
+        <ActionPanel
+          :can-tsumo="canTsumo"
+          :can-ron="canRon"
+          :can-declare-riichi="canDeclareRiichi"
+          :can-pon="canPon"
+          :can-kan="canKan"
+          :can-ankan="canAnkan"
+          :can-chi="canChi"
+          :is-human-turn="isHumanTurn"
+          :current-drawn-tile="currentDrawnTile"
+          :human-player-riichi="humanPlayer.riichi"
+          :riichi-preview-mode="riichiPreviewMode"
+          :riichi-button-text="riichiButtonText"
+          :show-result-and-next-buttons="showResultAndNextButtons"
+          :show-draw-result-buttons="showDrawResultButtons"
+          :is-debug-mode="isDebugMode"
+          :human-player-tiles-length="humanPlayer.tiles.length"
+          :human-shanten="humanShanten"
+          :human-player-score="humanPlayer.score"
+          :game-phase="gamePhase"
+          :debug-hand-content="humanPlayer.tiles.map(t => t.suit + t.rank).join(' ') + (currentDrawnTile ? ' + ' + currentDrawnTile.suit + currentDrawnTile.rank : '')"
+          @declare-tsumo="declareTsumo"
+          @cancel-tsumo="cancelTsumo"
+          @declare-ron="declareRon"
+          @toggle-riichi-preview="toggleRiichiPreview"
+          @declare-pon="declarePon"
+          @declare-kan="declareKan"
+          @declare-ankan="declareAnkan"
+          @declare-chi="declareChi"
+          @cancel-actions="cancelActions"
+          @reopen-win-modal="reopenWinModal"
+          @on-continue-game="onContinueGame"
+          @reopen-draw-modal="reopenDrawModal"
+          @on-continue-from-draw="onContinueFromDraw"
+        />
       </div>
     </div>
 
@@ -450,6 +267,9 @@ import WinModal, { type WinData } from '../components/WinModal.vue'
 import DrawModal, { type DrawData } from '../components/DrawModal.vue'
 import GameEndModal, { type GameEndData } from '../components/GameEndModal.vue'
 import GameSettingsPanel from '../components/GameSettingsPanel.vue'
+import GameInfoPanel from '../components/GameInfoPanel.vue'
+import ActionPanel from '../components/ActionPanel.vue'
+import DoraPanel from '../components/DoraPanel.vue'
 import TestModeDialog from '../components/TestModeDialog.vue'
 import AcceptancePopup from '../components/AcceptancePopup.vue'
 import { useRouter } from 'vue-router'
@@ -2525,7 +2345,7 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
 
 
 /* レスポンシブ対応 */
-@media (max-width: 1024px) {
+@media (max-width: 1024px) and (orientation: landscape) {
   .game-table {
     grid-template-rows: 20% 60% 20%;
     grid-template-columns: 20% 60% 20%;
@@ -2556,7 +2376,7 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px) and (orientation: landscape) {
   .game-table {
     grid-template-rows: 20% 60% 20%;
     grid-template-columns: 20% 60% 20%;
@@ -2590,7 +2410,7 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 480px) and (orientation: landscape) {
   .game-table {
     grid-template-rows: 40px 1fr 55px;
     grid-template-columns: 50px 1fr 50px;
@@ -2604,6 +2424,403 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
   .game-info-panel {
     max-width: 120px;
     font-size: 0.65rem;
+  }
+}
+
+/* 河の文字を常に非表示 */
+.center-label {
+  display: none !important;
+}
+
+/* スマホ横画面向けレスポンシブ対応 */
+@media screen and (max-width: 1024px) and (max-height: 600px) and (orientation: landscape) {
+  .game-container {
+    height: 100vh;
+  }
+  
+  /* ドラ表示牌のタイトルを非表示 */
+  .dora-panel .v-card-title {
+    display: none !important;
+  }
+  
+  /* ゲーム情報パネルのタイトルを非表示 */
+  .game-info-panel .v-card-title {
+    display: none !important;
+  }
+  
+  /* アクションパネルのタイトルを非表示 */
+  .action-panel .v-card-title {
+    display: none !important;
+  }
+  
+  /* ゲーム設定パネルのタイトルを非表示 */
+  .settings-panel :deep(.v-card-title),
+  .settings-area :deep(.v-card-title),
+  .settings-area :deep(.text-subtitle-2) {
+    display: none !important;
+  }
+  
+  /* 設定パネルの文字サイズを小さく */
+  .settings-panel :deep(.v-label),
+  .settings-panel :deep(.v-switch .v-label) {
+    font-size: 0.65rem !important;
+  }
+  
+  /* 各パネルにスクロール機能を強制適用 */
+  :deep(.v-card-text) {
+    max-height: 150px !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(0,0,0,0.3) transparent !important;
+  }
+  
+  :deep(.v-card-text::-webkit-scrollbar) {
+    width: 4px !important;
+  }
+  
+  :deep(.v-card-text::-webkit-scrollbar-track) {
+    background: transparent !important;
+  }
+  
+  :deep(.v-card-text::-webkit-scrollbar-thumb) {
+    background-color: rgba(0,0,0,0.3) !important;
+    border-radius: 2px !important;
+  }
+  
+  /* 点数表示から「点」文字を非表示 */
+  .score-unit {
+    display: none !important;
+  }
+  
+  /* 左右プレイヤーエリアのスクロール対応 */
+  .player-left,
+  .player-right {
+    overflow: visible !important;
+    width: 100%;
+    height: 100%;
+    position: relative !important;
+  }
+  
+  .player-left::after,
+  .player-right::after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+  
+  .player-left .hand-container,
+  .player-right .hand-container {
+    max-width: 100%;
+    overflow: visible !important;
+    height: 100%;
+    margin-top: 20px !important;
+  }
+  
+  .game-table {
+    grid-template-rows: 18% 64% 18%;
+    grid-template-columns: 18% 64% 18%;
+    gap: 1px;
+    padding: 1px;
+  }
+  
+  .player-area {
+    padding: 2px;
+  }
+  
+  .player-name {
+    font-size: 0.7rem;
+    padding: 1px 4px;
+  }
+  
+  .player-points {
+    font-size: 0.65rem;
+  }
+  
+  .central-square {
+    width: min(135px, 27vh, 27vw);
+    height: min(135px, 27vh, 27vw);
+  }
+  
+  /* 中央エリアの文字サイズとレイアウト調整 */
+  .center-info {
+    transform: translate(-50%, -45%) scale(0.6) !important;
+  }
+  
+  .center-label {
+    display: none !important;
+  }
+  
+  .remaining-tiles {
+    font-size: 1.5rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* プレイヤー点数表示のマージンを0に、辺際に寄せる */
+  .score-bottom {
+    margin: 0 !important;
+    bottom: 2px !important;
+  }
+  
+  .score-top {
+    margin: 0 !important;
+    top: 2px !important;
+  }
+  
+  .score-left {
+    margin: 0 !important;
+    left: 2px !important;
+  }
+  
+  .score-right {
+    margin: 0 !important;
+    right: 2px !important;
+  }
+  
+  .game-info-panel {
+    max-width: 150px;
+    font-size: 0.65rem;
+    padding: 4px;
+  }
+  
+  .info-item {
+    margin: 2px 0;
+  }
+  
+  /* 牌のサイズ調整 - スマホのみ */
+  .hand-container .tile-small {
+    width: 22px !important;
+    height: 31px !important;
+  }
+  
+  /* 河の捨牌を70%サイズにする */
+  .player-discards {
+    transform: scale(0.8) !important;
+    transform-origin: center !important;
+  }
+  
+  /* 捨て牌エリアの位置調整 - プレイヤー方向に寄せる */
+  .discard-area-bottom {
+    bottom: -100% !important;
+    left: -30% !important;
+  }
+  
+  .discard-area-top {
+    top: -100% !important;
+    right: -70% !important;
+  }
+  
+  .discard-area-left {
+    left: -5% !important;
+    top: 30% !important;
+  }
+  
+  .discard-area-right {
+    right: -5% !important;
+    top: 70% !important;
+  }
+}
+
+/* より小さいスマホ向け（高さ480px以下） */
+@media screen and (max-width: 768px) and (max-height: 480px) and (orientation: landscape) {
+  .game-container {
+    height: 100vh;
+  }
+  
+  /* ドラ表示牌のタイトルを非表示（継承） */
+  .dora-panel .v-card-title {
+    display: none !important;
+  }
+  
+  /* ゲーム情報パネルのタイトルを非表示（継承） */
+  .game-info-panel .v-card-title {
+    display: none !important;
+  }
+  
+  /* アクションパネルのタイトルを非表示（継承） */
+  .action-panel .v-card-title {
+    display: none !important;
+  }
+  
+  /* ゲーム設定パネルのタイトルを非表示（継承） */
+  .settings-panel :deep(.v-card-title),
+  .settings-area :deep(.v-card-title),
+  .settings-area :deep(.text-subtitle-2) {
+    display: none !important;
+  }
+  
+  /* 設定パネルの文字サイズを小さく（継承） */
+  .settings-panel :deep(.v-label),
+  .settings-panel :deep(.v-switch .v-label) {
+    font-size: 0.6rem !important;
+  }
+  
+  /* 各パネルにスクロール機能を強制適用（継承） */
+  :deep(.v-card-text) {
+    max-height: 120px !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(0,0,0,0.3) transparent !important;
+  }
+  
+  :deep(.v-card-text::-webkit-scrollbar) {
+    width: 3px !important;
+  }
+  
+  :deep(.v-card-text::-webkit-scrollbar-track) {
+    background: transparent !important;
+  }
+  
+  :deep(.v-card-text::-webkit-scrollbar-thumb) {
+    background-color: rgba(0,0,0,0.3) !important;
+    border-radius: 2px !important;
+  }
+  
+  /* 点数表示から「点」文字を非表示（継承） */
+  .score-unit {
+    display: none !important;
+  }
+  
+  /* 左右プレイヤーエリアのスクロール対応（継承） */
+  .player-left,
+  .player-right {
+    overflow: visible !important;
+    width: 100%;
+    height: 100%;
+    position: relative !important;
+  }
+  
+  .player-left::after,
+  .player-right::after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+  
+  .player-left .hand-container,
+  .player-right .hand-container {
+    max-width: 100%;
+    overflow: visible !important;
+    height: 100%;
+    margin-top: 15px !important;
+  }
+  
+  .game-table {
+    grid-template-rows: 15% 70% 15%;
+    grid-template-columns: 15% 70% 15%;
+    gap: 0;
+    padding: 0;
+  }
+  
+  .player-area {
+    padding: 1px;
+  }
+  
+  .player-name {
+    font-size: 0.65rem;
+    padding: 0 2px;
+  }
+  
+  .player-points {
+    font-size: 0.6rem;
+  }
+  
+  .central-square {
+    width: min(112px, 22vh, 22vw);
+    height: min(112px, 22vh, 22vw);
+  }
+  
+  /* 中央エリアの文字サイズとレイアウト調整（小画面） */
+  .center-info {
+    transform: translate(-50%, -45%) scale(0.5) !important;
+  }
+  
+  .center-label {
+    display: none !important;
+  }
+  
+  .remaining-tiles {
+    font-size: 1.5rem !important;
+    margin: 0 !important;
+    padding: 1px 2px !important;
+  }
+  
+  /* プレイヤー点数表示のマージンを0に、辺際に寄せる */
+  .score-bottom {
+    margin: 0 !important;
+    bottom: 1px !important;
+  }
+  
+  .score-top {
+    margin: 0 !important;
+    top: 1px !important;
+  }
+  
+  .score-left {
+    margin: 0 !important;
+    left: 1px !important;
+  }
+  
+  .score-right {
+    margin: 0 !important;
+    right: 1px !important;
+  }
+  
+  .game-info-panel {
+    max-width: 120px;
+    font-size: 0.6rem;
+    padding: 2px;
+  }
+  
+  .info-section {
+    margin-bottom: 4px;
+  }
+  
+  
+  /* ドラ表示エリアを小さく */
+  .dora-display {
+    padding: 2px;
+  }
+  
+  /* 牌のサイズをさらに調整 */
+  .hand-container .tile-small {
+    width: 18px !important;
+    height: 25px !important;
+  }
+  
+  /* 河の捨牌を70%サイズにする（継承） */
+  .player-discards {
+    transform: scale(0.8) !important;
+    transform-origin: center !important;
+  }
+  
+  
+  /* 捨て牌エリアの位置調整 - プレイヤー方向に寄せる */
+  .discard-area-bottom {
+    bottom: -100% !important;
+    left: -30% !important;
+  }
+  
+  .discard-area-top {
+    top: -100% !important;
+    right: -70% !important;
+  }
+  
+  .discard-area-left {
+    left: -5% !important;
+    top: 30% !important;
+  }
+  
+  .discard-area-right {
+    right: -5% !important;
+    top: 70% !important;
+  }
+  
+  /* ボタンサイズの調整 */
+  .v-btn {
+    height: 24px !important;
+    font-size: 0.6rem !important;
+    padding: 0 8px !important;
   }
 }
 </style>

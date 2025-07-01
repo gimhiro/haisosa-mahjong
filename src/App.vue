@@ -187,11 +187,11 @@ html, body {
   background-color: #f5f5f5;
 }
 
-/* #appの幅を画面の80%に設定 */
+/* #appの幅を画面の100%に設定 */
 #app {
-  width: 80%;
+  width: 100%;
   height: 100%;
-  margin: 0 auto;
+  margin: 0;
   padding: 0;
   background-color: #f5f5f5;
   position: relative;
@@ -258,5 +258,41 @@ html, body {
   height: calc(100vh - 64px);
   margin: 0;
   padding: 0;
+}
+
+/* スマホ横画面向けレスポンシブ対応 */
+@media screen and (max-width: 1024px) and (max-height: 600px) and (orientation: landscape) {
+  /* ヘッダーを完全に非表示 */
+  .v-app-bar {
+    display: none !important;
+  }
+  
+  /* メインコンテンツの上部余白を削除 */
+  .v-main {
+    padding-top: 0 !important;
+  }
+  
+  /* ゲーム画面の高さを調整 */
+  .four-player-game {
+    height: 100vh !important;
+  }
+}
+
+/* より小さいスマホ向け（高さ480px以下） */
+@media screen and (max-width: 768px) and (max-height: 480px) and (orientation: landscape) {
+  /* ヘッダーを完全に非表示（継承） */
+  .v-app-bar {
+    display: none !important;
+  }
+  
+  /* メインコンテンツの上部余白を削除 */
+  .v-main {
+    padding-top: 0 !important;
+  }
+  
+  /* ゲーム画面の高さを調整 */
+  .four-player-game {
+    height: 100vh !important;
+  }
 }
 </style>

@@ -1,0 +1,80 @@
+/* パネル共通スタイル */
+.panel-scrollable {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* スマホ横画面向けレスポンシブ対応 */
+@media screen and (max-width: 1024px) and (max-height: 600px) and (orientation: landscape) {
+  /* パネル全体の高さを制限 */
+  .panel-scrollable {
+    max-height: 90vh !important;
+    height: 100% !important;
+  }
+
+  /* 各パネルにスクロール機能を適用 */
+  .panel-scrollable .v-card-text {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(0, 0, 0, 0.3) transparent !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  .panel-scrollable .v-card-text::-webkit-scrollbar {
+    width: 4px !important;
+  }
+
+  .panel-scrollable .v-card-text::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+
+  .panel-scrollable .v-card-text::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.3) !important;
+    border-radius: 2px !important;
+  }
+
+  /* パネルタイトルを非表示 */
+  .panel-scrollable .v-card-title {
+    display: none !important;
+  }
+}
+
+/* より小さいスマホ向け（高さ480px以下） */
+@media screen and (max-width: 768px) and (max-height: 480px) and (orientation: landscape) {
+  /* パネル全体の高さを制限（継承） */
+  .panel-scrollable {
+    max-height: 90vh !important;
+    height: 100% !important;
+  }
+
+  /* 各パネルにスクロール機能を適用（継承） */
+  .panel-scrollable .v-card-text {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(0, 0, 0, 0.3) transparent !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  .panel-scrollable .v-card-text::-webkit-scrollbar {
+    width: 3px !important;
+  }
+
+  .panel-scrollable .v-card-text::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+
+  .panel-scrollable .v-card-text::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.3) !important;
+    border-radius: 2px !important;
+  }
+
+  /* パネルタイトルを非表示（継承） */
+  .panel-scrollable .v-card-title {
+    display: none !important;
+  }
+}

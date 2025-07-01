@@ -15,7 +15,7 @@
         <div class="players-info">
           <v-row>
             <v-col 
-              cols="12" sm="6" md="3"
+              cols="3"
               v-for="player in drawData.players"
               :key="player.id"
             >
@@ -42,7 +42,7 @@
         </div>
         
         <!-- 流局理由と統計 -->
-        <div class="draw-info mt-6">
+        <!-- <div class="draw-info mt-6">
           <v-card variant="outlined">
             <v-card-text>
               <div class="draw-reason">
@@ -51,21 +51,18 @@
               </div>
               <div class="draw-stats mt-3">
                 <div class="stat-item">
-                  <span class="stat-label">テンパイ:</span>
                   <span class="stat-value">{{ drawData.tenpaiCount }}人</span>
                 </div>
                 <div class="stat-item">
-                  <span class="stat-label">ノーテン:</span>
                   <span class="stat-value">{{ drawData.notenCount }}人</span>
                 </div>
                 <div class="stat-item">
-                  <span class="stat-label">残り牌:</span>
                   <span class="stat-value">{{ drawData.remainingTiles }}枚</span>
                 </div>
               </div>
             </v-card-text>
           </v-card>
-        </div>
+        </div> -->
       </v-card-text>
       
       <v-card-actions class="justify-center pb-6">
@@ -232,12 +229,7 @@ const getPositionText = (playerId: number): string => {
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.stat-label {
-  font-weight: 500;
-  color: #666;
+  justify-content: center;
 }
 
 .stat-value {
@@ -253,6 +245,120 @@ const getPositionText = (playerId: number): string => {
   
   .players-info {
     margin-bottom: 16px;
+  }
+}
+
+/* スマホ横画面向けレスポンシブ対応 */
+@media screen and (max-width: 1024px) and (max-height: 600px) and (orientation: landscape) {
+  /* 流局タイトルを小さく */
+  .draw-title {
+    font-size: 1.5rem !important;
+    margin-bottom: 8px !important;
+  }
+  
+  /* プレイヤー情報を4人横並びに */
+  .players-info .v-row {
+    margin: 0 !important;
+  }
+  
+  .players-info .v-col {
+    padding: 2px !important;
+  }
+  
+  /* プレイヤー情報をコンパクトに */
+  .player-name {
+    font-size: 0.9rem !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .player-position {
+    display: none !important;
+  }
+  
+  .tenpai-status {
+    font-size: 0.75rem !important;
+    padding: 2px 8px !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .score-change {
+    font-size: 0.9rem !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .total-score {
+    font-size: 0.8rem !important;
+  }
+  
+  /* 流局情報をコンパクトに */
+  .draw-info {
+    margin-top: 12px !important;
+  }
+  
+  .draw-reason {
+    font-size: 0.9rem !important;
+  }
+  
+  .draw-stats {
+    gap: 12px !important;
+  }
+  
+  .stat-value {
+    font-size: 0.8rem !important;
+  }
+  
+  /* モーダルサイズ調整 */
+  .draw-modal {
+    max-height: 95vh !important;
+  }
+}
+
+/* より小さいスマホ向け（高さ480px以下） */
+@media screen and (max-width: 768px) and (max-height: 480px) and (orientation: landscape) {
+  /* 流局タイトルを非表示 */
+  .draw-title {
+    display: none !important;
+  }
+  
+  /* プレイヤー情報を4人横並びに（継承） */
+  .players-info .v-row {
+    margin: 0 !important;
+  }
+  
+  .players-info .v-col {
+    padding: 1px !important;
+  }
+  
+  /* プレイヤー情報をさらにコンパクトに */
+  .player-name {
+    font-size: 0.8rem !important;
+  }
+  
+  .tenpai-status {
+    font-size: 0.7rem !important;
+    padding: 1px 6px !important;
+  }
+  
+  .score-change {
+    font-size: 0.8rem !important;
+  }
+  
+  .total-score {
+    font-size: 0.7rem !important;
+  }
+  
+  /* 流局情報をさらにコンパクトに */
+  .draw-reason {
+    font-size: 0.8rem !important;
+  }
+  
+  .stat-value {
+    font-size: 0.7rem !important;
+  }
+  
+  /* モーダルサイズ調整 */
+  .draw-modal {
+    max-height: 98vh !important;
   }
 }
 </style>

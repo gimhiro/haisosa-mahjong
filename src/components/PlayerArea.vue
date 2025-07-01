@@ -514,6 +514,289 @@ function shouldTileBeBack(meld: Meld, tileIndex: number): boolean {
   margin: -2% 0;
 }
 
+/* スマホ横画面向けスクロール対応 */
+@media screen and (max-width: 1024px) and (max-height: 600px) and (orientation: landscape) {
+  .hand-tiles-left,
+  .hand-tiles-right {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: 100% !important;
+    max-height: calc(100vh - 100px) !important;
+    flex-shrink: 0 !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.3) transparent;
+    padding: 5px 0 !important;
+  }
+  
+  .hand-tiles-left::-webkit-scrollbar,
+  .hand-tiles-right::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .hand-tiles-left::-webkit-scrollbar-track,
+  .hand-tiles-right::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .hand-tiles-left::-webkit-scrollbar-thumb,
+  .hand-tiles-right::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.3);
+    border-radius: 2px;
+  }
+  
+  /* 左右プレイヤーの情報エリアを回転してfloat化 */
+  .player-info-left,
+  .player-info-right {
+    transform: rotate(90deg);
+    transform-origin: center center;
+    float: left !important;
+    clear: both !important;
+    width: 100px !important;
+    height: 30px !important;
+    text-align: center !important;
+  }
+  
+  /* プレイヤー名のv-chipのみを非表示にして、ボタンは表示 */
+  .position-right .player-name .v-chip,
+  .position-left .player-name .v-chip,
+  .position-top .player-name .v-chip,
+  .position-bottom .player-name .v-chip,
+  .player-area.position-right .player-name .v-chip,
+  .player-area.position-left .player-name .v-chip,
+  .player-area.position-top .player-name .v-chip,
+  .player-area.position-bottom .player-name .v-chip {
+    display: none !important;
+  }
+  
+  /* プレイヤー情報エリアを最小化 */
+  .position-right .player-info,
+  .position-left .player-info,
+  .position-top .player-info,
+  .position-bottom .player-info,
+  .player-area.position-right .player-info,
+  .player-area.position-left .player-info,
+  .player-area.position-top .player-info,
+  .player-area.position-bottom .player-info {
+    position: relative !important;
+    height: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* 表示ボタンを確実に表示 */
+  .position-right .cpu-toggle-btn,
+  .position-left .cpu-toggle-btn,
+  .position-top .cpu-toggle-btn,
+  .position-bottom .cpu-toggle-btn,
+  .player-area.position-right .cpu-toggle-btn,
+  .player-area.position-left .cpu-toggle-btn,
+  .player-area.position-top .cpu-toggle-btn,
+  .player-area.position-bottom .cpu-toggle-btn {
+    display: inline-block !important;
+    visibility: visible !important;
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+    margin: 0 !important;
+    font-size: 0.45rem !important;
+    padding: 2px 6px !important;
+    min-width: auto !important;
+    height: 18px !important;
+    z-index: 1000 !important;
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid #ccc !important;
+    border-radius: 3px !important;
+  }
+  
+  /* プレイヤー情報エリアの位置を固定 */
+  .position-right .player-info,
+  .position-left .player-info,
+  .position-top .player-info {
+    position: relative !important;
+    height: 0 !important;
+    overflow: visible !important;
+  }
+  
+  /* 手牌エリアの位置を統一 */
+  .position-right .cpu-hand,
+  .position-left .cpu-hand,
+  .position-top .cpu-hand {
+    margin-top: 0 !important;
+    position: relative !important;
+  }
+  
+  /* 左右の牌サイズを非表示時に統一 */
+  .position-right .tile-back,
+  .position-left .tile-back,
+  .position-right .mahjong-tile,
+  .position-left .mahjong-tile {
+    width: 18px !important;
+    height: 25px !important;
+  }
+  
+  .position-right .drawn-tile,
+  .position-left .drawn-tile {
+    width: 18px !important;
+    height: 25px !important;
+  }
+  
+  .position-right .empty-drawn-tile,
+  .position-left .empty-drawn-tile {
+    width: 18px !important;
+    height: 25px !important;
+  }
+  
+  .player-info-left .player-points,
+  .player-info-right .player-points {
+    font-size: 0.6rem !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+    line-height: 30px !important;
+  }
+}
+
+@media screen and (max-width: 768px) and (max-height: 480px) and (orientation: landscape) {
+  .hand-tiles-left,
+  .hand-tiles-right {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: 100% !important;
+    max-height: calc(100vh - 80px) !important;
+    flex-shrink: 0 !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.3) transparent;
+    padding: 3px 0 !important;
+  }
+  
+  .hand-tiles-left::-webkit-scrollbar,
+  .hand-tiles-right::-webkit-scrollbar {
+    width: 3px;
+  }
+  
+  .hand-tiles-left::-webkit-scrollbar-track,
+  .hand-tiles-right::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .hand-tiles-left::-webkit-scrollbar-thumb,
+  .hand-tiles-right::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.3);
+    border-radius: 2px;
+  }
+  
+  /* 左右プレイヤーの情報エリアを回転してfloat化（小画面） */
+  .player-info-left,
+  .player-info-right {
+    transform: rotate(90deg);
+    transform-origin: center center;
+    float: left !important;
+    clear: both !important;
+    width: 80px !important;
+    height: 25px !important;
+    text-align: center !important;
+  }
+  
+  /* プレイヤー名のv-chipのみを非表示にして、ボタンは表示 */
+  .position-right .player-name .v-chip,
+  .position-left .player-name .v-chip,
+  .position-top .player-name .v-chip,
+  .position-bottom .player-name .v-chip,
+  .player-area.position-right .player-name .v-chip,
+  .player-area.position-left .player-name .v-chip,
+  .player-area.position-top .player-name .v-chip,
+  .player-area.position-bottom .player-name .v-chip {
+    display: none !important;
+  }
+  
+  /* プレイヤー情報エリアを最小化 */
+  .position-right .player-info,
+  .position-left .player-info,
+  .position-top .player-info,
+  .position-bottom .player-info,
+  .player-area.position-right .player-info,
+  .player-area.position-left .player-info,
+  .player-area.position-top .player-info,
+  .player-area.position-bottom .player-info {
+    position: relative !important;
+    height: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* 表示ボタンを確実に表示 */
+  .position-right .cpu-toggle-btn,
+  .position-left .cpu-toggle-btn,
+  .position-top .cpu-toggle-btn,
+  .position-bottom .cpu-toggle-btn,
+  .player-area.position-right .cpu-toggle-btn,
+  .player-area.position-left .cpu-toggle-btn,
+  .player-area.position-top .cpu-toggle-btn,
+  .player-area.position-bottom .cpu-toggle-btn {
+    display: inline-block !important;
+    visibility: visible !important;
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+    margin: 0 !important;
+    font-size: 0.45rem !important;
+    padding: 2px 6px !important;
+    min-width: auto !important;
+    height: 18px !important;
+    z-index: 1000 !important;
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid #ccc !important;
+    border-radius: 3px !important;
+  }
+  
+  /* プレイヤー情報エリアの位置を固定 */
+  .position-right .player-info,
+  .position-left .player-info,
+  .position-top .player-info {
+    position: relative !important;
+    height: 0 !important;
+    overflow: visible !important;
+  }
+  
+  /* 手牌エリアの位置を統一 */
+  .position-right .cpu-hand,
+  .position-left .cpu-hand,
+  .position-top .cpu-hand {
+    margin-top: 0 !important;
+    position: relative !important;
+  }
+  
+  /* 左右の牌サイズを非表示時に統一 */
+  .position-right .tile-back,
+  .position-left .tile-back,
+  .position-right .mahjong-tile,
+  .position-left .mahjong-tile {
+    width: 18px !important;
+    height: 25px !important;
+  }
+  
+  .position-right .drawn-tile,
+  .position-left .drawn-tile {
+    width: 18px !important;
+    height: 25px !important;
+  }
+  
+  .position-right .empty-drawn-tile,
+  .position-left .empty-drawn-tile {
+    width: 18px !important;
+    height: 25px !important;
+  }
+  
+  .player-info-left .player-points,
+  .player-info-right .player-points {
+    font-size: 0.55rem !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+    line-height: 25px !important;
+  }
+}
+
 /* ツモ牌スタイル */
 .drawn-tile {
   margin-left: 8px;

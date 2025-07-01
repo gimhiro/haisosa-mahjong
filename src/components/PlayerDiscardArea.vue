@@ -103,4 +103,18 @@ function getDiscardRowFixed(rowIndex: number): Tile[] {
 .discard-tile {
   transition: all 0.3s ease;
 }
+
+/* スマホ横画面向けレスポンシブ対応 */
+@media screen and (max-width: 1024px) and (max-height: 600px) and (orientation: landscape) {
+  .discard-row:not(:first-child) {
+    margin-top: -5px !important;
+  }
+}
+
+/* より小さいスマホ向け（高さ480px以下） */
+@media screen and (max-width: 768px) and (max-height: 480px) and (orientation: landscape) {
+  .discard-row:not(:first-child) {
+    margin-top: -5px !important;
+  }
+}
 </style>

@@ -89,6 +89,18 @@
           </v-row>
         </div>
         
+        <!-- スマホ用追加ボタン -->
+        <div class="mobile-continue-button">
+          <v-btn 
+            color="primary" 
+            size="large"
+            block
+            @click="$emit('continue')"
+          >
+            次の局へ
+          </v-btn>
+        </div>
+        
         <!-- 役一覧 -->
         <div class="yaku-list">
           <h4>役</h4>
@@ -115,33 +127,35 @@
         </div>
         
         <!-- ドラ情報 -->
-        <div class="dora-info">
-          <h4>ドラ表示</h4>
-          <div class="dora-tiles">
-            <MahjongTile
-              v-for="dora in winData.doraIndicators"
-              :key="dora.id"
-              :tile="dora"
-              size="small"
-              :is-draggable="false"
-            />
+        <div class="dora-container">
+          <div class="dora-info">
+            <h4>ドラ表示</h4>
+            <div class="dora-tiles">
+              <MahjongTile
+                v-for="dora in winData.doraIndicators"
+                :key="dora.id"
+                :tile="dora"
+                size="small"
+                :is-draggable="false"
+              />
+            </div>
+            <div class="dora-count">ドラ: {{ winData.doraCount }}枚</div>
           </div>
-          <div class="dora-count">ドラ: {{ winData.doraCount }}枚</div>
-        </div>
-        
-        <!-- 裏ドラ情報（リーチ時のみ） -->
-        <div v-if="winData.winner.riichi" class="uradora-info">
-          <h4>裏ドラ表示</h4>
-          <div class="uradora-tiles">
-            <MahjongTile
-              v-for="uradora in winData.uradoraIndicators"
-              :key="uradora.id"
-              :tile="uradora"
-              size="small"
-              :is-draggable="false"
-            />
+          
+          <!-- 裏ドラ情報（リーチ時のみ） -->
+          <div v-if="winData.winner.riichi" class="uradora-info">
+            <h4>裏ドラ表示</h4>
+            <div class="uradora-tiles">
+              <MahjongTile
+                v-for="uradora in winData.uradoraIndicators"
+                :key="uradora.id"
+                :tile="uradora"
+                size="small"
+                :is-draggable="false"
+              />
+            </div>
+            <div class="uradora-count">裏ドラ: {{ winData.uradoraCount }}枚</div>
           </div>
-          <div class="uradora-count">裏ドラ: {{ winData.uradoraCount }}枚</div>
         </div>
       </v-card-text>
       
@@ -418,15 +432,25 @@ const shouldTileBeBack = (meld: Meld, tileIndex: number): boolean => {
   border-radius: 4px;
 }
 
+.dora-container {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 .dora-info,
 .uradora-info {
-  margin-bottom: 16px;
+  flex: 1;
+  min-width: 200px;
 }
 
 .dora-info h4,
 .uradora-info h4 {
   margin-bottom: 8px;
   color: #333;
+  text-align: center;
 }
 
 .dora-tiles,
@@ -468,5 +492,58 @@ const shouldTileBeBack = (meld: Meld, tileIndex: number): boolean => {
   background: rgba(0, 0, 0, 0.05);
   border-radius: 8px;
   align-items: flex-end; /* 下揃え */
+}
+
+/* スマホ用ボタンをデフォルトで非表示 */
+.mobile-continue-button {
+  display: none;
+}
+
+/* スマホ横画面向けレスポンシブ対応 */
+@media screen and (max-width: 1024px) and (max-height: 600px) and (orientation: landscape) {
+  /* ツモ・ロンタイトルを非表示 */
+  .win-title {
+    display: none !important;
+  }
+  
+  /* 勝利プレイヤー情報を非表示 */
+  .winner-info {
+    display: none !important;
+  }
+  
+  /* モーダルサイズ調整 */
+  .win-modal {
+    max-height: 95vh;
+  }
+  
+  /* スマホ用ボタンを表示 */
+  .mobile-continue-button {
+    display: block !important;
+    margin: 16px 0;
+  }
+}
+
+/* より小さいスマホ向け（高さ480px以下） */
+@media screen and (max-width: 768px) and (max-height: 480px) and (orientation: landscape) {
+  /* ツモ・ロンタイトルを非表示（継承） */
+  .win-title {
+    display: none !important;
+  }
+  
+  /* 勝利プレイヤー情報を非表示（継承） */
+  .winner-info {
+    display: none !important;
+  }
+  
+  /* モーダルサイズ調整 */
+  .win-modal {
+    max-height: 98vh;
+  }
+  
+  /* スマホ用ボタンを表示（継承） */
+  .mobile-continue-button {
+    display: block !important;
+    margin: 12px 0;
+  }
 }
 </style>
