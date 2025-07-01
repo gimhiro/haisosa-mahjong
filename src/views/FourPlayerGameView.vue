@@ -442,10 +442,6 @@ const shantenColor = computed(() => {
 const shantenText = computed(() => {
   if (humanShanten.value === -1) return 'アガリ'
   if (humanShanten.value === 0) {
-    // テンパイ時はフリテンチェック
-    if (isFuriten(humanPlayer.value.tiles, humanPlayer.value.discards)) {
-      return 'テンパイ(フリテン)'
-    }
     return 'テンパイ'
   }
   if (humanShanten.value >= 8) return '計算不可'

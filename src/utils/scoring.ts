@@ -40,7 +40,7 @@ export interface ScoringResult {
 function formatPaymentInfo(outgoingTen: [number, number] | null, totalPoints: number, isTsumo: boolean, isDealer: boolean): { paymentInfo: string, totalPoints: number } {
   if (isTsumo && outgoingTen) {
     const [first, second] = outgoingTen
-    
+
     if (isDealer) {
       // 親ツモ: 全員が同額支払い
       const eachPayment = first
@@ -296,17 +296,11 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
         return count + (meld.type === 'kan' ? 3 : 3)  // カンもポン・チーも3枚として数える
       }, 0) : 0
       const expectedHandSize = 13 - meldTileCount  // 鳴き牌を除いた手牌数
-      const expectedTsumoHandSize = expectedHandSize + 1  // ツモ後の手牌数
-      
-      
-      if (input.hand.length !== expectedTsumoHandSize) {
-        console.warn(`TSUMO: Expected ${expectedTsumoHandSize} tiles, got ${input.hand.length}`)
-      }
-      
+
       // 手牌の最初のN枚を取得（ツモ牌以外）
       const handTiles = input.hand.slice(0, expectedHandSize)
       const handNumbers = convertTilesToNumbers(handTiles).sort((a, b) => a - b)
-      
+
       // ツモ牌（上がり牌）を最後に追加
       const winTileNumber = convertTileToNumber(input.winningTile)
       closedPart = [...handNumbers, winTileNumber]
@@ -318,8 +312,8 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
         return count + (meld.type === 'kan' ? 3 : 3)  // カンもポン・チーも3枚として数える
       }, 0) : 0
       const expectedHandSize = 13 - meldTileCount  // 鳴き牌を除いた手牌数
-      
-      
+
+
       if (input.hand.length !== expectedHandSize) {
         console.warn(`RON: Expected ${expectedHandSize} tiles, got ${input.hand.length}`)
         // 期待される枚数でない場合は先頭N枚を取る
@@ -346,10 +340,10 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
     if (input.isRiichi && uradoraNumbers.length > 0) {
       allDoraNumbers.push(...uradoraNumbers)
     }
-    
+
     // 赤ドラの枚数を計算
     const akaCount = calculateAkaDoraCount(input.hand)
-    
+
 
     // Create RiichiInput for riichi-rs-bundlers
     const riichiOptions: any = {
@@ -381,14 +375,14 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
     if (input.melds && input.melds.length > 0) {
       for (const meld of input.melds) {
         const meldTiles = convertTilesToNumbers(meld.tiles).sort((a, b) => a - b)
-        
+
         // is_open: 暗槓の場合はfalse、その他はtrue
         // 暗槓の判定: type='kan' かつ fromPlayerが自分自身（プレイヤー0）
         const isOpen = !(meld.type === 'kan' && meld.fromPlayer === 0)
-        
+
         // riichi-rs-bundlers形式: [is_open, Tile[]]
         openPart.push([isOpen, meldTiles])
-        
+
       }
     }
 
@@ -397,13 +391,13 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       open_part: openPart, // メルド情報
       options: riichiOptions
     }
-    
+
     // Final validation - 鳴き牌を考慮した期待される長さ
     const meldTileCount = input.melds ? input.melds.reduce((count, meld) => count + meld.tiles.length, 0) : 0
     const expectedClosedPartLength = input.isTsumo ? (13 - meldTileCount + 1) : (13 - meldTileCount)
-    
-    
-    
+
+
+
     // Call riichi-rs-bundlers calc function
     const result = calc(riichiInput)
 
@@ -425,7 +419,7 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
           // 数値IDの場合は変換
           yakuName = getYakuName(parseInt(yakuId))
         }
-        
+
         return {
           name: yakuName,
           han: han

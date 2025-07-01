@@ -4,10 +4,10 @@ import { syanten } from 'syanten'
 
 export function convertTilesToSyantenFormat(tiles: Tile[] | FourPlayerTile[]): [number[], number[], number[], number[]] {
   const man = new Array(9).fill(0)
-  const pin = new Array(9).fill(0) 
+  const pin = new Array(9).fill(0)
   const sou = new Array(9).fill(0)
   const honor = new Array(7).fill(0)
-  
+
   for (const tile of tiles) {
     if (tile.suit === 'man') {
       man[tile.rank - 1]++
@@ -19,7 +19,7 @@ export function convertTilesToSyantenFormat(tiles: Tile[] | FourPlayerTile[]): [
       honor[tile.rank - 1]++
     }
   }
-  
+
   return [man, pin, sou, honor]
 }
 
@@ -29,13 +29,13 @@ export function calculateShanten(tiles: Tile[] | FourPlayerTile[]): number {
   if (tiles.length === 0) {
     return 8 // 空の手牌の場合は最大シャンテン数を返す
   }
-  
+
   const [man, pin, sou, honor] = convertTilesToSyantenFormat(tiles)
-  
+
   try {
     // syantenライブラリは配列の配列形式を要求する
     const result = syanten([man as any, pin as any, sou as any, honor as any])
-    
+
     // syantenライブラリは-1で和了、0以上でシャンテン数を返す
     return result
   } catch (error) {
@@ -45,28 +45,28 @@ export function calculateShanten(tiles: Tile[] | FourPlayerTile[]): number {
 }
 
 // 鳴き牌を考慮したシャンテン数計算
-export function calculateShantenWithMelds(tiles: Tile[] | FourPlayerTile[], melds: Array<{type: 'pon' | 'kan' | 'chi', tiles: Tile[]}> = []): number {
+export function calculateShantenWithMelds(tiles: Tile[] | FourPlayerTile[], melds: Array<{ type: 'pon' | 'kan' | 'chi', tiles: Tile[] }> = []): number {
   // 鳴き牌の数を考慮した手牌枚数チェック
   const meldTileCount = melds.reduce((count, meld) => count + meld.tiles.length, 0)
   const expectedHandTiles = 13 - meldTileCount
   const expectedTotalTiles = [expectedHandTiles, expectedHandTiles + 1] // ツモ前/後
-  
+
   if (!expectedTotalTiles.includes(tiles.length)) {
     return 8 // 不正な手牌サイズ
   }
-  
+
   // 鳴き牌がない場合は通常の計算
   if (melds.length === 0) {
     return calculateShanten(tiles)
   }
-  
+
   // syantenライブラリは1,4,7,10,13枚でも計算できるので、そのまま手牌を渡す
   const handShanten = calculateShanten(tiles)
-  
+
   // 鳴き牌による面子数を考慮して調整
   // 1面子確定につき、シャンテン数が下がる
   const adjustedShanten = handShanten - melds.length
-  
+
   // 最小で-1（和了）まで
   return Math.max(-1, adjustedShanten)
 }
@@ -74,53 +74,53 @@ export function calculateShantenWithMelds(tiles: Tile[] | FourPlayerTile[], meld
 export function getUsefulTiles(tiles: Tile[] | FourPlayerTile[]): number[] {
   const currentShanten = calculateShanten(tiles)
   if (currentShanten === -1) return []
-  
+
   const useful: number[] = []
-  
+
   // 全ての可能な牌をテスト (34種類)
   for (let i = 0; i < 34; i++) {
     const testTile = createTileFromIndex(i, 'test')
     const testTiles = [...tiles, testTile]
-    
+
     const newShanten = calculateShanten(testTiles)
-    
+
     if (newShanten < currentShanten) {
       useful.push(i)
     }
   }
-  
+
   return useful
 }
 
 // 鳴き牌を考慮した有効牌計算
-export function getUsefulTilesWithMelds(tiles: Tile[], melds: Array<{type: 'pon' | 'kan' | 'chi', tiles: Tile[]}> = []): number[] {
+export function getUsefulTilesWithMelds(tiles: Tile[], melds: Array<{ type: 'pon' | 'kan' | 'chi', tiles: Tile[] }> = []): number[] {
   const currentShanten = calculateShantenWithMelds(tiles, melds)
   if (currentShanten === -1) return []
-  
+
   const useful: number[] = []
-  
+
   // 4枚目の牌をチェック（手牌に同じ牌が3枚ある場合やポンしている場合）
   const fourthTileIndices = getFourthTileOpportunities(tiles, melds)
-  
+
   // 全ての可能な牌をテスト (34種類)
   for (let i = 0; i < 34; i++) {
     const testTile = createTileFromIndex(i, 'test')
     const testTiles = [...tiles, testTile]
-    
+
     const newShanten = calculateShantenWithMelds(testTiles, melds)
-    
+
     if (newShanten < currentShanten || fourthTileIndices.includes(i)) {
       useful.push(i)
     }
   }
-  
+
   return [...new Set(useful)] // 重複除去
 }
 
 // 4枚目の牌の機会を検出
-function getFourthTileOpportunities(tiles: Tile[], melds: Array<{type: 'pon' | 'kan' | 'chi', tiles: Tile[]}>): number[] {
+function getFourthTileOpportunities(tiles: Tile[], melds: Array<{ type: 'pon' | 'kan' | 'chi', tiles: Tile[] }>): number[] {
   const opportunities: number[] = []
-  
+
   // 手牌内で同じ牌が3枚ある場合
   const tileCounts = countTilesByIndex(tiles)
   for (const [index, count] of Object.entries(tileCounts)) {
@@ -128,7 +128,7 @@ function getFourthTileOpportunities(tiles: Tile[], melds: Array<{type: 'pon' | '
       opportunities.push(parseInt(index))
     }
   }
-  
+
   // ポンしている牌の4枚目
   for (const meld of melds) {
     if (meld.type === 'pon' && meld.tiles.length >= 3) {
@@ -137,19 +137,19 @@ function getFourthTileOpportunities(tiles: Tile[], melds: Array<{type: 'pon' | '
       opportunities.push(index)
     }
   }
-  
+
   return opportunities
 }
 
 // 牌をインデックス別にカウント
 function countTilesByIndex(tiles: Tile[]): Record<number, number> {
   const counts: Record<number, number> = {}
-  
+
   for (const tile of tiles) {
     const index = getTileIndex(tile)
     counts[index] = (counts[index] || 0) + 1
   }
-  
+
   return counts
 }
 
@@ -189,16 +189,16 @@ export function canRiichi(tiles: Tile[] | FourPlayerTile[], discards?: Tile[] | 
   // 3. まだリーチしていない (GameManagerで判定)
   // 4. 鳴いていない (melds が空) (GameManagerで判定)
   // 5. 1000点以上持っている (GameManagerで判定)
-  
+
   if (tiles.length !== 14) {
     return false
   }
-  
+
   // 各牌を1枚ずつ取り除いて、残り13枚でテンパイ（シャンテン0）になるかチェック
   for (let i = 0; i < tiles.length; i++) {
     const testTiles = [...tiles]
     testTiles.splice(i, 1) // i番目の牌を除去
-    
+
     if (testTiles.length === 13) {
       const shanten = calculateShanten(testTiles)
       if (shanten === 0) {
@@ -206,30 +206,30 @@ export function canRiichi(tiles: Tile[] | FourPlayerTile[], discards?: Tile[] | 
       }
     }
   }
-  
+
   return false
 }
 
 // 鳴き牌を考慮したリーチ判定
-export function canRiichiWithMelds(tiles: Tile[] | FourPlayerTile[], melds: Array<{type: 'pon' | 'kan' | 'chi', tiles: Tile[]}> = []): boolean {
+export function canRiichiWithMelds(tiles: Tile[] | FourPlayerTile[], melds: Array<{ type: 'pon' | 'kan' | 'chi', tiles: Tile[] }> = []): boolean {
   // 暗カンのみの鳴きであればリーチ可能
   const hasOpenMelds = melds.some(meld => meld.type !== 'kan')
   if (hasOpenMelds) {
     return false
   }
-  
+
   // 鳴き牌を考慮した実効手牌枚数を計算
   const meldTiles = melds.reduce((total, meld) => total + 3, 0) // カンは3枚として扱う
   const effectiveHandSize = tiles.length + meldTiles
-  
-  
+
+
   // 実効手牌が14枚（13枚+ツモ牌1枚）の場合にリーチ判定
   if (effectiveHandSize === 14) {
     // 各牌を1枚ずつ取り除いて、残り牌でテンパイ（シャンテン0）になるかチェック
     for (let i = 0; i < tiles.length; i++) {
       const testTiles = [...tiles]
       testTiles.splice(i, 1) // i番目の牌を除去
-      
+
       // 実効手牌13枚でテンパイ判定
       if (testTiles.length + meldTiles === 13) {
         const shanten = calculateShanten(testTiles)
@@ -239,38 +239,38 @@ export function canRiichiWithMelds(tiles: Tile[] | FourPlayerTile[], melds: Arra
       }
     }
   }
-  
+
   return false
 }
 
 // 役判定の基本的な実装 (簡易版)
 export function checkBasicYaku(tiles: Tile[], winTile: Tile, isTsumo: boolean): string[] {
   const yaku: string[] = []
-  
+
   if (isTsumo) {
     yaku.push('門前清自摸和')
   }
-  
+
   // リーチ判定は別途実装が必要
   // その他の役も段階的に実装
-  
+
   return yaku
 }
 
 export function calculateScore(yaku: string[], han: number, fu: number): number {
   // 簡易的な得点計算
   // 実際の麻雀得点計算は複雑なので、基本的なもののみ
-  
+
   if (han >= 13) return 32000 // 役満
   if (han >= 11) return 24000 // 三倍満
   if (han >= 8) return 16000  // 倍満
   if (han >= 6) return 12000  // 跳満
   if (han >= 5) return 8000   // 満貫
-  
+
   // 通常の計算 (簡易版)
   let baseScore = fu * Math.pow(2, han + 2)
   if (baseScore > 8000) baseScore = 8000 // 満貫切り上げ
-  
+
   return Math.ceil(baseScore / 100) * 100
 }
 
@@ -278,7 +278,7 @@ export function calculateScore(yaku: string[], han: number, fu: number): number 
 import { calculateScore as calculateRiichiScore } from './scoring'
 
 // 麻雀の上がり判定（詳細版）
-export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTile, isTsumo: boolean, riichi: boolean, doraIndicators: FourPlayerTile[], uradoraIndicators: FourPlayerTile[] = [], isDealer: boolean = false, isIppatsu: boolean = false, melds: Array<{type: 'pon' | 'kan' | 'chi', tiles: FourPlayerTile[], calledTile: FourPlayerTile, fromPlayer?: number}> = [], isHaitei: boolean = false, isDoubleRiichi: boolean = false, isRinshanKaihou: boolean = false, isTenho: boolean = false, isChiho: boolean = false): {
+export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTile, isTsumo: boolean, riichi: boolean, doraIndicators: FourPlayerTile[], uradoraIndicators: FourPlayerTile[] = [], isDealer: boolean = false, isIppatsu: boolean = false, melds: Array<{ type: 'pon' | 'kan' | 'chi', tiles: FourPlayerTile[], calledTile: FourPlayerTile, fromPlayer?: number }> = [], isHaitei: boolean = false, isDoubleRiichi: boolean = false, isRinshanKaihou: boolean = false, isTenho: boolean = false, isChiho: boolean = false): {
   isWin: boolean
   yaku: Array<{ name: string; han: number }>
   totalHan: number
@@ -342,15 +342,15 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
 
     // 独自でドラと裏ドラの枚数を計算
     const { actualDoraCount, actualUradoraCount } = calculateActualDoraCount(
-      tiles, 
-      doraIndicators, 
+      tiles,
+      doraIndicators,
       riichi ? uradoraIndicators : []
     )
-    
-    
+
+
     // 役満の場合は役満役のみを表示（通常役やドラは除外）
     let modifiedYaku: Array<{ name: string; han: number }>
-    
+
     if (scoringResult.yakuman > 0) {
       // 役満の場合：役満役のみを表示
       modifiedYaku = scoringResult.yaku.filter(y => {
@@ -365,13 +365,13 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
     } else {
       // 通常手の場合：従来通りドラを分離
       modifiedYaku = [...scoringResult.yaku]
-      
+
       // 既存の「ドラ」役を除去
       const doraIndex = modifiedYaku.findIndex(y => y.name === 'ドラ')
       if (doraIndex !== -1) {
         modifiedYaku.splice(doraIndex, 1)
       }
-      
+
       // 表ドラと裏ドラを別々に追加
       if (actualDoraCount > 0) {
         modifiedYaku.push({ name: 'ドラ', han: actualDoraCount })
@@ -393,16 +393,16 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
       doraCount: actualDoraCount,
       uradoraCount: actualUradoraCount
     }
-    
-    
+
+
     return finalResult
   } catch (error) {
     console.error('Error in checkWinCondition:', error)
-    
+
     // Fallback to simple logic if riichi-rs-bundlers fails
     const convertedTiles = tiles.map(t => ({ id: t.id, suit: t.suit, rank: t.rank, isRed: t.isRed })) as Tile[]
     const isWin = calculateShanten(convertedTiles) === -1
-    
+
     if (!isWin) {
       return {
         isWin: false,
@@ -417,14 +417,14 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
         uradoraCount: 0
       }
     }
-    
+
     // Basic fallback scoring
     const yaku: Array<{ name: string; han: number }> = []
-    
+
     if (isTsumo) {
       yaku.push({ name: '門前清自摸和', han: 1 })
     }
-    
+
     if (riichi) {
       if (isDoubleRiichi) {
         yaku.push({ name: 'ダブルリーチ', han: 2 })
@@ -432,38 +432,38 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
         yaku.push({ name: 'リーチ', han: 1 })
       }
     }
-    
+
     if (isIppatsu && riichi) {
       yaku.push({ name: '一発', han: 1 })
     }
-    
+
     if (isHaitei && isTsumo) {
       yaku.push({ name: 'ハイテイツモ', han: 1 })
     }
-    
+
     if (isHaitei && !isTsumo) {
       yaku.push({ name: '河底撈魚', han: 1 })
     }
-    
+
     if (isRinshanKaihou && isTsumo) {
       yaku.push({ name: '嶺上開花', han: 1 })
     }
-    
+
     if (hasAllSimples(tiles)) {
       yaku.push({ name: '断ヤオ九', han: 1 })
     }
-    
+
     const doraCount = countDora(tiles, doraIndicators)
     const uradoraCount = riichi ? countDora(tiles, uradoraIndicators) : 0
-    
+
     if (doraCount > 0) {
       yaku.push({ name: 'ドラ', han: doraCount })
     }
-    
+
     if (uradoraCount > 0) {
       yaku.push({ name: '裏ドラ', han: uradoraCount })
     }
-    
+
     if (yaku.length === 0) {
       return {
         isWin: false,
@@ -478,16 +478,16 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
         uradoraCount
       }
     }
-    
+
     const totalHan = yaku.reduce((sum, y) => sum + y.han, 0)
     const fu = calculateFu(tiles, winTile, isTsumo)
     const basePoints = calculateScore(yaku.map(y => y.name), totalHan, fu)
-    
+
     // フォールバック時も支払い形式を計算
-    const paymentInfo = isTsumo 
+    const paymentInfo = isTsumo
       ? (isDealer ? `${Math.ceil(basePoints / 3 / 100) * 100} all` : `${Math.ceil(basePoints / 4 / 100) * 100}-${Math.ceil(basePoints / 2 / 100) * 100}`)
       : `${isDealer ? Math.ceil(basePoints * 1.5 / 100) * 100 : basePoints}`
-    
+
     return {
       isWin: true,
       yaku,
@@ -506,14 +506,14 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
 // 簡易的な符計算
 function calculateFu(tiles: FourPlayerTile[], winTile: FourPlayerTile, isTsumo: boolean): number {
   let fu = 20 // 基本符
-  
+
   if (isTsumo) {
     fu += 2 // ツモ符
   }
-  
+
   // 実際は面子構成や待ちの種類で変わるが、簡易版では固定
   fu += 30 // 面子符（簡易）
-  
+
   return Math.ceil(fu / 10) * 10 // 10符単位に切り上げ
 }
 
@@ -525,14 +525,14 @@ function isAllSameSuit(tiles: FourPlayerTile[]): boolean {
 
 // 混老頭判定
 function isAllTerminalsAndHonors(tiles: FourPlayerTile[]): boolean {
-  return tiles.every(t => 
+  return tiles.every(t =>
     t.suit === 'honor' || t.rank === 1 || t.rank === 9
   )
 }
 
 // 断ヤオ九判定
 function hasAllSimples(tiles: FourPlayerTile[]): boolean {
-  return tiles.every(t => 
+  return tiles.every(t =>
     t.suit !== 'honor' && t.rank >= 2 && t.rank <= 8
   )
 }
@@ -540,7 +540,7 @@ function hasAllSimples(tiles: FourPlayerTile[]): boolean {
 // ドラ計算
 function countDora(tiles: FourPlayerTile[], doraIndicators: FourPlayerTile[]): number {
   let count = 0
-  
+
   for (const tile of tiles) {
     for (const indicator of doraIndicators) {
       if (isDoraFromIndicator(tile, indicator)) {
@@ -548,7 +548,7 @@ function countDora(tiles: FourPlayerTile[], doraIndicators: FourPlayerTile[]): n
       }
     }
   }
-  
+
   return count
 }
 
@@ -557,7 +557,7 @@ function isDoraFromIndicator(tile: FourPlayerTile, indicator: FourPlayerTile): b
   if (indicator.suit === 'honor') {
     // 字牌の場合
     if (tile.suit !== 'honor') return false
-    
+
     if (indicator.rank <= 4) {
       // 風牌: 東→南→西→北→東
       const nextRank = indicator.rank === 4 ? 1 : indicator.rank + 1
@@ -570,7 +570,7 @@ function isDoraFromIndicator(tile: FourPlayerTile, indicator: FourPlayerTile): b
   } else {
     // 数牌の場合
     if (tile.suit !== indicator.suit) return false
-    
+
     const nextRank = indicator.rank === 9 ? 1 : indicator.rank + 1
     return tile.rank === nextRank
   }
@@ -580,7 +580,7 @@ function isDoraFromIndicator(tile: FourPlayerTile, indicator: FourPlayerTile): b
 function calculateActualDoraCount(tiles: FourPlayerTile[], doraIndicators: FourPlayerTile[], uradoraIndicators: FourPlayerTile[]): { actualDoraCount: number, actualUradoraCount: number } {
   let actualDoraCount = 0
   let actualUradoraCount = 0
-  
+
   // 表ドラの計算
   for (const tile of tiles) {
     for (const indicator of doraIndicators) {
@@ -589,7 +589,7 @@ function calculateActualDoraCount(tiles: FourPlayerTile[], doraIndicators: FourP
       }
     }
   }
-  
+
   // 裏ドラの計算
   for (const tile of tiles) {
     for (const indicator of uradoraIndicators) {
@@ -598,7 +598,7 @@ function calculateActualDoraCount(tiles: FourPlayerTile[], doraIndicators: FourP
       }
     }
   }
-  
+
   return { actualDoraCount, actualUradoraCount }
 }
 
@@ -619,7 +619,7 @@ export interface AcceptanceInfo {
  * @returns 各牌を切った時の受け入れ情報
  */
 export function calculateAcceptance(
-  tiles: Tile[] | FourPlayerTile[], 
+  tiles: Tile[] | FourPlayerTile[],
   visibleTiles: Tile[] | FourPlayerTile[] = []
 ): AcceptanceInfo[] {
   if (tiles.length !== 14) {
@@ -627,24 +627,24 @@ export function calculateAcceptance(
   }
 
   const results: AcceptanceInfo[] = []
-  
+
   // 各牌を1枚ずつ切ってテンパイになるかチェック
   for (let i = 0; i < tiles.length; i++) {
     const tileToDiscard = tiles[i]
     const remainingTiles = [...tiles]
     remainingTiles.splice(i, 1) // i番目の牌を切る
-    
+
     if (remainingTiles.length === 13) {
       const currentShanten = calculateShanten(remainingTiles)
-      
+
       if (currentShanten === 0) {
         // テンパイの場合、受け入れ牌を計算
         const acceptanceTiles = getUsefulTiles(remainingTiles)
-        const remainingCounts = acceptanceTiles.map(tileIndex => 
+        const remainingCounts = acceptanceTiles.map(tileIndex =>
           getTileRemainingCount(tileIndex, visibleTiles)
         )
         const totalAcceptance = remainingCounts.reduce((sum, count) => sum + count, 0)
-        
+
         results.push({
           tileIndex: getTileIndex(tileToDiscard),
           tile: tileToDiscard,
@@ -656,7 +656,7 @@ export function calculateAcceptance(
       }
     }
   }
-  
+
   return results
 }
 
@@ -667,12 +667,12 @@ export function calculateAcceptance(
  * @returns 残り枚数
  */
 export function getTileRemainingCount(
-  tileIndex: number, 
+  tileIndex: number,
   visibleTiles: Tile[] | FourPlayerTile[]
 ): number {
   // 通常の牌は4枚、赤ドラは考慮しない（簡略化）
   const maxCount = 4
-  
+
   // 見えている牌のうち、指定インデックスの牌をカウント
   let visibleCount = 0
   for (const tile of visibleTiles) {
@@ -680,7 +680,7 @@ export function getTileRemainingCount(
       visibleCount++
     }
   }
-  
+
   return Math.max(0, maxCount - visibleCount)
 }
 
@@ -693,16 +693,16 @@ export function findBestAcceptanceTiles(acceptanceInfos: AcceptanceInfo[]): numb
   if (acceptanceInfos.length === 0) {
     return []
   }
-  
+
   // 最小シャンテン数を見つける
   const minShanten = Math.min(...acceptanceInfos.map(info => info.shantenAfterDiscard))
-  
+
   // 最小シャンテン数の牌のみにフィルタ
   const minShantenTiles = acceptanceInfos.filter(info => info.shantenAfterDiscard === minShanten)
-  
+
   // その中で最大受け入れ枚数を見つける
   const maxAcceptance = Math.max(...minShantenTiles.map(info => info.totalAcceptance))
-  
+
   // 最小シャンテン数かつ最大受け入れ枚数の牌インデックスを返す
   return minShantenTiles
     .filter(info => info.totalAcceptance === maxAcceptance)
@@ -717,13 +717,14 @@ export function findBestAcceptanceTiles(acceptanceInfos: AcceptanceInfo[]): numb
  */
 export function isFuriten(tiles: Tile[] | FourPlayerTile[], discards: Tile[] | FourPlayerTile[]): boolean {
   // テンパイ状態でない場合はフリテンではない
+  console.log("check furiten")
   if (calculateShanten(tiles) !== 0) {
     return false
   }
-  
+
   // 待ち牌（受け入れ牌）を取得
   const waitingTiles = getUsefulTiles(tiles)
-  
+
   // 自分の河に待ち牌があるかチェック
   for (const discard of discards) {
     const discardIndex = getTileIndex(discard)
@@ -731,6 +732,6 @@ export function isFuriten(tiles: Tile[] | FourPlayerTile[], discards: Tile[] | F
       return true // 待ち牌が河にある = フリテン
     }
   }
-  
+
   return false
 }

@@ -34,9 +34,6 @@
           <v-icon>{{ isMuted ? 'mdi-volume-off' : 'mdi-volume-high' }}</v-icon>
         </v-btn>
       </div>
-      
-      <!-- スクロール領域を広げるための空白ブロック -->
-      <div class="scroll-spacer"></div>
     </v-card-text>
   </v-card>
 </template>
@@ -83,7 +80,7 @@ defineEmits<{
 /* スマホ横画面向けレスポンシブ対応 */
 @media screen and (max-width: 1024px) and (max-height: 600px) and (orientation: landscape) {
   .scroll-spacer {
-    height: 200px;
+    height: 100px;
   }
 }
 

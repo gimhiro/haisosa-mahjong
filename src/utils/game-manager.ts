@@ -257,10 +257,10 @@ export class GameManager {
   dealInitialHands(): void {
     // 手牌の良さ設定を取得
     const handQualitySetting = this.getHandQualitySetting()
-    
+
     // 人間プレイヤーの手牌を配牌
     this.dealPlayerHand(0, handQualitySetting)
-    
+
     // CPUプレイヤーの手牌を通常配牌
     for (let playerIndex = 1; playerIndex < 4; playerIndex++) {
       this.dealPlayerHand(playerIndex, 'normal')
@@ -290,7 +290,7 @@ export class GameManager {
 
   private dealPlayerHand(playerIndex: number, handQuality: string): void {
     const player = this._players[playerIndex]
-    
+
     if (handQuality === 'normal') {
       // 通常配牌（現在と同じ）
       for (let i = 0; i < 13; i++) {
@@ -303,7 +303,7 @@ export class GameManager {
       // 複数候補から最適な手牌を選択
       const candidates = handQuality === 'good' ? 2 : 5
       const bestHand = this.selectBestHand(candidates)
-      
+
       // 選択された手牌を配牌
       bestHand.forEach(tile => {
         const wallIndex = this._wall.findIndex(t => t.id === tile.id)
@@ -318,11 +318,11 @@ export class GameManager {
   private selectBestHand(candidates: number): Tile[] {
     let bestHand: Tile[] = []
     let bestScore = -1
-    
+
     for (let i = 0; i < candidates; i++) {
       const candidateHand: Tile[] = []
       const wallCopy = [...this._wall]
-      
+
       // 13枚の候補手牌を生成
       for (let j = 0; j < 13; j++) {
         if (wallCopy.length > 0) {
@@ -330,49 +330,49 @@ export class GameManager {
           candidateHand.push(wallCopy.splice(randomIndex, 1)[0])
         }
       }
-      
+
       // 手牌を評価
       const score = this.evaluateHand(candidateHand)
-      
+
       if (score > bestScore) {
         bestScore = score
         bestHand = candidateHand
       }
     }
-    
+
     return bestHand
   }
 
   private evaluateHand(hand: Tile[]): number {
     let score = 0
-    
+
     // シャンテン数による評価
     const shanten = calculateShanten(hand)
     score += (8 - shanten) * 100 // シャンテン数が少ないほど高スコア
-    
+
     // ドラ牌による評価
     if (this._doraIndicators.length > 0) {
       const doraCount = this.countDoraTiles(hand)
       score += doraCount * 20
     }
-    
+
     return score
   }
 
   private countDoraTiles(hand: Tile[]): number {
     if (this._doraIndicators.length === 0) return 0
-    
+
     let count = 0
     const doraIndicator = this._doraIndicators[0]
     const doranumber = this.getNextTileNumber(doraIndicator)
-    
+
     hand.forEach(tile => {
       const tileNumber = this.convertTileToNumber(tile)
       if (tileNumber === doranumber) {
         count++
       }
     })
-    
+
     return count
   }
 
@@ -486,7 +486,7 @@ export class GameManager {
       if (player.difficulty === 'hard') {
         boostProbability = 0.3 // hardAIは30%
       }
-      
+
       // 人間プレイヤーの場合は牌操作率設定を適用
       if (playerIndex === 0) {
         const manipulationRate = this.getManipulationRate()
@@ -759,11 +759,6 @@ export class GameManager {
     } else {
       // ロンの場合：勝利牌を追加
       allTiles = [...player.tiles, winTile]
-      
-      // ロンの場合はフリテンチェック
-      if (isFuriten(player.tiles, player.discards)) {
-        return { isWin: false } // フリテンの場合はロン不可
-      }
     }
 
 
@@ -792,6 +787,11 @@ export class GameManager {
       )
 
       if (winResult.isWin) {
+        // ロンの場合のみフリテンチェックを実行（あがり確定後）
+        if (!isTsumo && isFuriten(player.tiles, player.discards)) {
+          return { isWin: false } // フリテンの場合はロン不可
+        }
+
         if (shouldResetFlags) {
           // 実際の上がり確定時のみ一発フラグをリセット
           this._ippatsuFlags.fill(false)
@@ -918,11 +918,6 @@ export class GameManager {
       return false
     }
 
-    // フリテンチェック
-    if (isFuriten(this.humanPlayer.tiles, this.humanPlayer.discards)) {
-      return false // フリテンの場合はロン不可
-    }
-
     // まず簡単なシャンテン数チェックで和了可能性を確認
     const allTiles = [...this.humanPlayer.tiles, this._lastDiscardedTile]
     const convertedTiles = allTiles.map(t => ({ id: t.id, suit: t.suit, rank: t.rank, isRed: t.isRed }))
@@ -952,8 +947,16 @@ export class GameManager {
         false,                     // 天和フラグ（ロンでは不可）
         false                      // 地和フラグ（ロンでは不可）
       )
-      // 上がり形かつ点数が0より大きい場合のみロン可能
-      return winResult.isWin && winResult.totalPoints > 0
+      
+      // あがり形かつ点数が0より大きい場合、最後にフリテンチェック
+      if (winResult.isWin && winResult.totalPoints > 0) {
+        // フリテンチェック（あがり確定後に実行）
+        if (isFuriten(this.humanPlayer.tiles, this.humanPlayer.discards)) {
+          return false // フリテンの場合はロン不可
+        }
+        return true
+      }
+      return false
     } catch (error) {
       console.error('Error in canHumanRon scoring check:', error)
       return false
@@ -1399,7 +1402,7 @@ export class GameManager {
     const isDealer = playerIndex === this._dealer
     // 天和は配牌時点での上がりなので、誰も牌を捨てていない状態で判定
     const noDiscards = this._players.every(player => player.discards.length === 0)
-    
+
     // 親 && ツモ && 誰も捨て牌がない
     return isDealer && isTsumo && noDiscards
   }
@@ -1409,7 +1412,7 @@ export class GameManager {
     const isDealer = playerIndex === this._dealer
     // 地和は子の第一ツモでの上がりなので、自分が一枚も牌を捨てていない状態で判定
     const playerDiscardCount = this._players[playerIndex].discards.length
-    
+
     // 子 && ツモ && 自分が捨て牌なし
     return !isDealer && isTsumo && playerDiscardCount === 0
   }
