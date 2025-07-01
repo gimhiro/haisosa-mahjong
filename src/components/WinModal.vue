@@ -32,7 +32,7 @@
               />
             </div>
             <!-- 上がり牌（少し右に配置） -->
-            <div class="winning-tile-separate">
+            <div v-if="winData.winningTile" class="winning-tile-separate">
               <MahjongTile
                 :tile="winData.winningTile"
                 size="medium"

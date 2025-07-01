@@ -16,7 +16,7 @@
           :position="'top'"
           :show-tiles="cpuTilesVisible[2]"
           :drawn-tile="currentPlayerIndex === 2 ? currentDrawnTile : null"
-          :game-manager="gameManager"
+          :game-manager="undefined"
           :cpu-tiles-visible="cpuTilesVisible[2]"
           @toggle-cpu-tiles="toggleCpuTiles(2)"
         />
@@ -30,7 +30,7 @@
           :position="'left'"
           :show-tiles="cpuTilesVisible[3]"
           :drawn-tile="currentPlayerIndex === 3 ? currentDrawnTile : null"
-          :game-manager="gameManager"
+          :game-manager="undefined"
           :cpu-tiles-visible="cpuTilesVisible[3]"
           @toggle-cpu-tiles="toggleCpuTiles(3)"
         />
@@ -46,7 +46,7 @@
               <PlayerDiscardArea
                 :player-index="0"
                 :get-player-discard-row="getPlayerDiscardRow"
-                :game-manager="gameManager"
+                :game-manager="undefined"
               />
             </div>
             
@@ -54,7 +54,7 @@
               <PlayerDiscardArea
                 :player-index="1"
                 :get-player-discard-row="getPlayerDiscardRow"
-                :game-manager="gameManager"
+                :game-manager="undefined"
               />
             </div>
             
@@ -62,7 +62,7 @@
               <PlayerDiscardArea
                 :player-index="2"
                 :get-player-discard-row="getPlayerDiscardRow"
-                :game-manager="gameManager"
+                :game-manager="undefined"
               />
             </div>
             
@@ -70,7 +70,7 @@
               <PlayerDiscardArea
                 :player-index="3"
                 :get-player-discard-row="getPlayerDiscardRow"
-                :game-manager="gameManager"
+                :game-manager="undefined"
               />
             </div>
 
@@ -112,7 +112,7 @@
         <GameInfoPanel
           :dealer-text="getDealerText()"
           :current-player-name="currentPlayer.name"
-          :kyotaku="gameManager.kyotaku"
+          :kyotaku="0"
           :game-phase="gamePhase"
           :is-muted="isMuted"
           @start-game="startGame"
@@ -128,7 +128,7 @@
           :position="'right'"
           :show-tiles="cpuTilesVisible[1]"
           :drawn-tile="currentPlayerIndex === 1 ? currentDrawnTile : null"
-          :game-manager="gameManager"
+          :game-manager="undefined"
           :cpu-tiles-visible="cpuTilesVisible[1]"
           @toggle-cpu-tiles="toggleCpuTiles(1)"
         />
@@ -143,7 +143,7 @@
           :show-tiles="true"
           :drawn-tile="currentPlayerIndex === 0 ? currentDrawnTile : null"
           :shanten-info="{ text: shantenText, color: shantenColor }"
-          :game-manager="gameManager"
+          :game-manager="undefined"
           :is-riichi-preview-mode="riichiPreviewMode && !humanPlayer.riichi"
           :riichi-disabled-tiles="humanPlayer.riichi ? getPostRiichiDisabledTiles() : getRiichiDisabledTiles()"
           :show-acceptance-highlight="settings.showAcceptanceHighlight"
@@ -277,7 +277,7 @@ import { useGameSettings } from '../utils/useGameSettings'
 import { SoundManager } from '../utils/sound-manager'
 import { isDebugMode } from '../utils/env'
 
-const gameManager = ref(new GameManager())
+const gameManagerInstance = ref<GameManager>(new GameManager())
 const router = useRouter()
 const { settings } = useGameSettings()
 
@@ -323,7 +323,7 @@ const isCalculatingAcceptance = ref(false)
 const isMuted = ref(false)
 
 const winModalData = ref<WinData>({
-  winner: gameManager.value.players[0],
+  winner: gameManagerInstance.value.players[0],
   winningHand: [],
   winningTile: null,
   isTsumo: false,
@@ -341,24 +341,24 @@ const winModalData = ref<WinData>({
 })
 
 // GameManagerからプロパティを参照
-const players = computed(() => gameManager.value.players)
-const gamePhase = computed(() => gameManager.value.gamePhase)
-const currentPlayerIndex = computed(() => gameManager.value.currentPlayerIndex)
-const currentDrawnTile = computed(() => gameManager.value.currentDrawnTile)
-const doraIndicators = computed(() => gameManager.value.doraIndicators)
-const round = computed(() => gameManager.value.round)
-const dealer = computed(() => gameManager.value.dealer)
-const currentPlayer = computed(() => gameManager.value.currentPlayer)
-const humanPlayer = computed(() => gameManager.value.humanPlayer)
-const wallRemaining = computed(() => gameManager.value.wallRemaining)
+const players = computed(() => gameManagerInstance.value.players)
+const gamePhase = computed(() => gameManagerInstance.value.gamePhase)
+const currentPlayerIndex = computed(() => gameManagerInstance.value.currentPlayerIndex)
+const currentDrawnTile = computed(() => gameManagerInstance.value.currentDrawnTile)
+const doraIndicators = computed(() => gameManagerInstance.value.doraIndicators)
+const round = computed(() => gameManagerInstance.value.round)
+const dealer = computed(() => gameManagerInstance.value.dealer)
+const currentPlayer = computed(() => gameManagerInstance.value.currentPlayer)
+const humanPlayer = computed(() => gameManagerInstance.value.humanPlayer)
+const wallRemaining = computed(() => gameManagerInstance.value.wallRemaining)
 
 
 const isHumanTurn = computed(() => {
-  return gameManager.value.isHumanTurn()
+  return gameManagerInstance.value.isHumanTurn()
 })
 
 const canDraw = computed(() => {
-  return gameManager.value.canHumanDraw()
+  return gameManagerInstance.value.canHumanDraw()
 })
 
 const effectiveHandSize = computed(() => {
@@ -373,7 +373,7 @@ const effectiveHandSize = computed(() => {
 })
 
 const canDeclareRiichi = computed(() => {
-  const result = gameManager.value.canPlayerRiichi(0)
+  const result = gameManagerInstance.value.canPlayerRiichi(0)
   return result
 })
 
@@ -387,7 +387,7 @@ const canTsumo = computed(() => {
   }
   
   try {
-    const winResult = gameManager.value.checkWinConditionForPlayer(0, drawnTile, true)
+    const winResult = gameManagerInstance.value.checkWinConditionForPlayer(0, drawnTile, true)
     // 上がり形かつ点数が0より大きい場合のみツモ可能
     const canWin = winResult.isWin && (winResult.result?.totalPoints || 0) > 0
     return canWin
@@ -398,7 +398,7 @@ const canTsumo = computed(() => {
 
 const canRon = computed(() => {
   const isMyTurn = isHumanTurn.value
-  const canHumanRonResult = gameManager.value.canHumanRon()
+  const canHumanRonResult = gameManagerInstance.value.canHumanRon()
   
   if (isMyTurn) return false // 自分のターンではロンできない
   
@@ -488,7 +488,7 @@ watch(currentPlayerIndex, (newPlayerIndex) => {
 
 
 function getDealerText(): string {
-  return gameManager.value.getDealerText()
+  return gameManagerInstance.value.getDealerText()
 }
 
 function startGame() {
@@ -497,22 +497,22 @@ function startGame() {
   
   // テストモードが有効な場合はGameManagerに設定を送信
   if (settings.value.testMode.isActive) {
-    gameManager.value.setTestMode(true, settings.value.testMode.players)
+    gameManagerInstance.value.setTestMode(true, settings.value.testMode.players)
   }
   
-  gameManager.value.startNewGame()
+  gameManagerInstance.value.startNewGame()
   
   // テストモードの場合は手牌を設定
   if (settings.value.testMode.isActive) {
-    gameManager.value.setTestHands()
+    gameManagerInstance.value.setTestHands()
   }
   
   // ゲーム開始後、最初のプレイヤーにツモ牌を配る
   setTimeout(() => {
-    if (gameManager.value.gamePhase === 'playing') {
+    if (gameManagerInstance.value.gamePhase === 'playing') {
       // テストモードで人間プレイヤーの場合は既にツモ済みなのでスキップ
       if (!settings.value.testMode.isActive || currentPlayerIndex.value !== 0) {
-        gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
+        gameManagerInstance.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
       }
       
       // CPUプレイヤーの場合は自動的にターンを開始
@@ -534,7 +534,7 @@ function resetGame() {
   bestAcceptanceTiles.value = []
   isUsefulTilesMode.value = false
   
-  gameManager.value.resetGame()
+  gameManagerInstance.value.resetGame()
 }
 
 // ミュート状態を切り替え
@@ -545,8 +545,8 @@ function toggleMute() {
 // テストモード適用イベントハンドラ
 function onTestModeApplied() {
   if (settings.value.testMode.isActive) {
-    gameManager.value.setTestMode(true, settings.value.testMode.players)
-    gameManager.value.setTestHands()
+    gameManagerInstance.value.setTestMode(true, settings.value.testMode.players)
+    gameManagerInstance.value.setTestHands()
     // テスト手牌適用後に暗カンチェック
     if (isHumanTurn.value) {
       checkAnkanOptions()
@@ -568,9 +568,9 @@ async function onHumanTileDiscard(tileId: string) {
   isUsefulTilesMode.value = false
   
   // 打牌時に嶺上開花フラグをリセット
-  gameManager.value.resetAfterKan()
+  gameManagerInstance.value.resetAfterKan()
   
-  const success = gameManager.value.discardTile(0, tileId)
+  const success = gameManagerInstance.value.discardTile(0, tileId)
   
   if (success) {
     // 打牌音を再生
@@ -581,7 +581,7 @@ async function onHumanTileDiscard(tileId: string) {
     
     if (!cpuRonOccurred) {
       // ロンが発生しなかった場合のみ次のターンに進む
-      gameManager.value.nextTurn()
+      gameManagerInstance.value.nextTurn()
       
       // 次のターンに進んだ後、流局判定を行う
       checkForDraw()
@@ -607,7 +607,7 @@ async function processCpuTurn() {
     
     
     if (currentDrawnTile.value) {
-      const winResult = gameManager.value.checkWinConditionForPlayer(currentIndex, currentDrawnTile.value, true)
+      const winResult = gameManagerInstance.value.checkWinConditionForPlayer(currentIndex, currentDrawnTile.value, true)
       if (winResult.isWin && winResult.result) {
         // CPU上がり処理（既にチェック済みの結果を渡す）
         handleCpuWinWithResult(currentIndex, currentDrawnTile.value, true, winResult.result)
@@ -633,18 +633,18 @@ async function processCpuTurn() {
       
       if (riichiDiscardTile) {
         // リーチ宣言
-        const riichiSuccess = gameManager.value.declareRiichi(currentIndex)
+        const riichiSuccess = gameManagerInstance.value.declareRiichi(currentIndex)
         
         if (riichiSuccess) {
           // リーチ宣言音を再生
           SoundManager.playRiichiSound()
           
           // リーチ宣言と同時に決定した牌を捨てる
-          const discardSuccess = gameManager.value.discardTile(currentIndex, riichiDiscardTile, true)
+          const discardSuccess = gameManagerInstance.value.discardTile(currentIndex, riichiDiscardTile, true)
           
           if (discardSuccess) {
             // CPUが牌を捨てた後、人間プレイヤーがロン可能かチェック
-            if (gameManager.value.canHumanRon()) {
+            if (gameManagerInstance.value.canHumanRon()) {
               return
             }
             
@@ -661,18 +661,18 @@ async function processCpuTurn() {
               return
             }
             
-            gameManager.value.nextTurn()
+            gameManagerInstance.value.nextTurn()
           }
         }
       }
     } else if (decision.tileId) {
       // 通常の捨て牌
-      const success = gameManager.value.discardTile(currentIndex, decision.tileId)
+      const success = gameManagerInstance.value.discardTile(currentIndex, decision.tileId)
       if (success) {
         // 打牌音を再生
         SoundManager.playDiscardSound()
         // CPUが牌を捨てた後、人間プレイヤーがロン可能かチェック
-        if (gameManager.value.canHumanRon()) {
+        if (gameManagerInstance.value.canHumanRon()) {
           // ロンボタンが表示されるので、ここでは次のターンに進まない
           return
         }
@@ -690,7 +690,7 @@ async function processCpuTurn() {
           return
         }
         
-        gameManager.value.nextTurn()
+        gameManagerInstance.value.nextTurn()
         
         // 次のターンに進んだ後、流局判定を行う
         checkForDraw()
@@ -704,7 +704,7 @@ async function processCpuTurn() {
 
 function declareRiichi() {
   if (canDeclareRiichi.value) {
-    const success = gameManager.value.declareRiichi(0)
+    const success = gameManagerInstance.value.declareRiichi(0)
   } else {
   }
 }
@@ -793,7 +793,7 @@ function confirmRiichiAndDiscard(tileId: string) {
 
   // リーチを宣言
   if (canDeclareRiichi.value) {
-    gameManager.value.declareRiichi(0)
+    gameManagerInstance.value.declareRiichi(0)
     
     // リーチ宣言音を再生
     SoundManager.playRiichiSound()
@@ -803,9 +803,9 @@ function confirmRiichiAndDiscard(tileId: string) {
   riichiPreviewMode.value = false
 
   // 牌を捨てる（リーチ宣言牌としてマーク）
-  const success = gameManager.value.discardTile(0, tileId, true)
+  const success = gameManagerInstance.value.discardTile(0, tileId, true)
   if (success) {
-    gameManager.value.nextTurn()
+    gameManagerInstance.value.nextTurn()
   }
 }
 
@@ -819,7 +819,7 @@ function cancelTsumo() {
 
 function declareTsumo() {
   if (canTsumo.value && currentDrawnTile.value) {
-    const winResult = gameManager.value.checkWinConditionForPlayer(0, currentDrawnTile.value, true, true)
+    const winResult = gameManagerInstance.value.checkWinConditionForPlayer(0, currentDrawnTile.value, true, true)
     
     if (winResult.isWin && winResult.result) {
       const player = humanPlayer.value
@@ -838,15 +838,15 @@ function declareTsumo() {
         yakuman: winResult.result.yakuman,
         doraIndicators: doraIndicators.value,
         doraCount: winResult.result.doraCount,
-        uradoraIndicators: player.riichi ? gameManager.value.getUradoraIndicators() : [],
+        uradoraIndicators: player.riichi ? gameManagerInstance.value.getUradoraIndicators() : [],
         uradoraCount: winResult.result.uradoraCount
       }
       
       // 供託分を加算
-      gameManager.value.applyKyotakuToWinner(0)
+      gameManagerInstance.value.applyKyotakuToWinner(0)
       
       // 点数移動を実行（ツモ）
-      gameManager.value.executeScoreTransfer(
+      gameManagerInstance.value.executeScoreTransfer(
         0, // winner index (human player)
         winResult.result.paymentInfo,
         winResult.result.totalPoints,
@@ -854,34 +854,34 @@ function declareTsumo() {
       )
       
       // ゲーム終了判定
-      const gameEndCheck = gameManager.value.checkGameEnd()
+      const gameEndCheck = gameManagerInstance.value.checkGameEnd()
       const isGameEnding = gameEndCheck.isGameEnd
       
       // 人間プレイヤーの上がりを記録
-      gameManager.value.recordHumanWin(
+      gameManagerInstance.value.recordHumanWin(
         winResult.result.yaku.map(y => y.name),
         winResult.result.totalPoints,
         isGameEnding
       )
       
       // ゲーム状態を終了に変更
-      gameManager.value.gamePhase = 'finished'
+      gameManagerInstance.value.gamePhase = 'finished'
       showWinModal.value = true
     }
   }
 }
 
 function declareRon() {
-  if (canRon.value && gameManager.value.lastDiscardedTile) {
-    const winResult = gameManager.value.checkWinConditionForPlayer(0, gameManager.value.lastDiscardedTile, false, true)
+  if (canRon.value && gameManagerInstance.value.lastDiscardedTile) {
+    const winResult = gameManagerInstance.value.checkWinConditionForPlayer(0, gameManagerInstance.value.lastDiscardedTile, false, true)
     
     if (winResult.isWin && winResult.result) {
       const player = humanPlayer.value
       
       winModalData.value = {
         winner: player,
-        winningHand: [...player.tiles, gameManager.value.lastDiscardedTile],
-        winningTile: gameManager.value.lastDiscardedTile,
+        winningHand: [...player.tiles, gameManagerInstance.value.lastDiscardedTile],
+        winningTile: gameManagerInstance.value.lastDiscardedTile,
         isTsumo: false,
         basePoints: winResult.result.basePoints,
         totalPoints: winResult.result.totalPoints,
@@ -892,35 +892,35 @@ function declareRon() {
         yakuman: winResult.result.yakuman,
         doraIndicators: doraIndicators.value,
         doraCount: winResult.result.doraCount,
-        uradoraIndicators: player.riichi ? gameManager.value.getUradoraIndicators() : [],
+        uradoraIndicators: player.riichi ? gameManagerInstance.value.getUradoraIndicators() : [],
         uradoraCount: winResult.result.uradoraCount
       }
       
       // 供託分を加算
-      gameManager.value.applyKyotakuToWinner(0)
+      gameManagerInstance.value.applyKyotakuToWinner(0)
       
       // 点数移動を実行（ロン）
-      gameManager.value.executeScoreTransfer(
+      gameManagerInstance.value.executeScoreTransfer(
         0, // winner index (human player)
         winResult.result.paymentInfo,
         winResult.result.totalPoints,
         false, // isTsumo
-        gameManager.value.lastDiscardPlayerIndex ?? undefined // ron target
+        gameManagerInstance.value.lastDiscardPlayerIndex ?? undefined // ron target
       )
       
       // ゲーム終了判定
-      const gameEndCheck = gameManager.value.checkGameEnd()
+      const gameEndCheck = gameManagerInstance.value.checkGameEnd()
       const isGameEnding = gameEndCheck.isGameEnd
       
       // 人間プレイヤーの上がりを記録
-      gameManager.value.recordHumanWin(
+      gameManagerInstance.value.recordHumanWin(
         winResult.result.yaku.map(y => y.name),
         winResult.result.totalPoints,
         isGameEnding
       )
       
       // ゲーム状態を終了に変更
-      gameManager.value.gamePhase = 'finished'
+      gameManagerInstance.value.gamePhase = 'finished'
       showWinModal.value = true
     }
   }
@@ -928,15 +928,15 @@ function declareRon() {
 
 function cancelRon() {
   // ロンをキャンセルして次のプレイヤーのターンに進む
-  gameManager.value.clearLastDiscard()
-  gameManager.value.nextTurn()
+  gameManagerInstance.value.clearLastDiscard()
+  gameManagerInstance.value.nextTurn()
 }
 
 // ポン・カン・チーのアクション
 function declarePon() {
   if (!lastDiscardedTile.value) return
   
-  const humanPlayer = gameManager.value.humanPlayer
+  const humanPlayer = gameManagerInstance.value.humanPlayer
   const tile = lastDiscardedTile.value
   
   // ポンの実行（手牌から同じ牌2枚を削除し、鳴き牌に追加）
@@ -952,7 +952,7 @@ function declarePon() {
     }
     
     // 捨て牌を削除し、どのプレイヤーから鳴いたかを記録
-    const lastDiscardPlayer = gameManager.value.players.find(p => 
+    const lastDiscardPlayer = gameManagerInstance.value.players.find(p => 
       p.discards.length > 0 && p.discards[p.discards.length - 1].id === tile.id
     )
     let fromPlayerIndex = 0
@@ -970,7 +970,7 @@ function declarePon() {
     })
     
     // 人間プレイヤーのターンに設定
-    gameManager.value.currentPlayerIndex = 0
+    gameManagerInstance.value.currentPlayerIndex = 0
     
     // フラグリセット
     resetActionFlags()
@@ -980,7 +980,7 @@ function declarePon() {
 function declareKan() {
   if (!lastDiscardedTile.value) return
   
-  const humanPlayer = gameManager.value.humanPlayer
+  const humanPlayer = gameManagerInstance.value.humanPlayer
   const tile = lastDiscardedTile.value
   
   // カンの実行（手牌から同じ牌3枚を削除し、鳴き牌に追加）
@@ -996,7 +996,7 @@ function declareKan() {
     }
     
     // 捨て牌を削除し、どのプレイヤーから鳴いたかを記録
-    const lastDiscardPlayer = gameManager.value.players.find(p => 
+    const lastDiscardPlayer = gameManagerInstance.value.players.find(p => 
       p.discards.length > 0 && p.discards[p.discards.length - 1].id === tile.id
     )
     let fromPlayerIndex = 0
@@ -1014,19 +1014,19 @@ function declareKan() {
     })
     
     // カン後は嶺上牌を引く
-    const kanTile = gameManager.value.drawKanTile(0)
+    const kanTile = gameManagerInstance.value.drawKanTile(0)
     
     // カンドラを追加
-    gameManager.value.addKanDoraIndicator()
+    gameManagerInstance.value.addKanDoraIndicator()
     
     // 嶺上開花フラグを設定
-    gameManager.value.setAfterKan(0)
+    gameManagerInstance.value.setAfterKan(0)
     
     // 手牌をソート
-    gameManager.value.sortPlayerHand(humanPlayer)
+    gameManagerInstance.value.sortPlayerHand(humanPlayer)
     
     // 人間プレイヤーのターンに設定
-    gameManager.value.currentPlayerIndex = 0
+    gameManagerInstance.value.currentPlayerIndex = 0
     
     // フラグリセット
     resetActionFlags()
@@ -1040,7 +1040,7 @@ function declareChi() {
   // チーの場合は選択肢があるので、最初の選択肢を使用（簡易実装）
   if (!lastDiscardedTile.value || chiOptions.value.length === 0) return
   
-  const humanPlayer = gameManager.value.humanPlayer
+  const humanPlayer = gameManagerInstance.value.humanPlayer
   const tile = lastDiscardedTile.value
   const option = chiOptions.value[0] // 最初の選択肢を使用
   
@@ -1080,7 +1080,7 @@ function declareChi() {
   })
   
   // 捨て牌を削除し、どのプレイヤーから鳴いたかを記録
-  const lastDiscardPlayer = gameManager.value.players.find(p => 
+  const lastDiscardPlayer = gameManagerInstance.value.players.find(p => 
     p.discards.length > 0 && p.discards[p.discards.length - 1].id === tile.id
   )
   let fromPlayerIndex = 0
@@ -1096,7 +1096,7 @@ function declareChi() {
   }
   
   // 人間プレイヤーのターンに設定
-  gameManager.value.currentPlayerIndex = 0
+  gameManagerInstance.value.currentPlayerIndex = 0
   
   // フラグリセット
   resetActionFlags()
@@ -1106,16 +1106,16 @@ function declareChi() {
 function declareAnkan() {
   if (ankanOptions.value.length === 0) return
   
-  const humanPlayer = gameManager.value.humanPlayer
+  const humanPlayer = gameManagerInstance.value.humanPlayer
   
   // 簡易実装：最初の選択肢を使用
   const option = ankanOptions.value[0]
   
   // 正しいカンのルール：ツモ牌を手牌に加えてからカンを実行
-  const currentDrawnTile = gameManager.value.currentDrawnTile
+  const currentDrawnTile = gameManagerInstance.value.currentDrawnTile
   if (currentDrawnTile) {
     humanPlayer.tiles.push(currentDrawnTile)
-    gameManager.value.currentDrawnTile = null
+    gameManagerInstance.value.currentDrawnTile = null
   }
   
   // 手牌かざ4枚同じ牌を探す（ツモ牌含む）
@@ -1143,19 +1143,19 @@ function declareAnkan() {
     })
     
     // 暗カン後は嶺上牌を引く
-    const kanTile = gameManager.value.drawKanTile(0)
+    const kanTile = gameManagerInstance.value.drawKanTile(0)
     
     // カンドラを追加
-    gameManager.value.addKanDoraIndicator()
+    gameManagerInstance.value.addKanDoraIndicator()
     
     // 嶺上開花フラグを設定
-    gameManager.value.setAfterKan(0)
+    gameManagerInstance.value.setAfterKan(0)
     
     // 手牌をソート
-    gameManager.value.sortPlayerHand(humanPlayer)
+    gameManagerInstance.value.sortPlayerHand(humanPlayer)
     
     // 人間プレイヤーのターンを維持
-    gameManager.value.currentPlayerIndex = 0
+    gameManagerInstance.value.currentPlayerIndex = 0
     
     // フラグリセット
     resetActionFlags()
@@ -1169,7 +1169,7 @@ function cancelActions() {
   resetActionFlags()
   
   // キャンセル後は次のプレイヤーのターンに進む
-  gameManager.value.nextTurn()
+  gameManagerInstance.value.nextTurn()
 }
 
 function resetActionFlags() {
@@ -1199,7 +1199,7 @@ function checkHumanMeldActions(discardPlayerIndex: number) {
     return
   }
 
-  const humanPlayer = gameManager.value.humanPlayer
+  const humanPlayer = gameManagerInstance.value.humanPlayer
 
   // リーチ後は暗カン以外の鳴きができない
   if (humanPlayer.riichi) {
@@ -1207,7 +1207,7 @@ function checkHumanMeldActions(discardPlayerIndex: number) {
   }
 
   // 最後に捨てられた牌を取得
-  const discardedTile = gameManager.value.lastDiscardedTile
+  const discardedTile = gameManagerInstance.value.lastDiscardedTile
   if (!discardedTile) {
     return
   }
@@ -1233,12 +1233,12 @@ function checkHumanMeldActions(discardPlayerIndex: number) {
 
 // 暗カン可能な牌をチェックする関数
 function checkAnkanOptions() {
-  const humanPlayer = gameManager.value.humanPlayer
+  const humanPlayer = gameManagerInstance.value.humanPlayer
   ankanOptions.value = []
   
   // 手牌 + ツモ牌で同じ牌が4枚あるかチェック
   const allTiles = [...humanPlayer.tiles]
-  const currentDrawnTile = gameManager.value.currentDrawnTile
+  const currentDrawnTile = gameManagerInstance.value.currentDrawnTile
   if (currentDrawnTile) {
     allTiles.push(currentDrawnTile)
   }
@@ -1315,7 +1315,7 @@ function handleCpuWinWithResult(playerIndex: number, winTile: any, isTsumo: bool
   const player = players.value[playerIndex]
   
   // 実際の上がり確定時に一発フラグをリセット
-  gameManager.value.checkWinConditionForPlayer(playerIndex, winTile, isTsumo, true)
+  gameManagerInstance.value.checkWinConditionForPlayer(playerIndex, winTile, isTsumo, true)
   
   winModalData.value = {
     winner: player,
@@ -1331,16 +1331,16 @@ function handleCpuWinWithResult(playerIndex: number, winTile: any, isTsumo: bool
     yakuman: winResult.yakuman,
     doraIndicators: doraIndicators.value,
     doraCount: winResult.doraCount,
-    uradoraIndicators: player.riichi ? gameManager.value.getUradoraIndicators() : [],
+    uradoraIndicators: player.riichi ? gameManagerInstance.value.getUradoraIndicators() : [],
     uradoraCount: winResult.uradoraCount
   }
   
   // 供託分を加算
-  gameManager.value.applyKyotakuToWinner(playerIndex)
+  gameManagerInstance.value.applyKyotakuToWinner(playerIndex)
   
   // 点数移動を実行
   if (isTsumo) {
-    gameManager.value.executeScoreTransfer(
+    gameManagerInstance.value.executeScoreTransfer(
       playerIndex,
       winResult.paymentInfo,
       winResult.totalPoints,
@@ -1348,22 +1348,22 @@ function handleCpuWinWithResult(playerIndex: number, winTile: any, isTsumo: bool
     )
   } else {
     // ロンの場合（放銃者のインデックスを特定する必要がある）
-    gameManager.value.executeScoreTransfer(
+    gameManagerInstance.value.executeScoreTransfer(
       playerIndex,
       winResult.paymentInfo,
       winResult.totalPoints,
       false,
-      gameManager.value.lastDiscardPlayerIndex ?? undefined
+      gameManagerInstance.value.lastDiscardPlayerIndex ?? undefined
     )
   }
   
   // ゲーム状態を終了に変更
-  gameManager.value.gamePhase = 'finished'
+  gameManagerInstance.value.gamePhase = 'finished'
   showWinModal.value = true
 }
 
 function handleCpuWin(playerIndex: number, winTile: any, isTsumo: boolean) {
-  const result = gameManager.value.checkWinConditionForPlayer(playerIndex, winTile, isTsumo, true)
+  const result = gameManagerInstance.value.checkWinConditionForPlayer(playerIndex, winTile, isTsumo, true)
   
   if (result.isWin && result.result) {
     const player = players.value[playerIndex]
@@ -1383,16 +1383,16 @@ function handleCpuWin(playerIndex: number, winTile: any, isTsumo: boolean) {
       yakuman: winResult.yakuman,
       doraIndicators: doraIndicators.value,
       doraCount: winResult.doraCount,
-      uradoraIndicators: player.riichi ? gameManager.value.getUradoraIndicators() : [],
+      uradoraIndicators: player.riichi ? gameManagerInstance.value.getUradoraIndicators() : [],
       uradoraCount: winResult.uradoraCount
     }
     
     // 供託分を加算
-    gameManager.value.applyKyotakuToWinner(playerIndex)
+    gameManagerInstance.value.applyKyotakuToWinner(playerIndex)
     
     // 点数移動を実行
     if (isTsumo) {
-      gameManager.value.executeScoreTransfer(
+      gameManagerInstance.value.executeScoreTransfer(
         playerIndex,
         winResult.paymentInfo,
         winResult.totalPoints,
@@ -1400,23 +1400,23 @@ function handleCpuWin(playerIndex: number, winTile: any, isTsumo: boolean) {
       )
     } else {
       // ロンの場合（放銃者のインデックスを特定する必要がある）
-      gameManager.value.executeScoreTransfer(
+      gameManagerInstance.value.executeScoreTransfer(
         playerIndex,
         winResult.paymentInfo,
         winResult.totalPoints,
         false,
-        gameManager.value.lastDiscardPlayerIndex ?? undefined
+        gameManagerInstance.value.lastDiscardPlayerIndex ?? undefined
       )
     }
     
     // ゲーム状態を終了に変更
-    gameManager.value.gamePhase = 'finished'
+    gameManagerInstance.value.gamePhase = 'finished'
     showWinModal.value = true
   }
 }
 
 function checkWinConditionForPlayer(playerIndex: number, winTile: any, isTsumo: boolean): boolean {
-  const result = gameManager.value.checkWinConditionForPlayer(playerIndex, winTile, isTsumo)
+  const result = gameManagerInstance.value.checkWinConditionForPlayer(playerIndex, winTile, isTsumo)
   
   if (result.isWin && result.result) {
     // CPUプレイヤーの場合は自動で上がる
@@ -1437,19 +1437,19 @@ function onContinueGame() {
   showResultAndNextButtons.value = false
   
   // ゲーム終了判定
-  const gameEndCheck = gameManager.value.checkGameEnd()
+  const gameEndCheck = gameManagerInstance.value.checkGameEnd()
   if (gameEndCheck.isGameEnd) {
     gameEndModalData.value = gameEndCheck.gameEndData
     showGameEndModal.value = true
     return
   }
   
-  gameManager.value.advanceToNextRound()
+  gameManagerInstance.value.advanceToNextRound()
   
   // 次局開始後、最初のプレイヤーにツモ牌を配る
   setTimeout(() => {
-    if (gameManager.value.gamePhase === 'playing') {
-      gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
+    if (gameManagerInstance.value.gamePhase === 'playing') {
+      gameManagerInstance.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
       
       // CPUプレイヤーの場合は自動的にターンを開始
       if (players.value[currentPlayerIndex.value].type === 'cpu') {
@@ -1464,7 +1464,7 @@ function onContinueGame() {
 function onNewGame() {
   showWinModal.value = false
   showResultAndNextButtons.value = false
-  gameManager.value.resetGame()
+  gameManagerInstance.value.resetGame()
 }
 
 const showResultAndNextButtons = ref(false)
@@ -1481,7 +1481,7 @@ const lastDiscardedTile = ref<Tile | null>(null)
 const ankanOptions = ref<{suit: string, rank: number}[]>([]) // 暗カン可能な牌
 
 function onWinModalClose() {
-  showResultAndNextButtons.value = gameManager.value.gamePhase === 'finished'
+  showResultAndNextButtons.value = gameManagerInstance.value.gamePhase === 'finished'
 }
 
 function reopenWinModal() {
@@ -1500,19 +1500,19 @@ function onContinueFromDraw() {
   showDrawResultButtons.value = false
   
   // ゲーム終了判定
-  const gameEndCheck = gameManager.value.checkGameEnd()
+  const gameEndCheck = gameManagerInstance.value.checkGameEnd()
   if (gameEndCheck.isGameEnd) {
     gameEndModalData.value = gameEndCheck.gameEndData
     showGameEndModal.value = true
     return
   }
   
-  gameManager.value.advanceToNextRound()
+  gameManagerInstance.value.advanceToNextRound()
   
   // 次局開始後、最初のプレイヤーにツモ牌を配る
   setTimeout(() => {
-    if (gameManager.value.gamePhase === 'playing') {
-      gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
+    if (gameManagerInstance.value.gamePhase === 'playing') {
+      gameManagerInstance.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
       
       // CPUプレイヤーの場合は自動的にターンを開始
       if (players.value[currentPlayerIndex.value].type === 'cpu') {
@@ -1526,27 +1526,27 @@ function onContinueFromDraw() {
 
 function onDrawModalClose() {
   // 流局モーダルを閉じた後、結果表示ボタンを表示
-  showDrawResultButtons.value = gameManager.value.gamePhase === 'finished'
+  showDrawResultButtons.value = gameManagerInstance.value.gamePhase === 'finished'
 }
 
 // ゲーム終了関連のハンドラー
 function onBackToHome() {
   // ゲーム終了時の記録（上がりなし）
-  gameManager.value.recordGameEnd()
+  gameManagerInstance.value.recordGameEnd()
   router.push('/')
 }
 
 function onRematch() {
   showGameEndModal.value = false
-  gameManager.value.resetGame()
+  gameManagerInstance.value.resetGame()
   
   // 新しいゲーム開始
   setTimeout(() => {
-    gameManager.value.startNewGame()
+    gameManagerInstance.value.startNewGame()
     
     setTimeout(() => {
-      if (gameManager.value.gamePhase === 'playing') {
-        gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
+      if (gameManagerInstance.value.gamePhase === 'playing') {
+        gameManagerInstance.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
         
         // CPUプレイヤーの場合は自動的にターンを開始
         if (players.value[currentPlayerIndex.value].type === 'cpu') {
@@ -1565,15 +1565,15 @@ function onGameEndModalClose() {
 
 // 流局判定
 function checkForDraw() {
-  if (gameManager.value.gamePhase !== 'playing') {
+  if (gameManagerInstance.value.gamePhase !== 'playing') {
     return
   }
   
-  const drawCheck = gameManager.value.checkDraw()
+  const drawCheck = gameManagerInstance.value.checkDraw()
   if (drawCheck.isDraw) {
     drawModalData.value = drawCheck.drawData
     showDrawModal.value = true
-    gameManager.value.gamePhase = 'finished'
+    gameManagerInstance.value.gamePhase = 'finished'
   }
 }
 
@@ -1800,7 +1800,10 @@ async function onTileHover(tile: Tile, x: number, y: number) {
   
   // テンパイ時で該当する受け入れ情報がない場合、動的に計算
   if (!acceptanceInfo && currentShanten.value === 0) {
-    acceptanceInfo = await calculateSingleTileAcceptance(tile)
+    const calculatedInfo = await calculateSingleTileAcceptance(tile)
+    if (calculatedInfo) {
+      acceptanceInfo = calculatedInfo
+    }
   }
   
   if (acceptanceInfo) {
@@ -1888,12 +1891,12 @@ function onTileLeave() {
 }
 
 async function checkCpuRon(discardPlayerIndex: number): Promise<boolean> {
-  if (!gameManager.value.lastDiscardedTile) {
+  if (!gameManagerInstance.value.lastDiscardedTile) {
     return false
   }
 
-  const lastDiscardedTile = gameManager.value.lastDiscardedTile
-  const doraIndicators = gameManager.value.doraIndicators
+  const lastDiscardedTile = gameManagerInstance.value.lastDiscardedTile
+  const doraIndicators = gameManagerInstance.value.doraIndicators
   
   // 捨て牌を出したプレイヤー以外の全プレイヤーをチェック（人間プレイヤーは除く）  
   for (let i = 1; i <= 3; i++) {
@@ -1923,11 +1926,11 @@ async function handleCpuRon(winnerIndex: number, loserIndex: number, winTile: an
   const winner = players.value[winnerIndex]
   
   // ロン判定と得点計算
-  const winResult = gameManager.value.checkWinConditionForPlayer(winnerIndex, winTile, false, true)
+  const winResult = gameManagerInstance.value.checkWinConditionForPlayer(winnerIndex, winTile, false, true)
   
   if (winResult.isWin && winResult.result) {
     // 実際の上がり確定時に一発フラグをリセット
-    gameManager.value.checkWinConditionForPlayer(winnerIndex, winTile, false, true)
+    gameManagerInstance.value.checkWinConditionForPlayer(winnerIndex, winTile, false, true)
     
     winModalData.value = {
       winner: winner,
@@ -1943,15 +1946,15 @@ async function handleCpuRon(winnerIndex: number, loserIndex: number, winTile: an
       yakuman: winResult.result.yakuman,
       doraIndicators: doraIndicators.value,
       doraCount: winResult.result.doraCount,
-      uradoraIndicators: winner.riichi ? gameManager.value.getUradoraIndicators() : [],
+      uradoraIndicators: winner.riichi ? gameManagerInstance.value.getUradoraIndicators() : [],
       uradoraCount: winResult.result.uradoraCount
     }
     
     // 供託分を加算
-    gameManager.value.applyKyotakuToWinner(winnerIndex)
+    gameManagerInstance.value.applyKyotakuToWinner(winnerIndex)
     
     // 点数移動を実行（ロン）
-    gameManager.value.executeScoreTransfer(
+    gameManagerInstance.value.executeScoreTransfer(
       winnerIndex, // winner index
       winResult.result.paymentInfo,
       winResult.result.totalPoints,
@@ -1960,17 +1963,17 @@ async function handleCpuRon(winnerIndex: number, loserIndex: number, winTile: an
     )
     
     // ゲーム状態を終了に変更
-    gameManager.value.gamePhase = 'finished'
+    gameManagerInstance.value.gamePhase = 'finished'
     showWinModal.value = true
   }
 }
 
 function getPlayerDiscardRow(playerIndex: number, rowIndex: number): any[] {
-  return gameManager.value.getPlayerDiscardRow(playerIndex, rowIndex)
+  return gameManagerInstance.value.getPlayerDiscardRow(playerIndex, rowIndex)
 }
 
 function getPlayerPosition(playerIndex: number): string {
-  return gameManager.value.getPlayerPosition(playerIndex)
+  return gameManagerInstance.value.getPlayerPosition(playerIndex)
 }
 
 function toggleCpuTiles(playerIndex: number) {
@@ -1981,11 +1984,11 @@ function toggleCpuTiles(playerIndex: number) {
 
 onMounted(() => {
   if (gamePhase.value === 'waiting') {
-    gameManager.value.startNewGame()
+    gameManagerInstance.value.startNewGame()
     
     setTimeout(() => {
-      if (gameManager.value.gamePhase === 'playing') {
-        gameManager.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
+      if (gameManagerInstance.value.gamePhase === 'playing') {
+        gameManagerInstance.value.drawTileAndKeepSeparate(currentPlayerIndex.value)
       }
     }, 100)
   }
@@ -2011,13 +2014,13 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
     }
     
     // カン直後の場合は追加のツモを行わない（既にリンシャン牌を引いているため）
-    if (gameManager.value.currentDrawnTile && gameManager.value.isRinshanKaihou(newIndex)) {
+    if (gameManagerInstance.value.currentDrawnTile && gameManagerInstance.value.isRinshanKaihou(newIndex)) {
       return
     }
     
     // すべてのプレイヤーはdrawTileAndKeepSeparateを使用
     // （super CPUの場合は内部で有効牌処理が行われる）
-    const drawnTile = gameManager.value.drawTileAndKeepSeparate(newIndex)
+    const drawnTile = gameManagerInstance.value.drawTileAndKeepSeparate(newIndex)
     
     // ツモが成功しなかった場合（山が空など）は流局判定
     if (!drawnTile) {

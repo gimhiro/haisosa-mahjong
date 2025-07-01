@@ -65,9 +65,9 @@
             :is-draggable="isCurrent && showTiles && position === 'bottom'"
             :is-dora="checkIsDora(drawnTile)"
             :is-acceptance-highlight="checkIsAcceptanceHighlight(drawnTile)"
-            :disabled="(isRiichiPreviewMode || player.riichi) && riichiDisabledTiles.includes(drawnTile.id)"
+            :disabled="(isRiichiPreviewMode || player.riichi) && drawnTile && riichiDisabledTiles.includes(drawnTile.id)"
             @click="onTileClick"
-            @mouseenter="(event) => onTileHover(drawnTile, event)"
+            @mouseenter="(event) => drawnTile && onTileHover(drawnTile, event)"
             @mouseleave="onTileLeave"
           />
           <div
@@ -281,7 +281,7 @@ function onTileClick(tile: Tile) {
   } 
 }
 
-function onTileHover(tile: Tile, event?: MouseEvent) {
+function onTileHover(tile: Tile, event?: any) {
   if (props.showAcceptanceTooltip && props.position === 'bottom') {
     const mouseX = event?.clientX || 0
     const mouseY = event?.clientY || 0

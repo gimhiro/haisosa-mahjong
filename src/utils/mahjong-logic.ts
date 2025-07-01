@@ -717,7 +717,6 @@ export function findBestAcceptanceTiles(acceptanceInfos: AcceptanceInfo[]): numb
  */
 export function isFuriten(tiles: Tile[] | FourPlayerTile[], discards: Tile[] | FourPlayerTile[]): boolean {
   // テンパイ状態でない場合はフリテンではない
-  console.log("check furiten")
   if (calculateShanten(tiles) !== 0) {
     return false
   }

@@ -8,7 +8,7 @@
         color="primary"
         density="compact"
         hide-details
-        @update:model-value="updateSettings({ disableMeld: $event })"
+        @update:model-value="(value) => updateSettings({ disableMeld: !!value })"
       />
       <v-switch
         v-model="settings.autoWin"
@@ -16,7 +16,7 @@
         color="primary"
         density="compact"
         hide-details
-        @update:model-value="updateSettings({ autoWin: $event })"
+        @update:model-value="(value) => updateSettings({ autoWin: !!value })"
       />
       <v-switch
         v-model="settings.showAcceptance"
@@ -24,7 +24,7 @@
         color="primary"
         density="compact"
         hide-details
-        @update:model-value="updateSettings({ showAcceptance: $event })"
+        @update:model-value="(value) => updateSettings({ showAcceptance: !!value })"
       />
       <v-switch
         v-model="settings.showAcceptanceHighlight"
@@ -32,7 +32,7 @@
         color="primary"
         density="compact"
         hide-details
-        @update:model-value="updateSettings({ showAcceptanceHighlight: $event })"
+        @update:model-value="(value) => updateSettings({ showAcceptanceHighlight: !!value })"
       />
       
       <v-btn

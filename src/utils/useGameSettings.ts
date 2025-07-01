@@ -52,13 +52,13 @@ export function useGameSettings() {
           // 古い設定形式の場合は新しい形式にマイグレーション
           if (!parsed.testMode || parsed.showAcceptance === undefined || parsed.showAcceptanceHighlight === undefined || parsed.manipulationRate === undefined || parsed.handQuality === undefined) {
             return {
-              disableMeld: parsed.disableMeld || false,
-              autoWin: parsed.autoWin || false,
-              showAcceptance: parsed.showAcceptance || false,
-              showAcceptanceHighlight: parsed.showAcceptanceHighlight || false,
-              manipulationRate: parsed.manipulationRate || 80,
-              handQuality: parsed.handQuality || 'good',
-              testMode: parsed.testMode || defaultSettings.testMode
+              disableMeld: parsed.disableMeld ?? false,
+              autoWin: parsed.autoWin ?? false,
+              showAcceptance: parsed.showAcceptance ?? false,
+              showAcceptanceHighlight: parsed.showAcceptanceHighlight ?? false,
+              manipulationRate: parsed.manipulationRate ?? 80,
+              handQuality: parsed.handQuality ?? 'good',
+              testMode: parsed.testMode ?? defaultSettings.testMode
             }
           }
           return parsed
