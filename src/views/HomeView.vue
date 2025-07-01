@@ -413,8 +413,13 @@ function onPresetChange() {
     <div class="version-history-section">
       <v-card class="version-history-card" elevation="4">
           <v-card-title class="version-history-title">
-            <v-icon class="version-history-icon">mdi-history</v-icon>
-            バージョン履歴
+            <div class="version-history-title-content">
+              <div class="version-history-title-left">
+                <v-icon class="version-history-icon">mdi-history</v-icon>
+                バージョン履歴
+              </div>
+              <div class="current-version">v1.1.1</div>
+            </div>
           </v-card-title>
           <v-card-text>
             <div class="version-history-content">
@@ -1144,6 +1149,25 @@ function onPresetChange() {
   align-items: center;
   font-weight: 600;
   color: #334155;
+}
+
+.version-history-title-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.version-history-title-left {
+  display: flex;
+  align-items: center;
+}
+
+.current-version {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: #94a3b8;
+  opacity: 0.8;
 }
 
 .version-history-icon {

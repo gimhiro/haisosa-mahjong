@@ -22,8 +22,17 @@
 import { computed } from 'vue'
 import { Tile } from 'riichi-rs-bundlers'
 
-// 画像を動的にインポート
-const tileImages = import.meta.glob<{ default: string }>('@/assets/tiles/*.png', { eager: true })
+// 画像を動的にインポート（値は "URL 文字列" になる）
+const rawImages = import.meta.glob('@/assets/tiles/*.png', {
+  eager: true,
+  as: 'url'          // ← これで確実に URL 文字列
+})
+
+// 「ファイル名 → URL」のマップに変換
+const tileImages: Record<string, string> = {}
+for (const [path, url] of Object.entries(rawImages)) {
+  tileImages[path.split('/').pop()!] = url as string
+}
 
 interface Props {
   tileId: number
@@ -47,15 +56,12 @@ const emit = defineEmits<Emits>()
 // 牌IDから画像URLを取得
 const tileImageSrc = computed(() => {
   const fileName = getTileFileName(props.tileId)
-  const path = `/src/assets/tiles/${fileName}`
-  const module = tileImages[path]
-  
-  if (module) {
-    return module.default
-  }
-  
-  console.warn('Image not found:', path)
-  return tileImages['/src/assets/tiles/m1.png']?.default || ''
+  const url = tileImages[fileName]
+
+  if (url) return url            // ← これがハッシュ付き URL
+
+  console.warn('Image not found:', fileName)
+  return tileImages['m1.png'] || ''
 })
 
 // 牌IDから表示用テキストを取得
