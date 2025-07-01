@@ -420,6 +420,19 @@ function onPresetChange() {
             <div class="version-history-content">
               <div class="version-item">
                 <div class="version-header">
+                  <div class="version-badge">v1.1.0</div>
+                  <h4 class="version-title">レスポンシブ対応・UI最適化</h4>
+                  <div class="version-date">2025-07-01</div>
+                </div>
+                <div class="version-description">
+                  <ul class="version-features">
+                    <li>スマホ横画面レスポンシブ対応</li>
+                    <li>フリテンチェック処理の最適化</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="version-item">
+                <div class="version-header">
                   <div class="version-badge">v1.0.0</div>
                   <h4 class="version-title">初回リリース</h4>
                   <div class="version-date">2025-06-30</div>
@@ -428,7 +441,7 @@ function onPresetChange() {
                   <ul class="version-features">
                     <li>4人対戦麻雀の実装</li>
                     <li>牌操作機能による手牌品質調整</li>
-                    <li>受け入れ計算・ドラ表示機能</li>
+                    <li>受け入れ計算・表示機能</li>
                   </ul>
                 </div>
               </div>
