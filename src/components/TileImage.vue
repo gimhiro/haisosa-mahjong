@@ -22,16 +22,61 @@
 import { computed } from 'vue'
 import { Tile } from 'riichi-rs-bundlers'
 
-// 画像を動的にインポート（値は "URL 文字列" になる）
-const rawImages = import.meta.glob('@/assets/tiles/*.png', {
-  eager: true,
-  as: 'url'          // ← これで確実に URL 文字列
-})
+// 全ての牌画像を静的にインポート
+// 萬子 (1m-9m)
+import m1 from '@/assets/tiles/m1.png'
+import m2 from '@/assets/tiles/m2.png'
+import m3 from '@/assets/tiles/m3.png'
+import m4 from '@/assets/tiles/m4.png'
+import m5 from '@/assets/tiles/m5.png'
+import m6 from '@/assets/tiles/m6.png'
+import m7 from '@/assets/tiles/m7.png'
+import m8 from '@/assets/tiles/m8.png'
+import m9 from '@/assets/tiles/m9.png'
 
-// 「ファイル名 → URL」のマップに変換
-const tileImages: Record<string, string> = {}
-for (const [path, url] of Object.entries(rawImages)) {
-  tileImages[path.split('/').pop()!] = url as string
+// 筒子 (1p-9p)
+import p1 from '@/assets/tiles/p1.png'
+import p2 from '@/assets/tiles/p2.png'
+import p3 from '@/assets/tiles/p3.png'
+import p4 from '@/assets/tiles/p4.png'
+import p5 from '@/assets/tiles/p5.png'
+import p6 from '@/assets/tiles/p6.png'
+import p7 from '@/assets/tiles/p7.png'
+import p8 from '@/assets/tiles/p8.png'
+import p9 from '@/assets/tiles/p9.png'
+
+// 索子 (1s-9s)
+import s1 from '@/assets/tiles/s1.png'
+import s2 from '@/assets/tiles/s2.png'
+import s3 from '@/assets/tiles/s3.png'
+import s4 from '@/assets/tiles/s4.png'
+import s5 from '@/assets/tiles/s5.png'
+import s6 from '@/assets/tiles/s6.png'
+import s7 from '@/assets/tiles/s7.png'
+import s8 from '@/assets/tiles/s8.png'
+import s9 from '@/assets/tiles/s9.png'
+
+// 風牌 (東南西北)
+import w1 from '@/assets/tiles/w1.png'
+import w2 from '@/assets/tiles/w2.png'
+import w3 from '@/assets/tiles/w3.png'
+import w4 from '@/assets/tiles/w4.png'
+
+// 三元牌 (白發中)
+import d1 from '@/assets/tiles/d1.png'
+import d2 from '@/assets/tiles/d2.png'
+import d3 from '@/assets/tiles/d3.png'
+
+// ファイル名と画像URLのマッピング
+const tileImageMap: Record<string, string> = {
+  'm1.png': m1, 'm2.png': m2, 'm3.png': m3, 'm4.png': m4, 'm5.png': m5,
+  'm6.png': m6, 'm7.png': m7, 'm8.png': m8, 'm9.png': m9,
+  'p1.png': p1, 'p2.png': p2, 'p3.png': p3, 'p4.png': p4, 'p5.png': p5,
+  'p6.png': p6, 'p7.png': p7, 'p8.png': p8, 'p9.png': p9,
+  's1.png': s1, 's2.png': s2, 's3.png': s3, 's4.png': s4, 's5.png': s5,
+  's6.png': s6, 's7.png': s7, 's8.png': s8, 's9.png': s9,
+  'w1.png': w1, 'w2.png': w2, 'w3.png': w3, 'w4.png': w4,
+  'd1.png': d1, 'd2.png': d2, 'd3.png': d3
 }
 
 interface Props {
@@ -56,12 +101,13 @@ const emit = defineEmits<Emits>()
 // 牌IDから画像URLを取得
 const tileImageSrc = computed(() => {
   const fileName = getTileFileName(props.tileId)
-  const url = tileImages[fileName]
-
-  if (url) return url            // ← これがハッシュ付き URL
-
-  console.warn('Image not found:', fileName)
-  return tileImages['m1.png'] || ''
+  const url = tileImageMap[fileName]
+  
+  if (url) {
+    return url
+  }
+  
+  return tileImageMap['m1.png'] // フォールバック
 })
 
 // 牌IDから表示用テキストを取得
@@ -97,7 +143,6 @@ function getTileFileName(tileId: number): string {
     return fileName
   }
   
-  console.warn('Unknown tile ID:', tileId)
   return 'm1.png' // フォールバック
 }
 
@@ -121,7 +166,6 @@ function getTileDisplayText(tileId: number): string {
     return display
   }
   
-  console.warn('Unknown tile ID for display:', tileId)
   return '?'
 }
 

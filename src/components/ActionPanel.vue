@@ -114,7 +114,7 @@
       <v-btn
         v-if="showResultAndNextButtons && !showDrawResultButtons"
         color="info"
-        size="small"
+        size="x-small"
         block
         class="action-btn"
         @click="$emit('reopenWinModal')"
@@ -125,7 +125,7 @@
       <v-btn
         v-if="showResultAndNextButtons && !showDrawResultButtons"
         color="primary"
-        size="small"
+        size="x-small"
         block
         class="action-btn"
         @click="$emit('onContinueGame')"
@@ -137,7 +137,7 @@
       <v-btn
         v-if="showDrawResultButtons"
         color="info"
-        size="small"
+        size="x-small"
         block
         class="action-btn"
         @click="$emit('reopenDrawModal')"
@@ -148,7 +148,7 @@
       <v-btn
         v-if="showDrawResultButtons"
         color="primary"
-        size="small"
+        size="x-small"
         block
         class="action-btn"
         @click="$emit('onContinueFromDraw')"
@@ -242,6 +242,18 @@ defineEmits<{
 
 .action-btn {
   font-size: 0.9rem;
+}
+
+/* ゲームアクションボタンのサイズ */
+.action-btn.v-btn--size-small {
+  max-height: 32px !important;
+  padding: 0 12px !important;
+}
+
+/* 結果表示・次の局へボタンのサイズ */
+.action-btn.v-btn--size-x-small {
+  max-height: 28px !important;
+  padding: 0 8px !important;
 }
 
 /* スマホ横画面向けレスポンシブ対応 */

@@ -268,7 +268,6 @@ function getTileDisplay(tileId: number): string {
     return display
   }
   
-  console.warn('Unknown tile ID for display:', tileId)
   return '?'
 }
 

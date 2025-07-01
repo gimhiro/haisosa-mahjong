@@ -156,10 +156,10 @@ const handleTestModeToggle = () => {
   }
 }
 
-/* PC表示では空白ブロックを非表示 */
+/* PC表示でも空白ブロックを表示してスクロール可能にする */
 @media screen and (min-width: 1025px), screen and (min-height: 601px) {
   .scroll-spacer {
-    display: none;
+    height: 100px;
   }
 }
 </style>

@@ -2119,7 +2119,7 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .center-area {
@@ -2817,6 +2817,30 @@ watch(() => currentPlayerIndex.value, async (newIndex) => {
     height: 24px !important;
     font-size: 0.6rem !important;
     padding: 0 8px !important;
+  }
+}
+
+/* PC表示でのパネルスクロール設定 */
+@media screen and (min-width: 1025px), screen and (min-height: 601px) {
+  /* PC表示では設定パネルの高さ制限を解除してスクロール可能にする */
+  .settings-panel :deep(.v-card-text) {
+    max-height: 200px !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(0,0,0,0.3) transparent !important;
+  }
+  
+  .settings-panel :deep(.v-card-text::-webkit-scrollbar) {
+    width: 6px !important;
+  }
+  
+  .settings-panel :deep(.v-card-text::-webkit-scrollbar-track) {
+    background: transparent !important;
+  }
+  
+  .settings-panel :deep(.v-card-text::-webkit-scrollbar-thumb) {
+    background-color: rgba(0,0,0,0.3) !important;
+    border-radius: 3px !important;
   }
 }
 </style>

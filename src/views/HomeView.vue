@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+
+// コンポーネントマウント時の処理
+onMounted(() => {
+  // 必要に応じて初期化処理を追加
+})
 
 // ゲーム設定
 const gameSettings = ref({
@@ -418,7 +423,7 @@ function onPresetChange() {
                 <v-icon class="version-history-icon">mdi-history</v-icon>
                 バージョン履歴
               </div>
-              <div class="current-version">v1.1.1</div>
+              <div class="current-version">v1.1.5</div>
             </div>
           </v-card-title>
           <v-card-text>
