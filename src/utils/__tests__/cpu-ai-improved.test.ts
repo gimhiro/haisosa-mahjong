@@ -53,7 +53,6 @@ describe('改善されたCPU AI', () => {
       const tileExists = allTiles.some(t => t.id === discardTileId)
       expect(tileExists).toBe(true)
       
-      console.log('選択された捨て牌:', discardTileId)
     })
 
     it('字牌を優先的に捨てる', () => {
@@ -82,7 +81,6 @@ describe('改善されたCPU AI', () => {
         id === 'h1-1' || id === 'h5-1' || id === 'h6-1' || id === 'h7-1'
       )
       
-      console.log('捨て牌選択結果:', results)
       expect(honorTileSelected).toBe(true)
     })
   })
@@ -103,12 +101,10 @@ describe('改善されたCPU AI', () => {
 
       // 1回だけテストしてリーチ可能性を確認
       const shouldRiichi = ai.shouldDeclareRiichi(player, drawnTile)
-      console.log('リーチ判定結果:', shouldRiichi)
       
       // リーチ可能状態なので、少なくとも機能していることを確認
       // 確率的なテストなので、機能が動作することだけを確認
       expect(typeof shouldRiichi).toBe('boolean')
-      console.log('リーチ判定が正常に動作しています')
     })
 
     it('リーチ不可能状態ではリーチしない', () => {

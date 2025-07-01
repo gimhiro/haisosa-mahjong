@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "homepage": "https://szkhi.github.io/haisosa-mahjong/",
+  "homepage": "https://gimhiro.github.io/haisosa-mahjong/",
   "scripts": {
     "dev": "vite --mode development",
     "prod": "vite --mode production",

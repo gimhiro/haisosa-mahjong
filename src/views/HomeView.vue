@@ -459,6 +459,32 @@ function onPresetChange() {
           </v-card-text>
         </v-card>
       </div>
+
+    <!-- フィードバック・バグ報告 -->
+    <div class="feedback-section">
+      <v-card class="feedback-card" elevation="4">
+        <v-card-title class="feedback-title">
+          <v-icon class="feedback-icon">mdi-bug-outline</v-icon>
+          バグ報告・機能要望
+        </v-card-title>
+        <v-card-text class="feedback-content">
+          <p class="feedback-description">
+            バグの報告や新機能はこちら
+          </p>
+          <v-btn
+            color="primary"
+            variant="outlined"
+            href="https://github.com/gimhiro/haisosa-mahjong/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="feedback-button"
+          >
+            <v-icon start>mdi-github</v-icon>
+            GitHub Issues
+          </v-btn>
+        </v-card-text>
+      </v-card>
+    </div>
   </div>
 </template>
 
@@ -491,7 +517,8 @@ function onPresetChange() {
 .title-section,
 .panel-container,
 .info-section,
-.version-history-section {
+.version-history-section,
+.feedback-section {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1rem;
@@ -1305,6 +1332,46 @@ function onPresetChange() {
   .setting-section {
     padding: 1rem;
   }
+}
+
+/* フィードバック・バグ報告セクション */
+.feedback-section {
+  max-width: 1200px;
+  margin: 2rem auto 0;
+  padding: 0 1rem;
+}
+
+.feedback-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.feedback-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #334155;
+}
+
+.feedback-icon {
+  margin-right: 0.75rem;
+  color: #667eea;
+}
+
+.feedback-content {
+  padding-top: 0 !important;
+}
+
+.feedback-description {
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.feedback-button {
+  border-radius: 12px;
 }
 
 /* ラジオボタンのスタイル調整 */

@@ -41,8 +41,6 @@ describe('リーチボタン表示テスト', () => {
       gameManager.currentDrawnTile = createTile('sou', 1, 's1-1')
       
       const canRiichi = gameManager.canPlayerRiichi(0)
-      console.log('リーチ可能判定:', canRiichi)
-      console.log('手牌:', tiles.map(t => `${t.suit}${t.rank}`).join(' '))
       
       expect(canRiichi).toBe(true)
     })
@@ -131,8 +129,6 @@ describe('リーチボタン表示テスト', () => {
       // リーチ判定には14枚必要（手牌13枚+ツモ牌1枚）
       gameManager.currentDrawnTile = createTile('sou', 1, 's1-1')
       
-      console.log('簡単なテンパイパターンテスト')
-      console.log('手牌:', tiles.map(t => `${t.suit}${t.rank}`).join(' '))
       
       const canRiichi = gameManager.canPlayerRiichi(0)
       expect(canRiichi).toBe(true)

@@ -17,12 +17,8 @@ describe('winning hand debug', () => {
       createTile('pin', 1, 'p1-1'), createTile('pin', 1, 'p1-2')
     ]
 
-    console.log('Testing winning hand (14 tiles):')
-    console.log('Tiles:', winningTiles.map(t => t.suit + t.rank).join(' '))
-    console.log('Length:', winningTiles.length)
 
     const shanten = calculateShanten(winningTiles)
-    console.log('Shanten result:', shanten)
 
     // Should be -1 (winning hand)
     expect(shanten).toBe(-1)
@@ -30,7 +26,6 @@ describe('winning hand debug', () => {
     // Test the win condition function
     const tsumoTile = winningTiles[13]
     const winResult = checkWinCondition(winningTiles, tsumoTile, true, false, [], [])
-    console.log('Win result:', winResult)
 
     expect(winResult.isWin).toBe(true)
   })
@@ -44,11 +39,7 @@ describe('winning hand debug', () => {
       createTile('man', 5, 'm5-1'), createTile('man', 5, 'm5-2')
     ]
 
-    console.log('\\nTesting simpler winning hand:')
-    console.log('Tiles:', simpleTiles.map(t => t.suit + t.rank).join(' '))
-    
     const shanten = calculateShanten(simpleTiles)
-    console.log('Shanten result:', shanten)
     
     expect(shanten).toBe(-1)
   })

@@ -3,13 +3,18 @@ export class SoundManager {
   private static audioCache: Map<string, HTMLAudioElement> = new Map()
   private static isMuted: boolean = false
   
+  // publicディレクトリのパスベース（本番では /haisosa-mahjong/、開発では /）
+  private static get basePath(): string {
+    return import.meta.env.PROD ? '/haisosa-mahjong/' : '/'
+  }
+  
   /**
    * 音声ファイルを事前にロードしてキャッシュ
    */
   static preloadSounds() {
     const sounds = [
-      { key: 'dahai', path: new URL('../assets/sound/dahai.mp3', import.meta.url).href },
-      { key: 'riichi', path: new URL('../assets/sound/dahai_2.mp3', import.meta.url).href }
+      { key: 'dahai', path: `${this.basePath}sound/dahai.mp3` },
+      { key: 'riichi', path: `${this.basePath}sound/dahai_2.mp3` }
     ]
     
     sounds.forEach(({ key, path }) => {
@@ -34,8 +39,8 @@ export class SoundManager {
       if (!audio) {
         // キャッシュにない場合は新規作成
         const soundPaths: Record<string, string> = {
-          'dahai': new URL('../assets/sound/dahai.mp3', import.meta.url).href,
-          'riichi': new URL('../assets/sound/dahai_2.mp3', import.meta.url).href
+          'dahai': `${this.basePath}sound/dahai.mp3`,
+          'riichi': `${this.basePath}sound/dahai_2.mp3`
         }
         
         if (soundPaths[soundKey]) {
