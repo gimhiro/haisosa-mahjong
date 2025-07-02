@@ -281,6 +281,21 @@ const gameManagerInstance = ref<GameManager>(new GameManager())
 const router = useRouter()
 const { settings } = useGameSettings()
 
+// 設定変更の監視（牌操作率の更新）
+watch(() => settings.value.manipulationRate, (newRate, oldRate) => {
+  if (newRate !== oldRate) {
+    gameManagerInstance.value.updateManipulationRate()
+  }
+}, { immediate: false })
+
+// 設定変更の監視（鳴きなし設定）
+watch(() => settings.value.disableMeld, (newValue) => {
+  // 鳴きなし設定がONになった場合、表示中の鳴きアクションをキャンセル
+  if (newValue && (canPon.value || canKan.value || canChi.value)) {
+    cancelActions()
+  }
+}, { immediate: false })
+
 // CPU手牌表示状態
 const cpuTilesVisible = ref({
   1: false, // CPU1 (右)

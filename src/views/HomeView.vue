@@ -367,6 +367,20 @@ function onPresetChange() {
                 </v-row>
               </v-col>
             </v-row>
+            
+            <!-- ゲーム開始ボタン（下部） -->
+            <div class="start-button-container mt-8 mb-2">
+              <v-btn
+                color="primary"
+                size="x-large"
+                elevation="8"
+                @click="startFourPlayerGame"
+                class="start-game-btn"
+              >
+                <v-icon start size="large">mdi-play</v-icon>
+                4人対戦を開始
+              </v-btn>
+            </div>
           </v-card-text>
         </v-card>
       </div>

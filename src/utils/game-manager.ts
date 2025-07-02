@@ -34,11 +34,13 @@ export class GameManager {
   private _firstTakeFlags: boolean[] = [true, true, true, true] // 各プレイヤーの第一ツモフラグ
 
   constructor() {
-    this._enhancedDraw = new EnhancedDraw({ boostProbability: 0.8 })
-
     // ローカルストレージから設定を読み込み
     const savedSettings = this.loadGameSettings()
     this._gameSettings = savedSettings
+
+    // 牌操作率設定を適用してEnhancedDrawを初期化
+    const manipulationRate = this.getManipulationRate()
+    this._enhancedDraw = new EnhancedDraw({ boostProbability: manipulationRate / 100 })
 
     this._players = [
       { id: 0, name: 'あなた', type: 'human', tiles: [], discards: [], melds: [], riichi: false, score: 25000, wind: 'east' },
@@ -403,12 +405,20 @@ export class GameManager {
       const gameSettings = localStorage.getItem('mahjong-game-settings')
       if (gameSettings) {
         const settings = JSON.parse(gameSettings)
-        return settings.manipulationRate || 80
+        return settings.manipulationRate !== undefined ? settings.manipulationRate : 80
       }
     } catch (error) {
       console.error('Failed to load manipulation rate setting:', error)
     }
     return 80
+  }
+
+  /**
+   * 牌操作率設定を更新（ゲーム中の設定変更対応）
+   */
+  updateManipulationRate(): void {
+    const newRate = this.getManipulationRate()
+    this._enhancedDraw.setBoostProbability(newRate / 100)
   }
 
   sortPlayerHand(player: Player): void {
@@ -487,26 +497,35 @@ export class GameManager {
         boostProbability = 0.3 // hardAIは30%
       }
 
-      // 人間プレイヤーの場合は牌操作率設定を適用
+      // 人間プレイヤーの場合は設定済みの牌操作率をそのまま使用
       if (playerIndex === 0) {
-        const manipulationRate = this.getManipulationRate()
-        boostProbability = manipulationRate / 100
-      }
+        // 人間プレイヤーの場合は初期化時に設定した牌操作率を使用
+        const drawnTile = this._enhancedDraw.drawEnhancedTile(player.tiles, this._wall)
+        
+        if (drawnTile) {
+          // 山から引いた牌を除去
+          const index = this._wall.findIndex(t => t.id === drawnTile.id)
+          if (index !== -1) {
+            this._wall.splice(index, 1)
+          }
+          tile = drawnTile
+        }
+      } else {
+        // CPUプレイヤーの場合は一時的にブースト確率を変更
+        const originalProbability = this._enhancedDraw['options'].boostProbability
+        this._enhancedDraw.setBoostProbability(boostProbability)
 
-      // 一時的にブースト確率を変更
-      const originalProbability = this._enhancedDraw['options'].boostProbability
-      this._enhancedDraw.setBoostProbability(boostProbability)
+        const drawnTile = this._enhancedDraw.drawEnhancedTile(player.tiles, this._wall)
 
-      const drawnTile = this._enhancedDraw.drawEnhancedTile(player.tiles, this._wall)
-
-      // 元の確率に戻す
-      this._enhancedDraw.setBoostProbability(originalProbability)
-
-      if (drawnTile) {
-        // 山から引いた牌を除去
-        const index = this._wall.findIndex(t => t.id === drawnTile.id)
-        if (index !== -1) {
-          this._wall.splice(index, 1)
+        // 元の確率に戻す
+        this._enhancedDraw.setBoostProbability(originalProbability)
+        
+        if (drawnTile) {
+          // 山から引いた牌を除去
+          const index = this._wall.findIndex(t => t.id === drawnTile.id)
+          if (index !== -1) {
+            this._wall.splice(index, 1)
+          }
           tile = drawnTile
         }
       }

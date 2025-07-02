@@ -270,10 +270,10 @@ defineEmits<{
   }
 }
 
-/* PC表示では空白ブロックを非表示 */
+/* PC表示でも適度な空白ブロックを表示（スクロール可能にするため） */
 @media screen and (min-width: 1025px), screen and (min-height: 601px) {
   .scroll-spacer {
-    display: none;
+    height: 100px;
   }
 }
 </style>
