@@ -39,7 +39,6 @@ export function calculateShanten(tiles: Tile[] | FourPlayerTile[]): number {
     // syantenライブラリは-1で和了、0以上でシャンテン数を返す
     return result
   } catch (error) {
-    console.error('シャンテン数計算エラー:', error, { man, pin, sou, honor })
     return 8 // エラーの場合は最大シャンテン数を返す
   }
 }
@@ -397,8 +396,6 @@ export function checkWinCondition(tiles: FourPlayerTile[], winTile: FourPlayerTi
 
     return finalResult
   } catch (error) {
-    console.error('Error in checkWinCondition:', error)
-
     // Fallback to simple logic if riichi-rs-bundlers fails
     const convertedTiles = tiles.map(t => ({ id: t.id, suit: t.suit, rank: t.rank, isRed: t.isRed })) as Tile[]
     const isWin = calculateShanten(convertedTiles) === -1
@@ -627,10 +624,34 @@ export function calculateAcceptance(
   }
 
   const results: AcceptanceInfo[] = []
+  const calculatedTileTypes = new Set<string>() // 計算済みの牌種を記録
+  
+  // 効率化：手牌以外の見えている牌を事前に計算
+  const handTileIds = new Set(tiles.map(tile => tile.id))
+  const otherVisibleTiles = visibleTiles.filter(tile => !handTileIds.has(tile.id))
 
   // 各牌を1枚ずつ切ってテンパイになるかチェック
   for (let i = 0; i < tiles.length; i++) {
     const tileToDiscard = tiles[i]
+    
+    // 同じ種類の牌が既に計算済みかチェック
+    const tileTypeKey = `${tileToDiscard.suit}_${tileToDiscard.rank}_${tileToDiscard.isRed || false}`
+    if (calculatedTileTypes.has(tileTypeKey)) {
+      // 同じ牌種は既に計算済みなので、既存の結果をコピーして牌情報だけ更新
+      const existingResult = results.find(r => 
+        r.tile.suit === tileToDiscard.suit && 
+        r.tile.rank === tileToDiscard.rank && 
+        (r.tile as any).isRed === tileToDiscard.isRed
+      )
+      if (existingResult) {
+        results.push({
+          ...existingResult,
+          tile: tileToDiscard // 実際の牌情報を更新
+        })
+      }
+      continue
+    }
+    
     const remainingTiles = [...tiles]
     remainingTiles.splice(i, 1) // i番目の牌を切る
 
@@ -640,8 +661,12 @@ export function calculateAcceptance(
       if (currentShanten === 0) {
         // テンパイの場合、受け入れ牌を計算
         const acceptanceTiles = getUsefulTiles(remainingTiles)
+        
+        // この牌を切った後の見えている牌を計算（切った後の手牌 + その他の見えている牌）
+        const visibleTilesAfterDiscard = [...remainingTiles, ...otherVisibleTiles]
+        
         const remainingCounts = acceptanceTiles.map(tileIndex =>
-          getTileRemainingCount(tileIndex, visibleTiles)
+          getTileRemainingCount(tileIndex, visibleTilesAfterDiscard)
         )
         const totalAcceptance = remainingCounts.reduce((sum, count) => sum + count, 0)
 
@@ -653,6 +678,9 @@ export function calculateAcceptance(
           totalAcceptance,
           shantenAfterDiscard: 0 // テンパイなので0
         })
+        
+        // この牌種を計算済みとしてマーク
+        calculatedTileTypes.add(tileTypeKey)
       }
     }
   }

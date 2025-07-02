@@ -34,6 +34,19 @@
         hide-details
         @update:model-value="(value) => updateSettings({ showAcceptanceHighlight: !!value })"
       />
+
+      <!-- 特殊モード表示 -->
+      <div class="special-mode-info mt-3 mb-2">
+        <v-divider class="mb-2"></v-divider>
+        <div class="text-caption text-medium-emphasis mb-1">特殊モード</div>
+        <v-chip
+          :color="settings.specialMode?.chinitsuMode ? 'orange' : 'grey'"
+          size="small"
+          variant="flat"
+        >
+          {{ settings.specialMode?.chinitsuMode ? '清一色モード' : '通常モード' }}
+        </v-chip>
+      </div>
       
       <v-btn
         v-if="settings.testMode && isDebugMode"

@@ -52,7 +52,7 @@
           :is-acceptance-highlight="checkIsAcceptanceHighlight(tile)"
           :disabled="(isRiichiPreviewMode || player.riichi) && riichiDisabledTiles.includes(tile.id)"
           @click="onTileClick"
-          @mouseenter="(event) => onTileHover(tile, event)"
+          @mouseenter="(tile, event) => onTileHover(tile, event)"
           @mouseleave="onTileLeave"
         />
         
@@ -67,7 +67,7 @@
             :is-acceptance-highlight="checkIsAcceptanceHighlight(drawnTile)"
             :disabled="(isRiichiPreviewMode || player.riichi) && drawnTile && riichiDisabledTiles.includes(drawnTile.id)"
             @click="onTileClick"
-            @mouseenter="(event) => drawnTile && onTileHover(drawnTile, event)"
+            @mouseenter="(tile, event) => drawnTile && onTileHover(tile, event)"
             @mouseleave="onTileLeave"
           />
           <div

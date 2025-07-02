@@ -1,5 +1,5 @@
 import type { Tile, Player, GamePhase } from '../stores/fourPlayerMahjong'
-import { canRiichi, canRiichiWithMelds, checkWinCondition, calculateShanten, isFuriten } from './mahjong-logic'
+import { canRiichi, canRiichiWithMelds, checkWinCondition, calculateShanten, isFuriten, calculateAcceptance, type AcceptanceInfo } from './mahjong-logic'
 import { EnhancedDraw } from './enhanced-draw'
 import { RecordsManager } from './records-manager'
 import { type PlayerTestData } from './useGameSettings'
@@ -23,7 +23,8 @@ export class GameManager {
   private _lastKanPlayerIndex: number | null = null // 直前にカンしたプレイヤー
   private _afterKan: boolean = false // 直前にカンが行われたかどうか
   private _enhancedDraw: EnhancedDraw
-  private _gameSettings: { cpuStrengths: string[], gameType: string, agariRenchan: boolean, hakoshita: boolean }
+  private _gameSettings: { cpuStrengths: string[], gameType: string, agariRenchan: boolean, hakoshita: boolean, specialMode?: { chinitsuMode: boolean } }
+  private _chinitsuSuit: 'man' | 'pin' | 'sou' | null = null // 清一色モードで使用する色
   private _currentTurn: number = 0 // 現在の巡目
   private _gameStartTime: Date | null = null // ゲーム開始時刻
   private _testMode: { isActive: boolean, testData: PlayerTestData[] } = {
@@ -32,6 +33,10 @@ export class GameManager {
   }
   private _testDrawIndices: number[] = [0, 0, 0, 0] // 各プレイヤーのツモ牌インデックス
   private _firstTakeFlags: boolean[] = [true, true, true, true] // 各プレイヤーの第一ツモフラグ
+  
+  // 受け入れ計算キャッシュ
+  private _acceptanceCache: Map<string, AcceptanceInfo[]> = new Map()
+  private _lastHandStates: string[] = ['', '', '', ''] // 各プレイヤーの前回の手牌状態
 
   constructor() {
     // ローカルストレージから設定を読み込み
@@ -222,6 +227,16 @@ export class GameManager {
   generateWall(): void {
     const tiles: Tile[] = []
 
+    // 清一色モードかどうかチェック
+    const isChinitsuMode = this._gameSettings.specialMode?.chinitsuMode || false
+    
+    if (isChinitsuMode) {
+      // 清一色モードの場合、各局ごとにランダムに色を選択
+      const suits: ('man' | 'pin' | 'sou')[] = ['man', 'pin', 'sou']
+      this._chinitsuSuit = suits[Math.floor(Math.random() * suits.length)]
+    }
+    
+    // 清一色モードでも通常通り全色の牌を生成
     for (const suit of ['man', 'pin', 'sou'] as const) {
       for (let rank = 1; rank <= 9; rank++) {
         for (let i = 0; i < 4; i++) {
@@ -237,6 +252,7 @@ export class GameManager {
       }
     }
 
+    // 字牌も生成
     for (let rank = 1; rank <= 7; rank++) {
       for (let i = 0; i < 4; i++) {
         tiles.push({
@@ -285,17 +301,29 @@ export class GameManager {
         return settings.handQuality || 'good'
       }
     } catch (error) {
-      console.error('Failed to load hand quality setting:', error)
+      // Failed to load hand quality setting
     }
     return 'good'
   }
 
   private dealPlayerHand(playerIndex: number, handQuality: string): void {
     const player = this._players[playerIndex]
+    const isChinitsuMode = this._gameSettings.specialMode?.chinitsuMode || false
+    const isHumanPlayer = playerIndex === 0 // プレイヤー（人間）は0番
 
     if (handQuality === 'normal') {
-      // 通常配牌（現在と同じ）
+      // 通常配牌
       for (let i = 0; i < 13; i++) {
+        if (isChinitsuMode && isHumanPlayer) {
+          // 清一色モードかつプレイヤー（人間）の場合、100%の確率で対象の色の牌を優先的に配る
+          const chinitsutile = this.drawChinitsuTileForDeal()
+          if (chinitsutile) {
+            player.tiles.push(chinitsutile)
+            continue
+          }
+        }
+        
+        // 通常配牌または清一色モードで対象の色がない場合
         if (this._wall.length > 0) {
           const tile = this._wall.shift()!
           player.tiles.push(tile)
@@ -304,7 +332,7 @@ export class GameManager {
     } else {
       // 複数候補から最適な手牌を選択
       const candidates = handQuality === 'good' ? 2 : 5
-      const bestHand = this.selectBestHand(candidates)
+      const bestHand = this.selectBestHand(candidates, isHumanPlayer)
 
       // 選択された手牌を配牌
       bestHand.forEach(tile => {
@@ -317,9 +345,10 @@ export class GameManager {
     }
   }
 
-  private selectBestHand(candidates: number): Tile[] {
+  private selectBestHand(candidates: number, isHumanPlayer: boolean = false): Tile[] {
     let bestHand: Tile[] = []
     let bestScore = -1
+    const isChinitsuMode = this._gameSettings.specialMode?.chinitsuMode || false
 
     for (let i = 0; i < candidates; i++) {
       const candidateHand: Tile[] = []
@@ -327,6 +356,21 @@ export class GameManager {
 
       // 13枚の候補手牌を生成
       for (let j = 0; j < 13; j++) {
+        if (isChinitsuMode && isHumanPlayer && this._chinitsuSuit) {
+          // 清一色モードかつ人間プレイヤーの場合、100%の確率で対象の色の牌を選ぶ
+          const targetSuitTiles = wallCopy.filter(tile => tile.suit === this._chinitsuSuit)
+          if (targetSuitTiles.length > 0) {
+            const randomIndex = Math.floor(Math.random() * targetSuitTiles.length)
+            const selectedTile = targetSuitTiles[randomIndex]
+            const wallIndex = wallCopy.findIndex(t => t.id === selectedTile.id)
+            if (wallIndex !== -1) {
+              candidateHand.push(wallCopy.splice(wallIndex, 1)[0])
+              continue
+            }
+          }
+        }
+        
+        // 通常の牌選択または清一色モードでフォールバック
         if (wallCopy.length > 0) {
           const randomIndex = Math.floor(Math.random() * wallCopy.length)
           candidateHand.push(wallCopy.splice(randomIndex, 1)[0])
@@ -408,7 +452,7 @@ export class GameManager {
         return settings.manipulationRate !== undefined ? settings.manipulationRate : 80
       }
     } catch (error) {
-      console.error('Failed to load manipulation rate setting:', error)
+      // Failed to load manipulation rate setting
     }
     return 80
   }
@@ -417,6 +461,8 @@ export class GameManager {
    * 牌操作率設定を更新（ゲーム中の設定変更対応）
    */
   updateManipulationRate(): void {
+    // 設定を再読み込み
+    this._gameSettings = this.loadGameSettings()
     const newRate = this.getManipulationRate()
     this._enhancedDraw.setBoostProbability(newRate / 100)
   }
@@ -468,10 +514,78 @@ export class GameManager {
     return this.drawTileInternal(playerIndex)
   }
 
+  // 清一色モード用の配牌メソッド
+  private drawChinitsuTileForDeal(): Tile | null {
+    const isChinitsuMode = this._gameSettings.specialMode?.chinitsuMode || false
+    if (!isChinitsuMode || !this._chinitsuSuit) {
+      return null
+    }
+
+    // 清一色モードで対象の色の牌を探す
+    const targetSuitTiles = this._wall.filter(tile => tile.suit === this._chinitsuSuit)
+    
+    if (targetSuitTiles.length > 0) {
+      // 対象の色の牌がある場合、ランダムに選択
+      const randomIndex = Math.floor(Math.random() * targetSuitTiles.length)
+      const selectedTile = targetSuitTiles[randomIndex]
+      
+      // 山から除去
+      const wallIndex = this._wall.findIndex(t => t.id === selectedTile.id)
+      if (wallIndex !== -1) {
+        this._wall.splice(wallIndex, 1)
+      }
+      
+      return selectedTile
+    }
+    
+    return null
+  }
+
+  // 清一色モード用のツモメソッド
+  private drawChinitsuTile(playerIndex: number): Tile | null {
+    const isChinitsuMode = this._gameSettings.specialMode?.chinitsuMode || false
+    if (!isChinitsuMode || !this._chinitsuSuit) {
+      return null
+    }
+
+    // 清一色モードで対象の色の牌を探す
+    const targetSuitTiles = this._wall.filter(tile => tile.suit === this._chinitsuSuit)
+    
+    if (targetSuitTiles.length > 0) {
+      // 対象の色の牌がある場合、ランダムに選択
+      const randomIndex = Math.floor(Math.random() * targetSuitTiles.length)
+      const selectedTile = targetSuitTiles[randomIndex]
+      
+      // 山から除去
+      const wallIndex = this._wall.findIndex(t => t.id === selectedTile.id)
+      if (wallIndex !== -1) {
+        this._wall.splice(wallIndex, 1)
+      }
+      
+      return selectedTile
+    }
+    
+    // 対象の色の牌がない場合はnullを返す（通常のツモにフォールバック）
+    return null
+  }
+
   private drawTileInternal(playerIndex: number): Tile | null {
 
     // 14枚残しで終了
     if (this._wall.length <= 14) return null
+
+    // 清一色モードかつ人間プレイヤーの場合、必ず対象の色の牌を優先
+    const isChinitsuMode = this._gameSettings.specialMode?.chinitsuMode || false
+    const isHumanPlayer = playerIndex === 0
+    if (isChinitsuMode && isHumanPlayer) {
+      const chinitsutile = this.drawChinitsuTile(playerIndex)
+      if (chinitsutile) {
+        this._currentDrawnTile = chinitsutile
+        this.clearFirstTakeFlag(playerIndex)
+        return chinitsutile
+      }
+      // 対象の色の牌がない場合は通常処理にフォールバック
+    }
 
     const player = this._players[playerIndex]
 
@@ -660,6 +774,12 @@ export class GameManager {
     this._currentDrawnTile = null
     this._currentTurn = 1 // 巡目をリセット
     this.resetFirstTakeFlags() // 天和・地和判定のため第一ツモフラグをリセット
+    
+    // 清一色モードの色をリセット
+    this._chinitsuSuit = null
+    
+    // 受け入れキャッシュをクリア
+    this.clearAcceptanceCache()
 
     this.generateWall()
     this.dealInitialHands()
@@ -826,7 +946,6 @@ export class GameManager {
 
       return { isWin: false }
     } catch (error) {
-      console.error('Error in checkWinConditionForPlayer scoring check:', error)
       return { isWin: false }
     }
   }
@@ -977,7 +1096,6 @@ export class GameManager {
       }
       return false
     } catch (error) {
-      console.error('Error in canHumanRon scoring check:', error)
       return false
     }
   }
@@ -1041,20 +1159,35 @@ export class GameManager {
   }
 
   // ローカルストレージからゲーム設定を読み込み
-  private loadGameSettings(): { cpuStrengths: string[], gameType: string, agariRenchan: boolean, hakoshita: boolean } {
+  private loadGameSettings(): { cpuStrengths: string[], gameType: string, agariRenchan: boolean, hakoshita: boolean, specialMode?: { chinitsuMode: boolean } } {
     try {
+      // まず mahjongGameSettings から設定を読み込み
       const settingsJson = localStorage.getItem('mahjongGameSettings')
       if (settingsJson) {
         const settings = JSON.parse(settingsJson)
+        
+        // ゲームプレイ設定（mahjong-game-settings）から特殊モード設定を読み込み
+        let specialMode = { chinitsuMode: false }
+        try {
+          const gameplaySettingsJson = localStorage.getItem('mahjong-game-settings')
+          if (gameplaySettingsJson) {
+            const gameplaySettings = JSON.parse(gameplaySettingsJson)
+            specialMode = gameplaySettings.specialMode || { chinitsuMode: false }
+          }
+        } catch (error) {
+          // Failed to load gameplay settings
+        }
+        
         return {
           cpuStrengths: settings.cpuStrengths || ['normal', 'normal', 'normal'],
           gameType: settings.gameType || 'tonpuusen',
           agariRenchan: settings.agariRenchan || false,
-          hakoshita: settings.hakoshita !== undefined ? settings.hakoshita : true
+          hakoshita: settings.hakoshita !== undefined ? settings.hakoshita : true,
+          specialMode: specialMode
         }
       }
     } catch (error) {
-      console.error('Failed to load game settings:', error)
+      // Failed to load game settings
     }
 
     // デフォルト設定
@@ -1062,7 +1195,8 @@ export class GameManager {
       cpuStrengths: ['normal', 'normal', 'normal'],
       gameType: 'tonpuusen',
       agariRenchan: false,
-      hakoshita: true
+      hakoshita: true,
+      specialMode: { chinitsuMode: false }
     }
   }
 
@@ -1444,5 +1578,96 @@ export class GameManager {
   // ゲーム開始時に第一ツモフラグをリセット
   resetFirstTakeFlags(): void {
     this._firstTakeFlags = [true, true, true, true]
+  }
+
+  // 手牌状態を文字列キーに変換
+  private generateHandStateKey(playerIndex: number, tiles: Tile[], currentDrawnTile: Tile | null): string {
+    const allTiles = currentDrawnTile ? [...tiles, currentDrawnTile] : tiles
+    
+    // 牌をソートして一意のキーを生成
+    const sortedTiles = allTiles
+      .map(tile => `${tile.suit}${tile.rank}${tile.isRed ? 'r' : ''}`)
+      .sort()
+      .join(',')
+    
+    // 見えている牌も含める（河、ドラ表示牌など）
+    const visibleTiles = this.getVisibleTiles()
+    const visibleKey = visibleTiles
+      .map(tile => `${tile.suit}${tile.rank}${tile.isRed ? 'r' : ''}`)
+      .sort()
+      .join(',')
+    
+    return `${playerIndex}_${this._currentTurn}_${sortedTiles}_${visibleKey}`
+  }
+
+  // 見えている牌を取得
+  private getVisibleTiles(): Tile[] {
+    const visibleTiles: Tile[] = []
+    
+    // 全プレイヤーの河
+    for (const player of this._players) {
+      visibleTiles.push(...player.discards)
+    }
+    
+    // ドラ表示牌
+    visibleTiles.push(...this._doraIndicators)
+    
+    return visibleTiles
+  }
+
+  // キャッシュされた受け入れ情報を取得（なければ計算）
+  getCachedAcceptanceInfo(playerIndex: number): AcceptanceInfo[] {
+    const player = this._players[playerIndex]
+    const currentDrawnTile = playerIndex === this._currentPlayerIndex ? this._currentDrawnTile : null
+    
+    // 14枚でない場合は空を返す
+    const totalTiles = player.tiles.length + (currentDrawnTile ? 1 : 0)
+    if (totalTiles !== 14) {
+      return []
+    }
+    
+    const handStateKey = this.generateHandStateKey(playerIndex, player.tiles, currentDrawnTile)
+    
+    // 前回と同じ手牌状態ならキャッシュから取得
+    if (this._lastHandStates[playerIndex] === handStateKey && this._acceptanceCache.has(handStateKey)) {
+      return this._acceptanceCache.get(handStateKey)!
+    }
+    
+    // 新しい手牌状態なので計算
+    const allTiles = currentDrawnTile ? [...player.tiles, currentDrawnTile] : player.tiles
+    const visibleTiles = this.getVisibleTiles()
+    const acceptanceInfo = calculateAcceptance(allTiles, visibleTiles)
+    
+    // キャッシュに保存
+    this._acceptanceCache.set(handStateKey, acceptanceInfo)
+    this._lastHandStates[playerIndex] = handStateKey
+    
+    // 古いキャッシュをクリア（メモリ効率のため）
+    this.cleanupOldCache()
+    
+    return acceptanceInfo
+  }
+
+  // 古いキャッシュをクリア
+  private cleanupOldCache(): void {
+    // キャッシュサイズが100を超えた場合、古いエントリを削除
+    if (this._acceptanceCache.size > 100) {
+      const entries = Array.from(this._acceptanceCache.entries())
+      // 最初の50エントリを削除
+      for (let i = 0; i < 50; i++) {
+        this._acceptanceCache.delete(entries[i][0])
+      }
+    }
+  }
+
+  // 最後の手牌状態キーを取得
+  getLastHandStateKey(playerIndex: number): string {
+    return this._lastHandStates[playerIndex] || ''
+  }
+
+  // 新しいゲーム開始時にキャッシュをクリア
+  clearAcceptanceCache(): void {
+    this._acceptanceCache.clear()
+    this._lastHandStates = ['', '', '', '']
   }
 }

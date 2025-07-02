@@ -5,7 +5,12 @@ const router = useRouter()
 
 // コンポーネントマウント時の処理
 onMounted(() => {
-  // 必要に応じて初期化処理を追加
+  // specialModeプロパティが初期化されていることを確認
+  if (!gameSettings.value.specialMode) {
+    gameSettings.value.specialMode = {
+      chinitsuMode: false
+    }
+  }
 })
 
 // ゲーム設定
@@ -16,14 +21,18 @@ const gameSettings = ref({
   agariRenchan: false, // 上がり連荘
   hakoshita: false, // トビ終了
   manipulationRate: 80, // 牌操作率
-  handQuality: 'good' // 手牌の良さ
+  handQuality: 'good', // 手牌の良さ
+  specialMode: {
+    chinitsuMode: false // 清一色モード
+  }
 })
 
 // 各設定セクションの開閉状態
 const sectionExpanded = ref({
   cpu: false,
   gameType: false,
-  manipulation: false
+  manipulation: false,
+  special: false
 })
 
 
@@ -110,8 +119,8 @@ function startFourPlayerGame() {
   const gameplaySettings = {
     disableMeld: false,
     autoWin: false,
-    showAcceptance: false,
-    showAcceptanceHighlight: false,
+    showAcceptance: true,
+    showAcceptanceHighlight: true,
     manipulationRate: gameSettings.value.manipulationRate,
     handQuality: gameSettings.value.handQuality,
     testMode: {
@@ -122,6 +131,9 @@ function startFourPlayerGame() {
         { tiles: [], drawTiles: [] },
         { tiles: [], drawTiles: [] }
       ]
+    },
+    specialMode: {
+      chinitsuMode: gameSettings.value.specialMode.chinitsuMode
     }
   }
   
@@ -168,6 +180,10 @@ const manipulationDisplay = computed(() => {
   return `有効牌ツモ率: ${rate?.title || ''} / 配牌: ${quality?.title || ''}`
 })
 
+const specialModeDisplay = computed(() => {
+  return gameSettings.value.specialMode?.chinitsuMode ? '清一色モード' : 'OFF'
+})
+
 // エクスポート
 export {
   gameSettings,
@@ -181,5 +197,6 @@ export {
   onPresetChange,
   cpuSettingDisplay,
   gameTypeDisplay,
-  manipulationDisplay
+  manipulationDisplay,
+  specialModeDisplay
 }

@@ -630,6 +630,46 @@
   font-weight: bold;
 }
 
+/* 特殊モード */
+.special-mode-grid {
+  padding: 1rem 0;
+}
+
+.special-mode-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  padding: 1.2rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: all 0.3s ease;
+}
+
+.special-mode-card:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.special-mode-switch {
+  width: 100%;
+}
+
+.special-mode-label {
+  flex: 1;
+  padding-left: 0.5rem;
+}
+
+.special-mode-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.25rem;
+}
+
+.special-mode-description {
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
 /* 使い方セクション */
 .info-card {
   background: rgba(255, 255, 255, 0.95);

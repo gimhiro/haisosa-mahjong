@@ -6,7 +6,12 @@ const router = useRouter()
 
 // コンポーネントマウント時の処理
 onMounted(() => {
-  // 必要に応じて初期化処理を追加
+  // specialModeプロパティが初期化されていることを確認
+  if (!gameSettings.value.specialMode) {
+    gameSettings.value.specialMode = {
+      chinitsuMode: false
+    }
+  }
 })
 
 // ゲーム設定
@@ -17,14 +22,18 @@ const gameSettings = ref({
   agariRenchan: false, // 上がり連荘
   hakoshita: false, // トビ終了
   manipulationRate: 80, // 牌操作率
-  handQuality: 'good' // 手牌の良さ
+  handQuality: 'good', // 手牌の良さ
+  specialMode: {
+    chinitsuMode: false // 清一色モード
+  }
 })
 
 // 各設定セクションの開閉状態
 const sectionExpanded = ref({
   cpu: false,
   gameType: false,
-  manipulation: false
+  manipulation: false,
+  special: false
 })
 
 
@@ -111,8 +120,8 @@ function startFourPlayerGame() {
   const gameplaySettings = {
     disableMeld: false,
     autoWin: false,
-    showAcceptance: false,
-    showAcceptanceHighlight: false,
+    showAcceptance: true,
+    showAcceptanceHighlight: true,
     manipulationRate: gameSettings.value.manipulationRate,
     handQuality: gameSettings.value.handQuality,
     testMode: {
@@ -123,6 +132,9 @@ function startFourPlayerGame() {
         { tiles: [], drawTiles: [] },
         { tiles: [], drawTiles: [] }
       ]
+    },
+    specialMode: {
+      chinitsuMode: gameSettings.value.specialMode.chinitsuMode
     }
   }
 
@@ -167,6 +179,10 @@ const manipulationDisplay = computed(() => {
   const rate = manipulationRateOptions.find(r => r.value === gameSettings.value.manipulationRate)
   const quality = handQualityOptions.find(q => q.value === gameSettings.value.handQuality)
   return `有効牌ツモ率: ${rate?.title || ''} / 配牌: ${quality?.title || ''}`
+})
+
+const specialModeDisplay = computed(() => {
+  return gameSettings.value.specialMode?.chinitsuMode ? '清一色モード' : 'OFF'
 })
 </script>
 
@@ -409,6 +425,44 @@ const manipulationDisplay = computed(() => {
             </v-col>
           </v-row>
 
+          <!-- 特殊モード設定 -->
+          <v-row class="settings-grid">
+            <v-col cols="12">
+              <div class="setting-section">
+                <div class="section-header" @click="sectionExpanded.special = !sectionExpanded.special">
+                  <div class="section-header-content">
+                    <v-icon class="section-icon">mdi-star</v-icon>
+                    <h3 class="section-title">特殊モード</h3>
+                    <span class="section-value">{{ specialModeDisplay }}</span>
+                  </div>
+                  <v-icon class="expand-icon" :class="{ 'expand-icon--expanded': sectionExpanded.special }">
+                    mdi-chevron-down
+                  </v-icon>
+                </div>
+
+                <v-expand-transition>
+                  <div v-show="sectionExpanded.special">
+                    <div class="special-mode-grid">
+                      <div class="special-mode-card">
+                        <v-switch v-model="gameSettings.specialMode.chinitsuMode" hide-details color="primary"
+                          class="special-mode-switch">
+                          <template v-slot:label>
+                            <div class="special-mode-label">
+                              <div class="special-mode-title">清一色モード</div>
+                              <div class="special-mode-description">
+                                配牌およびすべてのツモがランダムな特定の一色になります (萬子、筒子、索子)
+                              </div>
+                            </div>
+                          </template>
+                        </v-switch>
+                      </div>
+                    </div>
+                  </div>
+                </v-expand-transition>
+              </div>
+            </v-col>
+          </v-row>
+
           <!-- ゲーム開始ボタン（下部） -->
           <!-- <div class="start-button-container mt-8 mb-2">
               <v-btn
@@ -478,11 +532,24 @@ const manipulationDisplay = computed(() => {
               <v-icon class="version-history-icon">mdi-history</v-icon>
               バージョン履歴
             </div>
-            <div class="current-version">v1.1.6</div>
+            <div class="current-version">v1.2.0</div>
           </div>
         </v-card-title>
         <v-card-text>
           <div class="version-history-content">
+            <div class="version-item">
+              <div class="version-header">
+                <div class="version-badge">v1.2.0</div>
+                <h4 class="version-title">清一色モードの追加</h4>
+                <div class="version-date">2025-07-02</div>
+              </div>
+              <div class="version-description">
+                <ul class="version-features">
+                  <li>特殊モード：清一色モードの実装 ※現段階では処理が重いので将来的に軽量化予定</li>
+                  <li>受け入れ計算パフォーマンスの軽量化</li>
+                </ul>
+              </div>
+            </div>
             <div class="version-item">
               <div class="version-header">
                 <div class="version-badge">v1.1.0</div>

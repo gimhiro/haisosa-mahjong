@@ -18,6 +18,9 @@ interface GameSettings {
   manipulationRate: number
   handQuality: 'normal' | 'good' | 'excellent'
   testMode: TestModeData
+  specialMode: {
+    chinitsuMode: boolean
+  }
 }
 
 const STORAGE_KEY = 'mahjong-game-settings'
@@ -37,6 +40,9 @@ const defaultSettings: GameSettings = {
       { tiles: [], drawTiles: [] },
       { tiles: [], drawTiles: [] }
     ]
+  },
+  specialMode: {
+    chinitsuMode: false
   }
 }
 
@@ -50,7 +56,7 @@ export function useGameSettings() {
         if (savedSettings) {
           const parsed = JSON.parse(savedSettings)
           // 古い設定形式の場合は新しい形式にマイグレーション
-          if (!parsed.testMode || parsed.showAcceptance === undefined || parsed.showAcceptanceHighlight === undefined || parsed.manipulationRate === undefined || parsed.handQuality === undefined) {
+          if (!parsed.testMode || parsed.showAcceptance === undefined || parsed.showAcceptanceHighlight === undefined || parsed.manipulationRate === undefined || parsed.handQuality === undefined || !parsed.specialMode) {
             return {
               disableMeld: parsed.disableMeld ?? false,
               autoWin: parsed.autoWin ?? false,
@@ -58,7 +64,8 @@ export function useGameSettings() {
               showAcceptanceHighlight: parsed.showAcceptanceHighlight ?? true,
               manipulationRate: parsed.manipulationRate ?? 80,
               handQuality: parsed.handQuality ?? 'good',
-              testMode: parsed.testMode ?? defaultSettings.testMode
+              testMode: parsed.testMode ?? defaultSettings.testMode,
+              specialMode: parsed.specialMode ?? defaultSettings.specialMode
             }
           }
           return parsed

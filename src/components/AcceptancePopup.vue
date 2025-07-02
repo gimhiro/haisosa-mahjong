@@ -1,43 +1,31 @@
 <template>
   <Teleport to="body">
-    <div 
-      v-if="show && (tileAcceptanceInfo || isCalculating)"
-      :class="['acceptance-popup-overlay', { 'fixed-position': isFixedPosition }]"
-      :style="isFixedPosition ? { 
-        top: `${mouseY}px`, 
-        left: `${mouseX}px` 
-      } : { 
-        top: `${mouseY - 20}px`, 
-        left: `${mouseX + 10}px` 
-      }"
-    >
+    <div v-if="show && (tileAcceptanceInfo || isCalculating)"
+      :class="['acceptance-popup-overlay', { 'fixed-position': isFixedPosition }]" :style="isFixedPosition ? {
+        top: `${mouseY}px`,
+        left: `${mouseX}px`
+      } : {
+        top: `${mouseY - 20}px`,
+        left: `${mouseX + 10}px`
+      }" @click="logDebugInfo">
       <v-card class="acceptance-popup-card">
         <v-card-text class="pa-3">
           <!-- ローディング表示 -->
           <div v-if="isCalculating" class="acceptance-loading">
-            <v-progress-circular
-              indeterminate
-              size="20"
-              width="2"
-              color="primary"
-            />
+            <v-progress-circular indeterminate size="20" width="2" color="primary" />
             <span class="loading-text">計算中...</span>
           </div>
-          
+
           <!-- 受け入れ情報なし -->
           <div v-else-if="!tileAcceptanceInfo" class="text-center">
             受け入れ情報なし
           </div>
-          
+
           <!-- 受け入れ情報表示 -->
           <div v-else class="acceptance-tooltip">
             <div class="tooltip-header">
               <div class="discard-tile-small">
-                <MahjongTile 
-                  :tile="tileAcceptanceInfo.tile"
-                  size="small"
-                  :is-draggable="false"
-                />
+                <MahjongTile :tile="tileAcceptanceInfo.tile" size="small" :is-draggable="false" />
                 <span class="tile-name">{{ getTileText(tileAcceptanceInfo.tile) }}</span>
               </div>
               <div class="total-acceptance">
@@ -47,18 +35,12 @@
                 </div>
               </div>
             </div>
-            
+
             <div class="acceptance-tiles">
-              <div 
-                v-for="(tileIndex, idx) in tileAcceptanceInfo.acceptanceTiles"
-                :key="idx"
-                class="acceptance-tile-item"
-              >
-                <MahjongTile 
-                  :tile="createTileFromIndex(tileIndex, `tooltip_${idx}`)"
-                  size="small"
-                  :is-draggable="false"
-                />
+              <div v-for="(tileIndex, idx) in tileAcceptanceInfo.acceptanceTiles" :key="idx"
+                class="acceptance-tile-item">
+                <MahjongTile :tile="createTileFromIndex(tileIndex, `tooltip_${idx}`)" size="small"
+                  :is-draggable="false" />
                 <div class="remaining-count">
                   {{ tileAcceptanceInfo.remainingCounts[idx] }}枚
                 </div>
@@ -72,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import MahjongTile from './MahjongTile.vue'
 import { getTileText } from '../utils/tile-renderer'
 import { createTileFromIndex, type AcceptanceInfo } from '../utils/mahjong-logic'
@@ -101,13 +83,28 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const show = computed({
-  get: () => props.modelValue,
+  get: () => {
+    return props.modelValue
+  },
   set: (value) => emit('update:modelValue', value)
 })
 
 function getAcceptanceLabel(): string {
   return props.isUsefulTiles ? '有効牌' : '受け入れ'
 }
+
+function logDebugInfo() {
+  // デバッグ情報のログ出力（削除済み）
+}
+
+// propsの変更を監視
+watch(() => props.modelValue, () => {
+  // modelValue変更の監視（ログ出力削除済み）
+})
+
+watch(() => props.tileAcceptanceInfo, () => {
+  // tileAcceptanceInfo変更の監視（ログ出力削除済み）
+})
 </script>
 
 <style scoped>

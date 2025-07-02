@@ -89,7 +89,7 @@ const emit = defineEmits<{
   select: [tile: Tile]
   dragStart: [tile: Tile]
   dragEnd: [tile: Tile]
-  mouseenter: [tile: Tile]
+  mouseenter: [tile: Tile, event: MouseEvent]
   mouseleave: [tile: Tile]
 }>()
 
@@ -160,17 +160,14 @@ function handleDragEnd() {
   emit('dragEnd', props.tile)
 }
 
-function handleMouseEnter() {
-  emit('mouseenter', props.tile)
+function handleMouseEnter(event: MouseEvent) {
+  emit('mouseenter', props.tile, event)
 }
 
 function handleMouseLeave() {
   emit('mouseleave', props.tile)
 }
 
-function logDoraRender() {
-  return ''
-}
 </script>
 
 <style scoped>
