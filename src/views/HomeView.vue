@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -18,6 +18,13 @@ const gameSettings = ref({
   hakoshita: false, // トビ終了
   manipulationRate: 80, // 牌操作率
   handQuality: 'good' // 手牌の良さ
+})
+
+// 各設定セクションの開閉状態
+const sectionExpanded = ref({
+  cpu: false,
+  gameType: false,
+  manipulation: false
 })
 
 
@@ -43,7 +50,7 @@ const cpuPresetOptions = [
   { 
     value: 'super', 
     title: 'Super × 3', 
-    description: '80% の牌操作',
+    description: 'hardAI + 80% の牌操作',
     detail: '最適解に近い打牌、上級者向けの高難易度'
   },
   { 
@@ -137,6 +144,30 @@ function onPresetChange() {
     ]
   }
 }
+
+// 現在の設定値を表示用に整形
+const cpuSettingDisplay = computed(() => {
+  const preset = cpuPresetOptions.find(p => p.value === gameSettings.value.cpuStrengthPreset)
+  if (gameSettings.value.cpuStrengthPreset === 'custom') {
+    return `カスタム: ${gameSettings.value.customCpuStrengths.join(', ')}`
+  }
+  return preset?.title || ''
+})
+
+const gameTypeDisplay = computed(() => {
+  const type = gameTypeOptions.find(t => t.value === gameSettings.value.gameType)
+  const options = []
+  if (type) options.push(type.title)
+  if (gameSettings.value.agariRenchan) options.push('上がり連荘')
+  if (gameSettings.value.hakoshita) options.push('トビ終了')
+  return options.join(' / ')
+})
+
+const manipulationDisplay = computed(() => {
+  const rate = manipulationRateOptions.find(r => r.value === gameSettings.value.manipulationRate)
+  const quality = handQualityOptions.find(q => q.value === gameSettings.value.handQuality)
+  return `有効牌ツモ率: ${rate?.title || ''} / 配牌: ${quality?.title || ''}`
+})
 </script>
 
 <template>
@@ -177,64 +208,74 @@ function onPresetChange() {
               <!-- CPU強さ設定 -->
               <v-col cols="12">
                 <div class="setting-section">
-                  <div class="section-header">
-                    <v-icon class="section-icon">mdi-robot</v-icon>
-                    <h3 class="section-title">CPU の強さ</h3>
-                  </div>
-                  
-                  <div class="preset-grid">
-                    <div
-                      v-for="preset in cpuPresetOptions"
-                      :key="preset.value"
-                      :class="['preset-card', { 'preset-card--selected': gameSettings.cpuStrengthPreset === preset.value }]"
-                      @click="gameSettings.cpuStrengthPreset = preset.value; onPresetChange()"
-                    >
-                      <div class="preset-card-inner">
-                        <div class="preset-header">
-                          <v-icon 
-                            :class="['preset-icon', { 'preset-icon--selected': gameSettings.cpuStrengthPreset === preset.value }]"
-                          >
-                            {{ preset.value === 'custom' ? 'mdi-tune' : 'mdi-robot' }}
-                          </v-icon>
-                          <div class="preset-title">{{ preset.title }}</div>
-                        </div>
-                        <div class="preset-description">{{ preset.description }}</div>
-                        <div class="preset-detail">{{ preset.detail }}</div>
-                        <div 
-                          :class="['preset-indicator', { 'preset-indicator--selected': gameSettings.cpuStrengthPreset === preset.value }]"
-                        ></div>
-                      </div>
+                  <div class="section-header" @click="sectionExpanded.cpu = !sectionExpanded.cpu">
+                    <div class="section-header-content">
+                      <v-icon class="section-icon">mdi-robot</v-icon>
+                      <h3 class="section-title">CPU の強さ</h3>
+                      <span class="section-value">{{ cpuSettingDisplay }}</span>
                     </div>
+                    <v-icon class="expand-icon" :class="{ 'expand-icon--expanded': sectionExpanded.cpu }">
+                      mdi-chevron-down
+                    </v-icon>
                   </div>
                   
-                  <!-- 詳細設定 -->
                   <v-expand-transition>
-                    <div v-show="gameSettings.cpuStrengthPreset === 'custom'" class="custom-settings mt-6">
-                      <div class="custom-header">
-                        <v-icon class="custom-icon">mdi-tune</v-icon>
-                        <span class="custom-title">個別CPU設定</span>
-                      </div>
-                      <v-row class="mt-4">
-                        <v-col cols="12" sm="4" v-for="(strength, index) in gameSettings.customCpuStrengths" :key="index">
-                          <div class="cpu-custom-section">
-                            <h4 class="cpu-custom-label">CPU{{ index + 1 }}</h4>
-                            <v-select
-                              v-model="gameSettings.customCpuStrengths[index]"
-                              :items="cpuStrengthOptions"
-                              variant="outlined"
-                              density="comfortable"
-                              class="cpu-select"
-                            >
-                              <template #item="{ props, item }">
-                                <v-list-item v-bind="props" class="cpu-option-item">
-                                  <v-list-item-title>{{ item.title }}</v-list-item-title>
-                                  <v-list-item-subtitle>{{ item.raw.description }}</v-list-item-subtitle>
-                                </v-list-item>
-                              </template>
-                            </v-select>
+                    <div v-show="sectionExpanded.cpu">
+                      <div class="preset-grid">
+                        <div
+                          v-for="preset in cpuPresetOptions"
+                          :key="preset.value"
+                          :class="['preset-card', { 'preset-card--selected': gameSettings.cpuStrengthPreset === preset.value }]"
+                          @click="gameSettings.cpuStrengthPreset = preset.value; onPresetChange()"
+                        >
+                          <div class="preset-card-inner">
+                            <div class="preset-header">
+                              <v-icon 
+                                :class="['preset-icon', { 'preset-icon--selected': gameSettings.cpuStrengthPreset === preset.value }]"
+                              >
+                                {{ preset.value === 'custom' ? 'mdi-tune' : 'mdi-robot' }}
+                              </v-icon>
+                              <div class="preset-title">{{ preset.title }}</div>
+                            </div>
+                            <div class="preset-description">{{ preset.description }}</div>
+                            <div class="preset-detail">{{ preset.detail }}</div>
+                            <div 
+                              :class="['preset-indicator', { 'preset-indicator--selected': gameSettings.cpuStrengthPreset === preset.value }]"
+                            ></div>
                           </div>
-                        </v-col>
-                      </v-row>
+                        </div>
+                      </div>
+                      
+                      <!-- 詳細設定 -->
+                      <v-expand-transition>
+                        <div v-show="gameSettings.cpuStrengthPreset === 'custom'" class="custom-settings mt-6">
+                          <div class="custom-header">
+                            <v-icon class="custom-icon">mdi-tune</v-icon>
+                            <span class="custom-title">個別CPU設定</span>
+                          </div>
+                          <v-row class="mt-4">
+                            <v-col cols="12" sm="4" v-for="(strength, index) in gameSettings.customCpuStrengths" :key="index">
+                              <div class="cpu-custom-section">
+                                <h4 class="cpu-custom-label">CPU{{ index + 1 }}</h4>
+                                <v-select
+                                  v-model="gameSettings.customCpuStrengths[index]"
+                                  :items="cpuStrengthOptions"
+                                  variant="outlined"
+                                  density="comfortable"
+                                  class="cpu-select"
+                                >
+                                  <template #item="{ props, item }">
+                                    <v-list-item v-bind="props" class="cpu-option-item">
+                                      <v-list-item-title>{{ item.value }}</v-list-item-title>
+                                      <v-list-item-subtitle>{{ item.raw.description }}</v-list-item-subtitle>
+                                    </v-list-item>
+                                  </template>
+                                </v-select>
+                              </div>
+                            </v-col>
+                          </v-row>
+                        </div>
+                      </v-expand-transition>
                     </div>
                   </v-expand-transition>
                 </div>
@@ -242,7 +283,21 @@ function onPresetChange() {
               
               <!-- 局数・ルール設定 -->
               <v-col cols="12">
-                <v-row>
+                <div class="setting-section">
+                  <div class="section-header" @click="sectionExpanded.gameType = !sectionExpanded.gameType">
+                    <div class="section-header-content">
+                      <v-icon class="section-icon">mdi-gamepad-square</v-icon>
+                      <h3 class="section-title">ゲーム形式</h3>
+                      <span class="section-value">{{ gameTypeDisplay }}</span>
+                    </div>
+                    <v-icon class="expand-icon" :class="{ 'expand-icon--expanded': sectionExpanded.gameType }">
+                      mdi-chevron-down
+                    </v-icon>
+                  </div>
+                  
+                  <v-expand-transition>
+                    <div v-show="sectionExpanded.gameType">
+                      <v-row>
                   <!-- 局数設定 -->
                   <v-col cols="12" sm="6">
                     <div class="setting-section">
@@ -298,17 +353,34 @@ function onPresetChange() {
                     </div>
                   </v-col>
                 </v-row>
+                    </div>
+                  </v-expand-transition>
+                </div>
               </v-col>
               
               <!-- 牌操作・配牌設定 -->
               <v-col cols="12">
-                <v-row>
+                <div class="setting-section">
+                  <div class="section-header" @click="sectionExpanded.manipulation = !sectionExpanded.manipulation">
+                    <div class="section-header-content">
+                      <v-icon class="section-icon">mdi-dice-6</v-icon>
+                      <h3 class="section-title">牌操作・配牌</h3>
+                      <span class="section-value">{{ manipulationDisplay }}</span>
+                    </div>
+                    <v-icon class="expand-icon" :class="{ 'expand-icon--expanded': sectionExpanded.manipulation }">
+                      mdi-chevron-down
+                    </v-icon>
+                  </div>
+                  
+                  <v-expand-transition>
+                    <div v-show="sectionExpanded.manipulation">
+                      <v-row>
                   <!-- 牌操作率設定 -->
                   <v-col cols="12" sm="6">
                     <div class="setting-section">
                       <div class="section-header">
                         <v-icon class="section-icon">mdi-shuffle-variant</v-icon>
-                        <h3 class="section-title">牌操作率</h3>
+                        <h3 class="section-title">有効牌ツモ率</h3>
                       </div>
                       <div class="manipulation-grid">
                         <div
@@ -339,7 +411,7 @@ function onPresetChange() {
                     <div class="setting-section">
                       <div class="section-header">
                         <v-icon class="section-icon">mdi-cards</v-icon>
-                        <h3 class="section-title">手牌の良さ</h3>
+                        <h3 class="section-title">配牌の良さ</h3>
                       </div>
                       <div class="hand-quality-grid">
                         <div
@@ -365,11 +437,14 @@ function onPresetChange() {
                     </div>
                   </v-col>
                 </v-row>
+                    </div>
+                  </v-expand-transition>
+                </div>
               </v-col>
             </v-row>
             
             <!-- ゲーム開始ボタン（下部） -->
-            <div class="start-button-container mt-8 mb-2">
+            <!-- <div class="start-button-container mt-8 mb-2">
               <v-btn
                 color="primary"
                 size="x-large"
@@ -380,7 +455,7 @@ function onPresetChange() {
                 <v-icon start size="large">mdi-play</v-icon>
                 4人対戦を開始
               </v-btn>
-            </div>
+            </div> -->
           </v-card-text>
         </v-card>
       </div>
@@ -1395,5 +1470,64 @@ function onPresetChange() {
 
 .v-radio :deep(.v-selection-control__wrapper) {
   margin-right: 0.75rem;
+}
+
+/* 開閉式セクションヘッダー */
+.section-header {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  margin: -0.5rem;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.section-header:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.section-header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.section-value {
+  font-size: 1.1rem;
+  color: #334155;
+  font-weight: 600;
+  margin-left: auto;
+  margin-right: 0.5rem;
+}
+
+.expand-icon {
+  transition: transform 0.3s ease;
+  color: #64748b;
+}
+
+.expand-icon--expanded {
+  transform: rotate(180deg);
+}
+
+/* 設定セクション内の入れ子を調整 */
+.setting-section .setting-section {
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.setting-section .setting-section .section-header {
+  display: block;
+  cursor: default;
+  padding: 0;
+  margin: 0;
+}
+
+.setting-section .setting-section .section-header:hover {
+  background: none;
 }
 </style>
