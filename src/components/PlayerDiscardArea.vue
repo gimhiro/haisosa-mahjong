@@ -70,9 +70,10 @@ function getDiscardRowFixed(rowIndex: number): Tile[] {
   const tiles = allDiscards.value
   const rowTiles = tiles.slice(rowIndex * 6, (rowIndex + 1) * 6)
   
-  // リーチ宣言牌をログ出力
+  // リーチ宣言牌の処理
   rowTiles.forEach(tile => {
     if (tile.isRiichiDeclaration) {
+      // リーチ宣言牌として処理済み
     }
   })
   

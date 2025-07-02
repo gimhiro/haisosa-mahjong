@@ -45,7 +45,7 @@
         size="small"
         block
         class="action-btn"
-        @click="$emit('toggleRiichiPreview')"
+        @click="riichiPreviewMode ? $emit('toggleRiichiPreview') : $emit('declareRiichi')"
       >
         {{ riichiButtonText }}
       </v-btn>
@@ -211,6 +211,7 @@ defineEmits<{
   declareTsumo: []
   cancelTsumo: []
   declareRon: []
+  declareRiichi: []
   toggleRiichiPreview: []
   declarePon: []
   declareKan: []
