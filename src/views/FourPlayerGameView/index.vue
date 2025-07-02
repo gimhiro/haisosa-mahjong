@@ -252,6 +252,7 @@ import DoraPanel from '../../components/DoraPanel.vue'
 import TestModeDialog from '../../components/TestModeDialog.vue'
 import AcceptancePopup from '../../components/AcceptancePopup.vue'
 import { useFourPlayerGameView } from './script'
+import { computed } from 'vue'
 
 // Composition APIを使用してロジックを分離
 const {
