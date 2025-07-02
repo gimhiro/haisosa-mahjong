@@ -322,10 +322,12 @@ export function useFourPlayerGameView() {
       return
     }
     
-    // 打牌時に受け入れマスクを消去
+    // 打牌時に受け入れマスクと受け入れツールチップを消去
     acceptanceInfos.value = []
     bestAcceptanceTiles.value = []
     isUsefulTilesMode.value = false
+    showAcceptancePopup.value = false
+    currentHoveredTileAcceptance.value = null
     
     // 打牌時に嶺上開花フラグをリセット
     gameManagerInstance.value.resetAfterKan()
@@ -545,10 +547,12 @@ export function useFourPlayerGameView() {
       return
     }
 
-    // リーチ宣言時に受け入れマスクを消去
+    // リーチ宣言時に受け入れマスクと受け入れツールチップを消去
     acceptanceInfos.value = []
     bestAcceptanceTiles.value = []
     isUsefulTilesMode.value = false
+    showAcceptancePopup.value = false
+    currentHoveredTileAcceptance.value = null
 
     // リーチを宣言
     if (canDeclareRiichi.value) {

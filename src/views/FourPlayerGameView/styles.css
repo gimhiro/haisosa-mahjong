@@ -1,0 +1,801 @@
+.four-player-game {
+  width: 100%;
+  height: calc(100vh - 64px);
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #e8f5e8 0%, #f0f8ff 100%);
+  position: relative;
+}
+
+.game-table {
+  flex: 1;
+  position: relative;
+  display: grid;
+  grid-template-areas: 
+    "dora top info"
+    "left center right"
+    "settings bottom actions";
+  grid-template-rows: 20% 60% 20%;
+  grid-template-columns: 20% 60% 20%;
+  gap: 4px;
+  padding: 4px;
+  height: 100%;
+  width: 100%;
+  max-height: 100%;
+}
+
+.player-top {
+  grid-area: top;
+}
+
+.player-left {
+  grid-area: left;
+}
+
+.player-right {
+  grid-area: right;
+}
+
+.player-bottom {
+  grid-area: bottom;
+}
+
+.dora-area {
+  grid-area: dora;
+  padding: 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.game-info-area {
+  grid-area: info;
+  padding: 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.action-area {
+  grid-area: actions;
+  padding: 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.settings-area {
+  grid-area: settings;
+  padding: 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: visible;
+}
+
+.center-area {
+  grid-area: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  position: relative;
+}
+
+.discards-area {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.central-square {
+  position: relative;
+  width: min(240px, 36vh, 36vw);
+  height: min(240px, 36vh, 36vw);
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px dashed rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  aspect-ratio: 1;
+}
+
+
+
+.center-info {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.center-label {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.3);
+}
+
+.remaining-tiles {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.5);
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* プレイヤー点数表示 */
+.score-bottom,
+.score-top,
+.score-left,
+.score-right {
+  position: absolute;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #333;
+  /* background: rgba(255, 255, 255, 0.9); */
+  padding: 4px 8px;
+  /* border-radius: 4px; */
+  /* border: 1px solid #ddd; */
+}
+
+.score-bottom {
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.score-top {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.score-left {
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+}
+
+.score-right {
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+}
+
+/* 捨牌エリアの配置 */
+.discard-area-bottom {
+  position: absolute;
+  bottom: -10%;
+  left: 0%;
+  transform: translate(-50%, 50%);
+}
+
+.discard-area-right {
+  position: absolute;
+  right: -10%;
+  top: 100%;
+  transform: translate(50%, -50%) rotate(270deg);
+}
+
+.discard-area-top {
+  position: absolute;
+  top: -10%;
+  left: 100%;
+  transform: translate(-50%, -50%) rotate(180deg);
+}
+
+.discard-area-left {
+  position: absolute;
+  left: -10%;
+  top: 0%;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+
+.turn-info {
+  margin: 8px 0;
+}
+
+.human-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.discard-hint {
+  font-size: 0.8rem;
+  color: #666;
+  text-align: center;
+  font-style: italic;
+}
+
+
+.dora-panel {
+  width: 100%;
+  max-width: 280px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #4caf50;
+  font-size: 0.85rem;
+}
+
+.dora-content {
+  padding: 8px !important;
+}
+
+.game-info-panel {
+  width: 100%;
+  max-width: 280px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #1976d2;
+  font-size: 0.85rem;
+}
+
+.action-panel {
+  width: 100%;
+  max-width: 280px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ff9800;
+  font-size: 0.85rem;
+}
+
+.settings-panel {
+  width: 100%;
+  max-width: 280px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #9c27b0;
+  font-size: 0.85rem;
+}
+
+.action-content {
+  padding: 8px !important;
+}
+
+.action-btn {
+  margin-bottom: 8px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.info-label {
+  font-weight: bold;
+  color: #666;
+}
+
+.info-value {
+  color: #333;
+}
+
+.game-controls {
+  margin-top: 12px;
+}
+
+.dora-tiles {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+
+/* レスポンシブ対応 */
+@media (max-width: 1024px) and (orientation: landscape) {
+  .game-table {
+    grid-template-rows: 20% 60% 20%;
+    grid-template-columns: 20% 60% 20%;
+    gap: 2px;
+    padding: 2px;
+  }
+  
+  .game-info-panel {
+    max-width: 200px;
+    font-size: 0.75rem;
+  }
+  
+  .central-square {
+    width: min(210px, 30vh, 30vw);
+    height: min(210px, 30vh, 30vw);
+  }
+  
+  .discard-area-bottom,
+  .discard-area-top {
+    bottom: -25px;
+    top: -25px;
+  }
+  
+  .discard-area-left,
+  .discard-area-right {
+    left: -25px;
+    right: -25px;
+  }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+  .game-table {
+    grid-template-rows: 20% 60% 20%;
+    grid-template-columns: 20% 60% 20%;
+  }
+  
+  .center-area {
+    padding: 2px;
+    gap: 2px;
+  }
+  
+  .central-square {
+    width: min(168px, 24vh, 42vw);
+    height: min(168px, 24vh, 42vw);
+  }
+  
+  .discard-area-bottom,
+  .discard-area-top {
+    bottom: -20px;
+    top: -20px;
+  }
+  
+  .discard-area-left,
+  .discard-area-right {
+    left: -20px;
+    right: -20px;
+  }
+  
+  .game-info-panel {
+    max-width: 160px;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) and (orientation: landscape) {
+  .game-table {
+    grid-template-rows: 40px 1fr 55px;
+    grid-template-columns: 50px 1fr 50px;
+  }
+  
+  .central-square {
+    width: min(120px, 18vh);
+    height: min(120px, 18vh);
+  }
+  
+  .game-info-panel {
+    max-width: 120px;
+    font-size: 0.65rem;
+  }
+}
+
+/* 河の文字を常に非表示 */
+.center-label {
+  display: none !important;
+}
+
+/* スマホ横画面向けレスポンシブ対応 */
+@media screen and (max-width: 1024px) and (max-height: 600px) and (orientation: landscape) {
+  .game-container {
+    height: 100vh;
+  }
+  
+  /* ドラ表示牌のタイトルを非表示 */
+  .dora-panel .v-card-title {
+    display: none !important;
+  }
+  
+  /* ゲーム情報パネルのタイトルを非表示 */
+  .game-info-panel .v-card-title {
+    display: none !important;
+  }
+  
+  /* アクションパネルのタイトルを非表示 */
+  .action-panel .v-card-title {
+    display: none !important;
+  }
+  
+  /* ゲーム設定パネルのタイトルを非表示 */
+  .settings-panel :deep(.v-card-title),
+  .settings-area :deep(.v-card-title),
+  .settings-area :deep(.text-subtitle-2) {
+    display: none !important;
+  }
+  
+  /* 設定パネルの文字サイズを小さく */
+  .settings-panel :deep(.v-label),
+  .settings-panel :deep(.v-switch .v-label) {
+    font-size: 0.65rem !important;
+  }
+  
+  /* 各パネルにスクロール機能を強制適用 */
+  :deep(.v-card-text) {
+    max-height: 150px !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(0,0,0,0.3) transparent !important;
+  }
+  
+  :deep(.v-card-text::-webkit-scrollbar) {
+    width: 4px !important;
+  }
+  
+  :deep(.v-card-text::-webkit-scrollbar-track) {
+    background: transparent !important;
+  }
+  
+  :deep(.v-card-text::-webkit-scrollbar-thumb) {
+    background-color: rgba(0,0,0,0.3) !important;
+    border-radius: 2px !important;
+  }
+  
+  /* 点数表示から「点」文字を非表示 */
+  .score-unit {
+    display: none !important;
+  }
+  
+  /* 左右プレイヤーエリアのスクロール対応 */
+  .player-left,
+  .player-right {
+    overflow: visible !important;
+    width: 100%;
+    height: 100%;
+    position: relative !important;
+  }
+  
+  .player-left::after,
+  .player-right::after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+  
+  .player-left .hand-container,
+  .player-right .hand-container {
+    max-width: 100%;
+    overflow: visible !important;
+    height: 100%;
+    margin-top: 20px !important;
+  }
+  
+  .game-table {
+    grid-template-rows: 18% 64% 18%;
+    grid-template-columns: 18% 64% 18%;
+    gap: 1px;
+    padding: 1px;
+  }
+  
+  .player-area {
+    padding: 2px;
+  }
+  
+  .player-name {
+    font-size: 0.7rem;
+    padding: 1px 4px;
+  }
+  
+  .player-points {
+    font-size: 0.65rem;
+  }
+  
+  .central-square {
+    width: min(135px, 27vh, 27vw);
+    height: min(135px, 27vh, 27vw);
+  }
+  
+  /* 中央エリアの文字サイズとレイアウト調整 */
+  .center-info {
+    transform: translate(-50%, -45%) scale(0.6) !important;
+  }
+  
+  .center-label {
+    display: none !important;
+  }
+  
+  .remaining-tiles {
+    font-size: 1.5rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* プレイヤー点数表示のマージンを0に、辺際に寄せる */
+  .score-bottom {
+    margin: 0 !important;
+    bottom: 2px !important;
+  }
+  
+  .score-top {
+    margin: 0 !important;
+    top: 2px !important;
+  }
+  
+  .score-left {
+    margin: 0 !important;
+    left: 2px !important;
+  }
+  
+  .score-right {
+    margin: 0 !important;
+    right: 2px !important;
+  }
+  
+  .game-info-panel {
+    max-width: 150px;
+    font-size: 0.65rem;
+    padding: 4px;
+  }
+  
+  .info-item {
+    margin: 2px 0;
+  }
+  
+  /* 牌のサイズ調整 - スマホのみ */
+  .hand-container .tile-small {
+    width: 22px !important;
+    height: 31px !important;
+  }
+  
+  /* 河の捨牌を70%サイズにする */
+  .player-discards {
+    transform: scale(0.8) !important;
+    transform-origin: center !important;
+  }
+  
+  /* 捨て牌エリアの位置調整 - プレイヤー方向に寄せる */
+  .discard-area-bottom {
+    bottom: -100% !important;
+    left: -30% !important;
+  }
+  
+  .discard-area-top {
+    top: -100% !important;
+    right: -70% !important;
+  }
+  
+  .discard-area-left {
+    left: -5% !important;
+    top: 30% !important;
+  }
+  
+  .discard-area-right {
+    right: -5% !important;
+    top: 70% !important;
+  }
+}
+
+/* より小さいスマホ向け（高さ480px以下） */
+@media screen and (max-width: 768px) and (max-height: 480px) and (orientation: landscape) {
+  .game-container {
+    height: 100vh;
+  }
+  
+  /* ドラ表示牌のタイトルを非表示（継承） */
+  .dora-panel .v-card-title {
+    display: none !important;
+  }
+  
+  /* ゲーム情報パネルのタイトルを非表示（継承） */
+  .game-info-panel .v-card-title {
+    display: none !important;
+  }
+  
+  /* アクションパネルのタイトルを非表示（継承） */
+  .action-panel .v-card-title {
+    display: none !important;
+  }
+  
+  /* ゲーム設定パネルのタイトルを非表示（継承） */
+  .settings-panel :deep(.v-card-title),
+  .settings-area :deep(.v-card-title),
+  .settings-area :deep(.text-subtitle-2) {
+    display: none !important;
+  }
+  
+  /* 設定パネルの文字サイズを小さく（継承） */
+  .settings-panel :deep(.v-label),
+  .settings-panel :deep(.v-switch .v-label) {
+    font-size: 0.6rem !important;
+  }
+  
+  /* 各パネルにスクロール機能を強制適用（継承） */
+  :deep(.v-card-text) {
+    max-height: 120px !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(0,0,0,0.3) transparent !important;
+  }
+  
+  :deep(.v-card-text::-webkit-scrollbar) {
+    width: 3px !important;
+  }
+  
+  :deep(.v-card-text::-webkit-scrollbar-track) {
+    background: transparent !important;
+  }
+  
+  :deep(.v-card-text::-webkit-scrollbar-thumb) {
+    background-color: rgba(0,0,0,0.3) !important;
+    border-radius: 2px !important;
+  }
+  
+  /* 点数表示から「点」文字を非表示（継承） */
+  .score-unit {
+    display: none !important;
+  }
+  
+  /* 左右プレイヤーエリアのスクロール対応（継承） */
+  .player-left,
+  .player-right {
+    overflow: visible !important;
+    width: 100%;
+    height: 100%;
+    position: relative !important;
+  }
+  
+  .player-left::after,
+  .player-right::after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+  
+  .player-left .hand-container,
+  .player-right .hand-container {
+    max-width: 100%;
+    overflow: visible !important;
+    height: 100%;
+    margin-top: 15px !important;
+  }
+  
+  .game-table {
+    grid-template-rows: 15% 70% 15%;
+    grid-template-columns: 15% 70% 15%;
+    gap: 0;
+    padding: 0;
+  }
+  
+  .player-area {
+    padding: 1px;
+  }
+  
+  .player-name {
+    font-size: 0.65rem;
+    padding: 0 2px;
+  }
+  
+  .player-points {
+    font-size: 0.6rem;
+  }
+  
+  .central-square {
+    width: min(112px, 22vh, 22vw);
+    height: min(112px, 22vh, 22vw);
+  }
+  
+  /* 中央エリアの文字サイズとレイアウト調整（小画面） */
+  .center-info {
+    transform: translate(-50%, -45%) scale(0.5) !important;
+  }
+  
+  .center-label {
+    display: none !important;
+  }
+  
+  .remaining-tiles {
+    font-size: 1.5rem !important;
+    margin: 0 !important;
+    padding: 1px 2px !important;
+  }
+  
+  /* プレイヤー点数表示のマージンを0に、辺際に寄せる */
+  .score-bottom {
+    margin: 0 !important;
+    bottom: 1px !important;
+  }
+  
+  .score-top {
+    margin: 0 !important;
+    top: 1px !important;
+  }
+  
+  .score-left {
+    margin: 0 !important;
+    left: 1px !important;
+  }
+  
+  .score-right {
+    margin: 0 !important;
+    right: 1px !important;
+  }
+  
+  .game-info-panel {
+    max-width: 120px;
+    font-size: 0.6rem;
+    padding: 2px;
+  }
+  
+  .info-section {
+    margin-bottom: 4px;
+  }
+  
+  
+  /* ドラ表示エリアを小さく */
+  .dora-display {
+    padding: 2px;
+  }
+  
+  /* 牌のサイズをさらに調整 */
+  .hand-container .tile-small {
+    width: 18px !important;
+    height: 25px !important;
+  }
+  
+  /* 河の捨牌を70%サイズにする（継承） */
+  .player-discards {
+    transform: scale(0.8) !important;
+    transform-origin: center !important;
+  }
+  
+  
+  /* 捨て牌エリアの位置調整 - プレイヤー方向に寄せる */
+  .discard-area-bottom {
+    bottom: -100% !important;
+    left: -30% !important;
+  }
+  
+  .discard-area-top {
+    top: -100% !important;
+    right: -70% !important;
+  }
+  
+  .discard-area-left {
+    left: -5% !important;
+    top: 30% !important;
+  }
+  
+  .discard-area-right {
+    right: -5% !important;
+    top: 70% !important;
+  }
+  
+  /* ボタンサイズの調整 */
+  .v-btn {
+    height: 24px !important;
+    font-size: 0.6rem !important;
+    padding: 0 8px !important;
+  }
+}
+
+/* PC表示でのパネルスクロール設定 */
+@media screen and (min-width: 1025px), screen and (min-height: 601px) {
+  /* PC表示では設定パネルの高さ制限を解除してスクロール可能にする */
+  .settings-panel :deep(.v-card-text) {
+    max-height: 200px !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(0,0,0,0.3) transparent !important;
+  }
+  
+  .settings-panel :deep(.v-card-text::-webkit-scrollbar) {
+    width: 6px !important;
+  }
+  
+  .settings-panel :deep(.v-card-text::-webkit-scrollbar-track) {
+    background: transparent !important;
+  }
+  
+  .settings-panel :deep(.v-card-text::-webkit-scrollbar-thumb) {
+    background-color: rgba(0,0,0,0.3) !important;
+    border-radius: 3px !important;
+  }
+}

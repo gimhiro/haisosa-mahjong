@@ -10,54 +10,28 @@
 
       <!-- ゲーム情報エリア -->
       <div class="game-info-area">
-        <GameInfoPanel
-          class="game-info-panel"
-          :round="round"
-          :wall-remaining="wallRemaining"
-          :dealer="getDealerText()"
-          :dealer-text="getDealerText()"
-          :current-player="currentPlayer"
-          :current-player-name="currentPlayer?.name || ''"
-          :riichi-bets="gameManagerInstance?.kyotaku || 0"
-          :honba="0"
-          :kyotaku="gameManagerInstance?.kyotaku || 0"
-          :dora-count="doraIndicators.length"
-          :game-phase="gamePhase"
-          :is-muted="isMuted"
-          :east-wind="'東'"
-          :south-wind="'南'"
-          :west-wind="'西'"
-          :north-wind="'北'"
-          @toggle-mute="toggleMute"
-        />
+        <GameInfoPanel class="game-info-panel" :round="round" :wall-remaining="wallRemaining" :dealer="getDealerText()"
+          :dealer-text="getDealerText()" :current-player="currentPlayer"
+          :current-player-name="currentPlayer?.name || ''" :riichi-bets="gameManagerInstance?.kyotaku || 0" :honba="0"
+          :kyotaku="gameManagerInstance?.kyotaku || 0" :dora-count="doraIndicators.length" :game-phase="gamePhase"
+          :is-muted="isMuted" :east-wind="'東'" :south-wind="'南'" :west-wind="'西'" :north-wind="'北'"
+          @toggle-mute="toggleMute" />
       </div>
 
       <!-- 上側プレイヤー（プレイヤー2） -->
       <div class="player-area player-top">
-        <PlayerArea
-          :player="players[2]"
-          :is-current="currentPlayerIndex === 2"
-          :position="'top'"
-          :show-tiles="cpuTilesVisible[2]"
-          :drawn-tile="currentPlayerIndex === 2 ? currentDrawnTile : null"
-          :game-manager="gameManagerInstance"
-          :cpu-tiles-visible="cpuTilesVisible[2]"
-          @toggle-cpu-tiles="toggleCpuTiles(2)"
-        />
+        <PlayerArea :player="players[2]" :is-current="currentPlayerIndex === 2" :position="'top'"
+          :show-tiles="cpuTilesVisible[2]" :drawn-tile="currentPlayerIndex === 2 ? currentDrawnTile : null"
+          :game-manager="gameManager" :cpu-tiles-visible="cpuTilesVisible[2]"
+          @toggle-cpu-tiles="toggleCpuTiles(2)" />
       </div>
 
       <!-- 左側プレイヤー（プレイヤー3） -->
       <div class="player-area player-left">
-        <PlayerArea
-          :player="players[3]"
-          :is-current="currentPlayerIndex === 3"
-          :position="'left'"
-          :show-tiles="cpuTilesVisible[3]"
-          :drawn-tile="currentPlayerIndex === 3 ? currentDrawnTile : null"
-          :game-manager="gameManagerInstance"
-          :cpu-tiles-visible="cpuTilesVisible[3]"
-          @toggle-cpu-tiles="toggleCpuTiles(3)"
-        />
+        <PlayerArea :player="players[3]" :is-current="currentPlayerIndex === 3" :position="'left'"
+          :show-tiles="cpuTilesVisible[3]" :drawn-tile="currentPlayerIndex === 3 ? currentDrawnTile : null"
+          :game-manager="gameManager" :cpu-tiles-visible="cpuTilesVisible[3]"
+          @toggle-cpu-tiles="toggleCpuTiles(3)" />
       </div>
 
       <!-- 中央エリア（河・ドラ表示） -->
@@ -65,34 +39,33 @@
         <!-- 捨牌エリア -->
         <div class="discards-area">
           <div class="central-square">
+            <!-- 中央情報表示 -->
+            <div class="center-info">
+              <div class="remaining-tiles">{{ wallRemaining }}</div>
+            </div>
+
+            <!-- 各プレイヤーのスコア表示 -->
+            <div class="score-bottom">{{ players[0].score.toLocaleString() }}</div>
+            <div class="score-right">{{ players[1].score.toLocaleString() }}</div>
+            <div class="score-top">{{ players[2].score.toLocaleString() }}</div>
+            <div class="score-left">{{ players[3].score.toLocaleString() }}</div>
+
             <!-- 各プレイヤーの捨牌エリア -->
             <div class="discard-area-bottom">
-              <PlayerDiscardArea
-                :player-index="0"
-                :get-player-discard-row="getPlayerDiscardRow"
-                :game-manager="gameManagerInstance"
-              />
+              <PlayerDiscardArea :player-index="0" :get-player-discard-row="getPlayerDiscardRow"
+                :game-manager="gameManager" />
             </div>
             <div class="discard-area-right">
-              <PlayerDiscardArea
-                :player-index="1"
-                :get-player-discard-row="getPlayerDiscardRow"
-                :game-manager="gameManagerInstance"
-              />
+              <PlayerDiscardArea :player-index="1" :get-player-discard-row="getPlayerDiscardRow"
+                :game-manager="gameManager" />
             </div>
             <div class="discard-area-top">
-              <PlayerDiscardArea
-                :player-index="2"
-                :get-player-discard-row="getPlayerDiscardRow"
-                :game-manager="gameManagerInstance"
-              />
+              <PlayerDiscardArea :player-index="2" :get-player-discard-row="getPlayerDiscardRow"
+                :game-manager="gameManager" />
             </div>
             <div class="discard-area-left">
-              <PlayerDiscardArea
-                :player-index="3"
-                :get-player-discard-row="getPlayerDiscardRow"
-                :game-manager="gameManagerInstance"
-              />
+              <PlayerDiscardArea :player-index="3" :get-player-discard-row="getPlayerDiscardRow"
+                :game-manager="gameManager" />
             </div>
           </div>
         </div>
@@ -100,142 +73,66 @@
 
       <!-- 右側プレイヤー（プレイヤー1） -->
       <div class="player-area player-right">
-        <PlayerArea
-          :player="players[1]"
-          :is-current="currentPlayerIndex === 1"
-          :position="'right'"
-          :show-tiles="cpuTilesVisible[1]"
-          :drawn-tile="currentPlayerIndex === 1 ? currentDrawnTile : null"
-          :game-manager="gameManagerInstance"
-          :cpu-tiles-visible="cpuTilesVisible[1]"
-          @toggle-cpu-tiles="toggleCpuTiles(1)"
-        />
+        <PlayerArea :player="players[1]" :is-current="currentPlayerIndex === 1" :position="'right'"
+          :show-tiles="cpuTilesVisible[1]" :drawn-tile="currentPlayerIndex === 1 ? currentDrawnTile : null"
+          :game-manager="gameManager" :cpu-tiles-visible="cpuTilesVisible[1]"
+          @toggle-cpu-tiles="toggleCpuTiles(1)" />
       </div>
 
       <!-- 下側プレイヤー（人間プレイヤー） -->
       <div class="player-area player-bottom">
-        <PlayerArea
-          :player="players[0]"
-          :is-current="currentPlayerIndex === 0"
-          :position="'bottom'"
-          :show-tiles="true"
-          :drawn-tile="currentPlayerIndex === 0 ? currentDrawnTile : null"
-          :game-manager="gameManagerInstance"
-          :is-riichi-preview-mode="riichiPreviewMode"
-          :riichi-valid-tiles="getRiichiValidTiles()"
+        <PlayerArea :player="players[0]" :is-current="currentPlayerIndex === 0" :position="'bottom'" :show-tiles="true"
+          :drawn-tile="currentPlayerIndex === 0 ? currentDrawnTile : null" :game-manager="gameManager"
+          :is-riichi-preview-mode="riichiPreviewMode" :riichi-valid-tiles="getRiichiValidTiles()"
           :riichi-disabled-tiles="riichiPreviewMode ? getRiichiDisabledTiles() : getPostRiichiDisabledTiles()"
-          :show-acceptance-highlight="settings.showAcceptanceHighlight"
-          :best-acceptance-tiles="bestAcceptanceTiles"
-          :show-acceptance-tooltip="settings.showAcceptance"
-          :acceptance-infos="acceptanceInfos"
-          @tile-discarded="onHumanTileDiscard"
-          @riichi-confirmed="confirmRiichiAndDiscard"
-          @tile-hover="onTileHover"
-          @tile-leave="onTileLeave"
-        />
+          :show-acceptance-highlight="settings.showAcceptanceHighlight" :best-acceptance-tiles="bestAcceptanceTiles"
+          :show-acceptance-tooltip="settings.showAcceptance" :acceptance-infos="acceptanceInfos"
+          @tile-discarded="onHumanTileDiscard" @riichi-confirmed="confirmRiichiAndDiscard" @tile-hover="onTileHover"
+          @tile-leave="onTileLeave" />
       </div>
 
       <!-- 設定エリア -->
       <div class="settings-area">
-        <GameSettingsPanel
-          class="settings-panel"
-          :game-manager="gameManagerInstance"
-          @toggle-mute="toggleMute"
-          @start-game="startGame"
-          @reset-game="resetGame"
-          @show-test-dialog="showTestDialog = true"
-        />
+        <GameSettingsPanel class="settings-panel" :game-manager="gameManager" @toggle-mute="toggleMute"
+          @start-game="startGame" @reset-game="resetGame" @show-test-dialog="showTestDialog = true" />
       </div>
 
       <!-- アクションエリア -->
       <div class="action-area">
-        <ActionPanel
-          class="action-panel"
-          :can-tsumo="canTsumo"
-          :can-ron="canRon"
-          :can-declare-riichi="canDeclareRiichi"
-          :can-pon="canPon"
-          :can-kan="canKan"
-          :can-ankan="canAnkan"
-          :can-chi="canChi"
-          :riichi-preview-mode="riichiPreviewMode"
-          :riichi-button-text="riichiButtonText"
-          :shanten="humanShanten"
-          :shanten-color="shantenColor"
-          :shanten-text="shantenText"
-          :is-human-turn="isHumanTurn"
-          :human-player="humanPlayer"
-          :current-drawn-tile="currentDrawnTile"
-          :human-player-riichi="humanPlayer?.riichi || false"
-          :show-result-and-next-buttons="showResultAndNextButtons"
-          :show-draw-result-buttons="showDrawResultButtons"
-          @declare-tsumo="declareTsumo"
-          @declare-ron="declareRon"
-          @declare-riichi="declareRiichi"
-          @toggle-riichi-preview="toggleRiichiPreview"
-          @declare-pon="declarePon"
-          @declare-kan="declareKan"
-          @declare-ankan="declareAnkan"
-          @declare-chi="declareChi"
-          @cancel-actions="cancelActions"
-          @cancel-tsumo="cancelTsumo"
-          @reopen-win-modal="reopenWinModal"
-          @on-continue-game="onContinueGame"
-          @reopen-draw-modal="reopenDrawModal"
-          @on-continue-from-draw="onContinueFromDraw"
-        />
+        <ActionPanel class="action-panel" :can-tsumo="canTsumo" :can-ron="canRon" :can-declare-riichi="canDeclareRiichi"
+          :can-pon="canPon" :can-kan="canKan" :can-ankan="canAnkan" :can-chi="canChi"
+          :riichi-preview-mode="riichiPreviewMode" :riichi-button-text="riichiButtonText" :shanten="humanShanten"
+          :shanten-color="shantenColor" :shanten-text="shantenText" :is-human-turn="isHumanTurn"
+          :human-player="humanPlayer" :current-drawn-tile="currentDrawnTile"
+          :human-player-riichi="humanPlayer?.riichi || false" :show-result-and-next-buttons="showResultAndNextButtons"
+          :show-draw-result-buttons="showDrawResultButtons" @declare-tsumo="declareTsumo" @declare-ron="declareRon"
+          @declare-riichi="declareRiichi" @toggle-riichi-preview="toggleRiichiPreview" @declare-pon="declarePon"
+          @declare-kan="declareKan" @declare-ankan="declareAnkan" @declare-chi="declareChi"
+          @cancel-actions="cancelActions" @cancel-tsumo="cancelTsumo" @reopen-win-modal="reopenWinModal"
+          @on-continue-game="onContinueGame" @reopen-draw-modal="reopenDrawModal"
+          @on-continue-from-draw="onContinueFromDraw" />
       </div>
     </div>
 
     <!-- モーダル -->
-    <WinModal 
-      v-model="showWinModal" 
-      :win-data="winModalData"
-      :show-result-and-next-buttons="showResultAndNextButtons"
-      @close="onWinModalClose"
-      @continue="onContinueGame"
-      @new-game="onNewGame"
-      @reopen="reopenWinModal"
-    />
+    <WinModal v-model="showWinModal" :win-data="winModalData" :show-result-and-next-buttons="showResultAndNextButtons"
+      @close="onWinModalClose" @continue="onContinueGame" @new-game="onNewGame" @reopen="reopenWinModal" />
 
-    <DrawModal 
-      v-if="drawModalData"
-      v-model="showDrawModal" 
-      :draw-data="drawModalData"
-      :show-draw-result-buttons="showDrawResultButtons"
-      @close="onDrawModalClose"
-      @continue="onContinueFromDraw"
-      @new-game="onNewGame"
-      @reopen="reopenDrawModal"
-    />
+    <DrawModal v-if="drawModalData" v-model="showDrawModal" :draw-data="drawModalData"
+      :show-draw-result-buttons="showDrawResultButtons" @close="onDrawModalClose" @continue="onContinueFromDraw"
+      @new-game="onNewGame" @reopen="reopenDrawModal" />
 
-    <GameEndModal 
-      v-if="gameEndModalData"
-      v-model="showGameEndModal" 
-      :game-end-data="gameEndModalData"
-      @close="onGameEndModalClose"
-      @back-to-home="onBackToHome"
-      @rematch="onRematch"
-    />
+    <GameEndModal v-if="gameEndModalData" v-model="showGameEndModal" :game-end-data="gameEndModalData"
+      @close="onGameEndModalClose" @back-to-home="onBackToHome" @rematch="onRematch" />
 
     <!-- テストモードダイアログ -->
-    <TestModeDialog
-      v-model="showTestDialog"
-      :game-manager="gameManager"
-      @close="showTestDialog = false"
-      @apply="onTestModeApplied"
-    />
+    <TestModeDialog v-model="showTestDialog" :game-manager="gameManager" @close="showTestDialog = false"
+      @apply="onTestModeApplied" />
 
     <!-- 受け入れ情報ポップアップ -->
-    <AcceptancePopup
-      v-model="showAcceptancePopup"
-      :tile-acceptance-info="currentHoveredTileAcceptance"
-      :mouse-x="mouseX"
-      :mouse-y="mouseY"
-      :is-useful-tiles="isUsefulTilesMode"
-      :is-calculating="isCalculatingAcceptance"
-      :is-fixed-position="true"
-    />
+    <AcceptancePopup v-model="showAcceptancePopup" :tile-acceptance-info="currentHoveredTileAcceptance"
+      :mouse-x="mouseX" :mouse-y="mouseY" :is-useful-tiles="isUsefulTilesMode" :is-calculating="isCalculatingAcceptance"
+      :is-fixed-position="true" />
   </div>
 </template>
 
@@ -282,7 +179,7 @@ const {
   isMuted,
   acceptanceInfos,
   bestAcceptanceTiles,
-  
+
   // computed properties
   players,
   gamePhase,
@@ -301,7 +198,7 @@ const {
   shantenColor,
   shantenText,
   riichiButtonText,
-  
+
   // メソッド
   getDealerText,
   startGame,
@@ -342,7 +239,7 @@ const {
 } = useFourPlayerGameView()
 
 // 互換性のためのアクセサ
-const gameManager = gameManagerInstance
+const gameManager = computed(() => gameManagerInstance.value)
 
 // 互換性チェック
 const isGameReady = computed(() => {
@@ -367,7 +264,7 @@ const isGameReady = computed(() => {
   flex: 1;
   position: relative;
   display: grid;
-  grid-template-areas: 
+  grid-template-areas:
     "dora top info"
     "left center right"
     "settings bottom actions";
@@ -579,7 +476,7 @@ const isGameReady = computed(() => {
     gap: 2px;
     padding: 2px;
   }
-  
+
   .central-square {
     width: min(210px, 30vh, 30vw);
     height: min(210px, 30vh, 30vw);

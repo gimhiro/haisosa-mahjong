@@ -25,8 +25,8 @@ const STORAGE_KEY = 'mahjong-game-settings'
 const defaultSettings: GameSettings = {
   disableMeld: false,
   autoWin: false,
-  showAcceptance: false,
-  showAcceptanceHighlight: false,
+  showAcceptance: true,
+  showAcceptanceHighlight: true,
   manipulationRate: 80,
   handQuality: 'good',
   testMode: {
@@ -54,8 +54,8 @@ export function useGameSettings() {
             return {
               disableMeld: parsed.disableMeld ?? false,
               autoWin: parsed.autoWin ?? false,
-              showAcceptance: parsed.showAcceptance ?? false,
-              showAcceptanceHighlight: parsed.showAcceptanceHighlight ?? false,
+              showAcceptance: parsed.showAcceptance ?? true,
+              showAcceptanceHighlight: parsed.showAcceptanceHighlight ?? true,
               manipulationRate: parsed.manipulationRate ?? 80,
               handQuality: parsed.handQuality ?? 'good',
               testMode: parsed.testMode ?? defaultSettings.testMode

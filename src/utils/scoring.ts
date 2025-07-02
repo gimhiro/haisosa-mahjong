@@ -315,7 +315,6 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
 
 
       if (input.hand.length !== expectedHandSize) {
-        console.warn(`RON: Expected ${expectedHandSize} tiles, got ${input.hand.length}`)
         // 期待される枚数でない場合は先頭N枚を取る
         const handTiles = input.hand.slice(0, expectedHandSize)
         closedPart = convertTilesToNumbers(handTiles) as number[]
@@ -439,7 +438,6 @@ export function calculateScore(input: ScoringInput): ScoringResult | null {
       yaku
     }
   } catch (error) {
-    console.error('Error calculating score:', error)
     return null
   }
 }

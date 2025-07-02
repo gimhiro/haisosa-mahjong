@@ -284,7 +284,7 @@ function onTileClick(tile: Tile) {
 }
 
 function onTileHover(tile: Tile, event?: any) {
-  if (props.showAcceptanceTooltip && props.position === 'bottom') {
+  if ((props.showAcceptanceTooltip || props.isRiichiPreviewMode) && props.position === 'bottom') {
     const mouseX = event?.clientX || 0
     const mouseY = event?.clientY || 0
     emit('tileHover', tile, mouseX, mouseY)
@@ -292,7 +292,7 @@ function onTileHover(tile: Tile, event?: any) {
 }
 
 function onTileLeave() {
-  if (props.showAcceptanceTooltip && props.position === 'bottom') {
+  if ((props.showAcceptanceTooltip || props.isRiichiPreviewMode) && props.position === 'bottom') {
     emit('tileLeave')
   }
 }

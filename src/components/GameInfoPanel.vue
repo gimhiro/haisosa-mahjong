@@ -11,6 +11,10 @@
         <span class="info-value">{{ currentPlayerName }}</span>
       </div>
       <div class="info-row">
+        <span class="info-label">残り:</span>
+        <span class="info-value">{{ wallRemaining }}枚</span>
+      </div>
+      <div class="info-row">
         <span class="info-label">供託:</span>
         <span class="info-value">{{ kyotaku }}本</span>
       </div>
@@ -42,6 +46,7 @@
 interface Props {
   dealerText: string
   currentPlayerName: string
+  wallRemaining?: number
   kyotaku: number
   gamePhase: string
   isMuted: boolean
