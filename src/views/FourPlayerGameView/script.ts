@@ -318,13 +318,7 @@ export function useFourPlayerGameView() {
   // 人間プレイヤーのターンが開始されたときに自動的にツモする
 
   async function onHumanTileDiscard(tileId: string) {
-    console.log('DEBUG: onHumanTileDiscard called with tileId:', tileId)
-    console.log('DEBUG: isHumanTurn:', isHumanTurn.value)
-    console.log('DEBUG: gamePhase:', gamePhase.value)
-    console.log('DEBUG: currentPlayerIndex:', currentPlayerIndex.value)
-    
     if (!isHumanTurn.value) {
-      console.log('DEBUG: Not human turn, returning')
       return
     }
     

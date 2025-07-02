@@ -343,21 +343,10 @@ const {
 // 互換性のためのアクセサ
 const gameManager = gameManagerInstance
 
-// デバッグ: script.tsから正常に関数が取得できているかチェック
-console.log('DEBUG: useFourPlayerGameView結果:', {
-  gameManagerInstance: !!gameManagerInstance,
-  players: !!players,
-  gamePhase: gamePhase?.value || gamePhase,
-  currentPlayer: !!currentPlayer,
-  getDealerText: !!getDealerText,
-  gameManager: !!gameManager
+// 互換性チェック
+const isGameReady = computed(() => {
+  return gameManagerInstance && players.value && players.value.length > 0
 })
-
-// プレイヤー情報をデバッグ
-console.log('DEBUG: players data:', players.value)
-console.log('DEBUG: currentPlayerIndex:', currentPlayerIndex.value)
-console.log('DEBUG: isHumanTurn:', isHumanTurn.value)
-console.log('DEBUG: human player (players[0]):', players.value[0])
 
 </script>
 
