@@ -233,9 +233,10 @@ export function useFourPlayerGameView() {
     }
   })
 
-  // 受け入れ情報更新のwatcher（ツモ牌がある場合のみ）
-  watch([currentDrawnTile, () => settings.value.showAcceptance, () => settings.value.showAcceptanceHighlight], () => {
-    if (isHumanTurn.value && currentDrawnTile.value) {
+  // 受け入れ情報更新のwatcher（ツモ牌の有無に関わらず実行）
+  watch([currentDrawnTile, () => settings.value.showAcceptance, () => settings.value.showAcceptanceHighlight, () => humanPlayer.value?.tiles.length, () => humanPlayer.value?.melds.length], () => {
+    if (isHumanTurn.value) {
+      // 人間プレイヤーのターンで手牌がある場合は受け入れ計算を実行
       updateAcceptanceInfo()
     } else if (!isHumanTurn.value) {
       // 人間プレイヤーのターンでない場合は受け入れマスクを消去
@@ -1362,7 +1363,6 @@ export function useFourPlayerGameView() {
 
   // 受け入れ表示関連関数（キャンセル機能付き）
   async function updateAcceptanceInfo() {
-
     if (!settings.value.showAcceptance && !settings.value.showAcceptanceHighlight) {
       acceptanceInfos.value = []
       bestAcceptanceTiles.value = []
@@ -1370,18 +1370,48 @@ export function useFourPlayerGameView() {
     }
 
     const player = humanPlayer.value
-    if (!player || !currentDrawnTile.value) {
+    if (!player) {
       acceptanceInfos.value = []
       bestAcceptanceTiles.value = []
       return
     }
 
-    // 14枚の手牌（手牌13枚 + ツモ牌1枚）
-    const allTiles = [...player.tiles, currentDrawnTile.value]
-    if (allTiles.length !== 14) {
+    // 手牌を取得（ツモ牌がある場合は含める）
+    let allTiles = [...player.tiles]
+    if (currentDrawnTile.value) {
+      allTiles.push(currentDrawnTile.value)
+    }
+
+    // 手牌が空の場合は処理しない
+    if (allTiles.length === 0) {
       acceptanceInfos.value = []
       bestAcceptanceTiles.value = []
       return
+    }
+
+    // 鳴き牌がある場合の手牌枚数調整
+    const expectedTileCount = 14 - (player.melds.length * 3)
+    
+    // 手牌枚数が適切でない場合の詳細チェック
+    if (player.melds.length === 0) {
+      // 鳴き牌がない場合は14枚でないと受け入れ計算できない
+      if (allTiles.length !== 14) {
+        acceptanceInfos.value = []
+        bestAcceptanceTiles.value = []
+        return
+      }
+    } else {
+      // 鳴き牌がある場合の枚数チェック
+      // 鳴き牌1つにつき手牌から2枚減る（鳴いた牌1枚は相手の捨て牌）
+      // 例: 1鳴きの場合 → 捨て牌後10枚（ツモ前） or ツモ後11枚
+      const handTilesAfterMeldsAndDiscard = 13 - (player.melds.length * 2) - 1 // 捨て牌後の状態
+      const validCounts = [handTilesAfterMeldsAndDiscard, handTilesAfterMeldsAndDiscard + 1] // ツモ前後の状態
+      
+      if (!validCounts.includes(allTiles.length)) {
+        acceptanceInfos.value = []
+        bestAcceptanceTiles.value = []
+        return
+      }
     }
 
     // 計算開始前にキャンセルフラグをリセット
@@ -1398,19 +1428,14 @@ export function useFourPlayerGameView() {
     isCalculatingAcceptance.value = true
 
     try {
-      // 現在のシャンテン数をチェック
-      const shantenNum = calculateShanten(allTiles)
+      // 現在のシャンテン数をチェック（鳴き牌を考慮）
+      const shantenNum = player.melds.length > 0 
+        ? calculateShantenWithMelds(allTiles, player.melds)
+        : calculateShanten(allTiles)
       currentShanten.value = shantenNum
 
       // キャンセルチェック
       if (isCalculationCancelled.value) {
-        return
-      }
-
-      if (shantenNum === -1) {
-        acceptanceInfos.value = []
-        bestAcceptanceTiles.value = []
-        isUsefulTilesMode.value = false
         return
       }
 
@@ -1421,18 +1446,34 @@ export function useFourPlayerGameView() {
       }
       visibleTiles.push(...doraIndicators.value)
 
-      // キャンセルチェック
-      if (isCalculationCancelled.value) {
-        return
-      }
-
-      if (shantenNum === 0) {
+      if (shantenNum === -1) {
+        // 和了形の場合：各牌を切った時の待ち牌を計算
+        if (player.melds.length > 0) {
+          acceptanceInfos.value = await calculateWinningHandInfoForMelds(allTiles, visibleTiles, player.melds)
+        } else {
+          acceptanceInfos.value = await calculateWinningHandInfo(allTiles, visibleTiles)
+        }
+        isUsefulTilesMode.value = false
+        bestAcceptanceTiles.value = [] // 和了形では全ての牌が切れるので、特に優先する牌はない
+      } else if (shantenNum === 0) {
         // テンパイの場合：各牌を切った時の受け入れ計算
-        acceptanceInfos.value = await calculateAcceptanceOptimizedWithCancel(allTiles, visibleTiles)
+        if (player.melds.length > 0) {
+          // 鳴き牌がある場合は手牌のみで受け入れ計算（mahjong_calculator_rsが鳴き牌を考慮）
+          acceptanceInfos.value = await calculateAcceptanceForMeldsWithCancel(allTiles, visibleTiles, player.melds)
+        } else {
+          // 鳴き牌がない場合は通常の計算
+          acceptanceInfos.value = await calculateAcceptanceOptimizedWithCancel(allTiles, visibleTiles)
+        }
         isUsefulTilesMode.value = false
       } else {
         // シャンテン数1以上の場合：有効牌計算
-        acceptanceInfos.value = await calculateUsefulTilesInfoOptimizedWithCancel(allTiles, visibleTiles)
+        if (player.melds.length > 0) {
+          // 鳴き牌がある場合は手牌のみで有効牌計算
+          acceptanceInfos.value = await calculateUsefulTilesForMeldsWithCancel(allTiles, visibleTiles, player.melds)
+        } else {
+          // 鳴き牌がない場合は通常の計算
+          acceptanceInfos.value = await calculateUsefulTilesInfoOptimizedWithCancel(allTiles, visibleTiles)
+        }
         isUsefulTilesMode.value = true
       }
 
@@ -1821,6 +1862,246 @@ export function useFourPlayerGameView() {
     })
   }
 
+  // 鳴き牌がある場合の受け入れ計算（キャンセル対応版）
+  async function calculateAcceptanceForMeldsWithCancel(allTiles: any[], visibleTiles: any[], melds: any[]): Promise<AcceptanceInfo[]> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        if (isCalculationCancelled.value) {
+          resolve([])
+          return
+        }
+
+        const results: AcceptanceInfo[] = []
+        const calculatedTileTypes = new Set<string>()
+
+        for (const tile of allTiles) {
+          if (isCalculationCancelled.value) {
+            resolve([])
+            return
+          }
+
+          const tileTypeKey = `${tile.suit}-${tile.rank}-${tile.isRed || false}`
+          
+          if (calculatedTileTypes.has(tileTypeKey)) {
+            const existingResult = results.find(r => 
+              r.tile.suit === tile.suit && 
+              r.tile.rank === tile.rank && 
+              (r.tile.isRed || false) === (tile.isRed || false)
+            )
+            if (existingResult) {
+              results.push({
+                ...existingResult,
+                tile: tile,
+                tileIndex: getTileIndex(tile)
+              })
+            }
+            continue
+          }
+
+          calculatedTileTypes.add(tileTypeKey)
+          
+          // この牌を除いた残りの手牌
+          const remainingTiles = allTiles.filter(t => t.id !== tile.id)
+          
+          // 鳴き牌を考慮したシャンテン数計算
+          const shantenAfterDiscard = calculateShantenWithMelds(remainingTiles, melds)
+          
+          if (shantenAfterDiscard === 0) {
+            // テンパイの場合：受け入れ牌を計算（手牌のみをRustライブラリに渡す）
+            const usefulTileIndices = getUsefulTiles(remainingTiles)
+            const remainingCounts = usefulTileIndices.map(tileIndex =>
+              getTileRemainingCount(tileIndex, visibleTiles)
+            )
+            const totalAcceptance = remainingCounts.reduce((sum, count) => sum + count, 0)
+
+            results.push({
+              tile: tile,
+              tileIndex: getTileIndex(tile),
+              acceptanceTiles: usefulTileIndices,
+              remainingCounts,
+              totalAcceptance,
+              shantenAfterDiscard: 0
+            })
+          }
+        }
+
+        resolve(results)
+      }, 0)
+    })
+  }
+
+  // 鳴き牌がある場合の有効牌計算（キャンセル対応版）
+  async function calculateUsefulTilesForMeldsWithCancel(allTiles: any[], visibleTiles: any[], melds: any[]): Promise<AcceptanceInfo[]> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        if (isCalculationCancelled.value) {
+          resolve([])
+          return
+        }
+
+        const results: AcceptanceInfo[] = []
+        const calculatedTileTypes = new Set<string>()
+        
+        // 現在のシャンテン数を計算
+        const currentShanten = calculateShantenWithMelds(allTiles, melds)
+
+        for (const tile of allTiles) {
+          if (isCalculationCancelled.value) {
+            resolve([])
+            return
+          }
+
+          const tileTypeKey = `${tile.suit}-${tile.rank}-${tile.isRed || false}`
+          
+          if (calculatedTileTypes.has(tileTypeKey)) {
+            const existingResult = results.find(r => 
+              r.tile.suit === tile.suit && 
+              r.tile.rank === tile.rank && 
+              (r.tile.isRed || false) === (tile.isRed || false)
+            )
+            if (existingResult) {
+              results.push({
+                ...existingResult,
+                tile: tile,
+                tileIndex: getTileIndex(tile)
+              })
+            }
+            continue
+          }
+
+          calculatedTileTypes.add(tileTypeKey)
+          
+          // この牌を除いた残りの手牌
+          const remainingTiles = allTiles.filter(t => t.id !== tile.id)
+          
+          // この牌を切った後のシャンテン数
+          const shantenAfterDiscard = calculateShantenWithMelds(remainingTiles, melds)
+          
+          // 有効牌を計算（シャンテン数を下げる牌）
+          const usefulTileIndices: number[] = []
+          for (let tileIdx = 0; tileIdx < 34; tileIdx++) {
+            const testTile = createTileFromIndex(tileIdx, 'test')
+            const testTiles = [...remainingTiles, testTile]
+            const newShanten = calculateShantenWithMelds(testTiles, melds)
+            
+            if (newShanten < shantenAfterDiscard) {
+              usefulTileIndices.push(tileIdx)
+            }
+          }
+          const remainingCounts = usefulTileIndices.map(tileIndex =>
+            getTileRemainingCount(tileIndex, visibleTiles)
+          )
+          const totalAcceptance = remainingCounts.reduce((sum, count) => sum + count, 0)
+
+          if (usefulTileIndices.length > 0) {
+            results.push({
+              tile: tile,
+              tileIndex: getTileIndex(tile),
+              acceptanceTiles: usefulTileIndices,
+              remainingCounts,
+              totalAcceptance,
+              shantenAfterDiscard
+            })
+          }
+        }
+
+        resolve(results)
+      }, 0)
+    })
+  }
+
+  // 和了形の場合の情報計算（鳴きなし）
+  async function calculateWinningHandInfo(allTiles: any[], visibleTiles: any[]): Promise<AcceptanceInfo[]> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const results: AcceptanceInfo[] = []
+        
+        // 和了形では、どの牌を切っても和了形が崩れる
+        // 各牌を切った後の受け入れ牌を計算
+        for (const tile of allTiles) {
+          const remainingTiles = allTiles.filter(t => t.id !== tile.id)
+          const shantenAfterDiscard = calculateShanten(remainingTiles)
+          
+          if (shantenAfterDiscard === 0) {
+            // テンパイになる場合、受け入れ牌を計算
+            const acceptanceTiles = getUsefulTiles(remainingTiles)
+            const remainingCounts = acceptanceTiles.map(tileIndex =>
+              getTileRemainingCount(tileIndex, visibleTiles)
+            )
+            const totalAcceptance = remainingCounts.reduce((sum, count) => sum + count, 0)
+            
+            results.push({
+              tile: tile,
+              tileIndex: getTileIndex(tile),
+              acceptanceTiles,
+              remainingCounts,
+              totalAcceptance,
+              shantenAfterDiscard: 0
+            })
+          } else {
+            // テンパイでなくなる場合
+            results.push({
+              tile: tile,
+              tileIndex: getTileIndex(tile),
+              acceptanceTiles: [],
+              remainingCounts: [],
+              totalAcceptance: 0,
+              shantenAfterDiscard
+            })
+          }
+        }
+        
+        resolve(results)
+      }, 0)
+    })
+  }
+
+  // 和了形の場合の情報計算（鳴きあり）
+  async function calculateWinningHandInfoForMelds(allTiles: any[], visibleTiles: any[], melds: any[]): Promise<AcceptanceInfo[]> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const results: AcceptanceInfo[] = []
+        
+        // 和了形では、どの牌を切っても和了形が崩れる
+        // 各牌を切った後の受け入れ牌を計算
+        for (const tile of allTiles) {
+          const remainingTiles = allTiles.filter(t => t.id !== tile.id)
+          const shantenAfterDiscard = calculateShantenWithMelds(remainingTiles, melds)
+          
+          if (shantenAfterDiscard === 0) {
+            // テンパイになる場合、受け入れ牌を計算
+            const acceptanceTiles = getUsefulTiles(remainingTiles)
+            const remainingCounts = acceptanceTiles.map(tileIndex =>
+              getTileRemainingCount(tileIndex, visibleTiles)
+            )
+            const totalAcceptance = remainingCounts.reduce((sum, count) => sum + count, 0)
+            
+            results.push({
+              tile: tile,
+              tileIndex: getTileIndex(tile),
+              acceptanceTiles,
+              remainingCounts,
+              totalAcceptance,
+              shantenAfterDiscard: 0
+            })
+          } else {
+            // テンパイでなくなる場合
+            results.push({
+              tile: tile,
+              tileIndex: getTileIndex(tile),
+              acceptanceTiles: [],
+              remainingCounts: [],
+              totalAcceptance: 0,
+              shantenAfterDiscard
+            })
+          }
+        }
+        
+        resolve(results)
+      }, 0)
+    })
+  }
+
   // 孤立牌かどうかの判定（最適化のため）
   function isIsolatedTile(tiles: any[], tileIndex: number): boolean {
     const testTile = createTileFromIndex(tileIndex, 'test')
@@ -1954,12 +2235,16 @@ export function useFourPlayerGameView() {
       setTimeout(() => {
         
         const player = humanPlayer.value
-        if (!player || !currentDrawnTile.value) {
+        if (!player) {
           resolve(null)
           return
         }
 
-        const allTiles = [...player.tiles, currentDrawnTile.value]
+        // 手牌を取得（ツモ牌がある場合は含める）
+        let allTiles = [...player.tiles]
+        if (currentDrawnTile.value) {
+          allTiles.push(currentDrawnTile.value)
+        }
         const tileIndex = getTileIndex(tile)
 
         // この牌を切った後の手牌を作成
@@ -1972,13 +2257,20 @@ export function useFourPlayerGameView() {
         const remainingTiles = [...allTiles]
         remainingTiles.splice(tileToDiscardIndex, 1)
 
-        if (remainingTiles.length !== 13) {
+        // 鳴き牌がある場合の手牌枚数チェック
+        const expectedRemainingTiles = player.melds.length > 0 
+          ? 13 - (player.melds.length * 2) - 1 // 鳴き後の期待枚数 - 1（切り牌分）
+          : 13 // 鳴きなしの場合は13枚
+
+        if (remainingTiles.length !== expectedRemainingTiles) {
           resolve(null)
           return
         }
 
-        // この牌を切った後のシャンテン数を計算
-        const shantenAfterDiscard = calculateShanten(remainingTiles)
+        // この牌を切った後のシャンテン数を計算（鳴き牌を考慮）
+        const shantenAfterDiscard = player.melds.length > 0
+          ? calculateShantenWithMelds(remainingTiles, player.melds)
+          : calculateShanten(remainingTiles)
 
     // 見えている牌を収集
     const visibleTiles = [...allTiles]
@@ -1991,7 +2283,7 @@ export function useFourPlayerGameView() {
     let remainingCounts: number[] = []
 
     if (shantenAfterDiscard === 0) {
-      // テンパイを維持する場合、受け入れ牌を計算
+      // テンパイを維持する場合、受け入れ牌を計算（鳴き牌がある場合は手牌のみで計算）
       acceptanceTiles = getUsefulTiles(remainingTiles)
       remainingCounts = acceptanceTiles.map(tileIdx =>
         getTileRemainingCount(tileIdx, visibleTiles)
@@ -2005,7 +2297,10 @@ export function useFourPlayerGameView() {
 
         const testTile = createTileFromIndex(tileIdx, 'test')
         const testTiles = [...remainingTiles, testTile]
-        const newShanten = calculateShanten(testTiles)
+        // 鳴き牌を考慮したシャンテン計算
+        const newShanten = player.melds.length > 0
+          ? calculateShantenWithMelds(testTiles, player.melds)
+          : calculateShanten(testTiles)
 
         if (newShanten < shantenAfterDiscard) {
           acceptanceTiles.push(tileIdx)
@@ -2292,6 +2587,8 @@ export function useFourPlayerGameView() {
     updateAcceptanceInfo,
     calculateAcceptanceOptimized,
     calculateUsefulTilesInfoOptimized,
+    calculateAcceptanceForMeldsWithCancel,
+    calculateUsefulTilesForMeldsWithCancel,
     isIsolatedTile,
     onTileHover,
     calculateSingleTileAcceptance,

@@ -29,15 +29,23 @@
                 <span class="tile-name">{{ getTileText(tileAcceptanceInfo.tile) }}</span>
               </div>
               <div class="total-acceptance">
-                {{ getAcceptanceLabel() }}: {{ tileAcceptanceInfo.totalAcceptance }}枚
-                <div class="shanten-info">
+                <span v-if="tileAcceptanceInfo.shantenAfterDiscard === 0">
+                  {{ getAcceptanceLabel() }}: {{ tileAcceptanceInfo.totalAcceptance }}枚
+                </span>
+                <span v-else>
+                  切った後: {{ getShantenText(tileAcceptanceInfo.shantenAfterDiscard) }}
+                </span>
+                <div class="shanten-info" v-if="tileAcceptanceInfo.shantenAfterDiscard === 0">
                   シャンテン: {{ tileAcceptanceInfo.shantenAfterDiscard }}
                 </div>
               </div>
             </div>
 
             <div class="acceptance-tiles">
-              <div v-for="(tileIndex, idx) in tileAcceptanceInfo.acceptanceTiles" :key="idx"
+              <div v-if="tileAcceptanceInfo.acceptanceTiles.length === 0 && tileAcceptanceInfo.shantenAfterDiscard > 0" class="no-acceptance">
+                この牌を切ると{{ getShantenText(tileAcceptanceInfo.shantenAfterDiscard) }}になります
+              </div>
+              <div v-else v-for="(tileIndex, idx) in tileAcceptanceInfo.acceptanceTiles" :key="idx"
                 class="acceptance-tile-item">
                 <MahjongTile :tile="createTileFromIndex(tileIndex, `tooltip_${idx}`)" size="small"
                   :is-draggable="false" />
@@ -91,6 +99,16 @@ const show = computed({
 
 function getAcceptanceLabel(): string {
   return props.isUsefulTiles ? '有効牌' : '受け入れ'
+}
+
+function getShantenText(shanten: number): string {
+  if (shanten === -1) {
+    return '和了形'
+  } else if (shanten === 0) {
+    return 'テンパイ'
+  } else {
+    return `${shanten}シャンテン`
+  }
 }
 
 function logDebugInfo() {
@@ -195,5 +213,12 @@ watch(() => props.tileAcceptanceInfo, () => {
 .loading-text {
   font-size: 12px;
   color: #666;
+}
+
+.no-acceptance {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+  padding: 8px;
 }
 </style>
