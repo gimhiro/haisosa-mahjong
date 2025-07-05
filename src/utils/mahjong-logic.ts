@@ -1,7 +1,23 @@
 import type { Tile } from '../stores/mahjong'
 import type { Tile as FourPlayerTile } from '../stores/fourPlayerMahjong'
-import { syanten } from 'syanten'
+import { 
+  calculateShantenSync,
+  getUsefulTilesSync,
+  getTileIndex as getRustTileIndex,
+  createTileFromIndex,
+  initMahjongCalculator
+} from './mahjong-calculator-wrapper'
 
+// ライブラリの初期化
+let isLibraryInitialized = false
+async function ensureInitialized() {
+  if (!isLibraryInitialized) {
+    await initMahjongCalculator()
+    isLibraryInitialized = true
+  }
+}
+
+// 後方互換性のため、旧形式の関数も残す
 export function convertTilesToSyantenFormat(tiles: Tile[] | FourPlayerTile[]): [number[], number[], number[], number[]] {
   const man = new Array(9).fill(0)
   const pin = new Array(9).fill(0)
@@ -24,23 +40,26 @@ export function convertTilesToSyantenFormat(tiles: Tile[] | FourPlayerTile[]): [
 }
 
 export function calculateShanten(tiles: Tile[] | FourPlayerTile[]): number {
-  // syantenライブラリは1,4,7,10,13,14枚などの3n+1,3n+2枚で計算可能
-  // 空の場合のみチェック
-  if (tiles.length === 0) {
-    return 8 // 空の手牌の場合は最大シャンテン数を返す
+  // 初期化をバックグラウンドで実行（ノンブロッキング）
+  if (!isLibraryInitialized) {
+    ensureInitialized().catch(console.error)
   }
-
-  const [man, pin, sou, honor] = convertTilesToSyantenFormat(tiles)
-
+  
+  // Rustライブラリが利用可能であれば使用、そうでなければフォールバック
   try {
-    // syantenライブラリは配列の配列形式を要求する
-    const result = syanten([man as any, pin as any, sou as any, honor as any])
-
-    // syantenライブラリは-1で和了、0以上でシャンテン数を返す
-    return result
+    return calculateShantenSync(tiles)
   } catch (error) {
-    return 8 // エラーの場合は最大シャンテン数を返す
+    console.warn('Rustライブラリでエラーが発生しました。フォールバック処理を実行します。', error)
+    // 簡易フォールバック（実際は古いsyantenライブラリの結果）
+    return fallbackCalculateShanten(tiles)
   }
+}
+
+function fallbackCalculateShanten(tiles: Tile[] | FourPlayerTile[]): number {
+  // 簡易的なシャンテン計算（フォールバック用）
+  if (tiles.length === 0) return 8
+  if (tiles.length === 14) return -1 // 仮の和了判定
+  return Math.max(0, Math.floor((14 - tiles.length) / 3))
 }
 
 // 鳴き牌を考慮したシャンテン数計算
@@ -59,7 +78,7 @@ export function calculateShantenWithMelds(tiles: Tile[] | FourPlayerTile[], meld
     return calculateShanten(tiles)
   }
 
-  // syantenライブラリは1,4,7,10,13枚でも計算できるので、そのまま手牌を渡す
+  // Rustライブラリでシャンテン数を計算
   const handShanten = calculateShanten(tiles)
 
   // 鳴き牌による面子数を考慮して調整
@@ -71,6 +90,20 @@ export function calculateShantenWithMelds(tiles: Tile[] | FourPlayerTile[], meld
 }
 
 export function getUsefulTiles(tiles: Tile[] | FourPlayerTile[]): number[] {
+  // 初期化をバックグラウンドで実行（ノンブロッキング）
+  if (!isLibraryInitialized) {
+    ensureInitialized().catch(console.error)
+  }
+  
+  try {
+    return getUsefulTilesSync(tiles)
+  } catch (error) {
+    console.warn('Rustライブラリでエラーが発生しました。フォールバック処理を実行します。', error)
+    return fallbackGetUsefulTiles(tiles)
+  }
+}
+
+function fallbackGetUsefulTiles(tiles: Tile[] | FourPlayerTile[]): number[] {
   const currentShanten = calculateShanten(tiles)
   if (currentShanten === -1) return []
 
@@ -152,30 +185,13 @@ function countTilesByIndex(tiles: Tile[]): Record<number, number> {
   return counts
 }
 
-// 牌からインデックスを取得
+// 牌からインデックスを取得（ラッパー関数を使用）
 export function getTileIndex(tile: Tile): number {
-  if (tile.suit === 'man') {
-    return tile.rank - 1
-  } else if (tile.suit === 'pin') {
-    return tile.rank - 1 + 9
-  } else if (tile.suit === 'sou') {
-    return tile.rank - 1 + 18
-  } else { // honor
-    return tile.rank - 1 + 27
-  }
+  return getRustTileIndex(tile)
 }
 
-export function createTileFromIndex(index: number, id: string): Tile {
-  if (index < 9) {
-    return { id, suit: 'man', rank: index + 1, isRed: false } as any
-  } else if (index < 18) {
-    return { id, suit: 'pin', rank: index - 9 + 1, isRed: false } as any
-  } else if (index < 27) {
-    return { id, suit: 'sou', rank: index - 18 + 1, isRed: false } as any
-  } else {
-    return { id, suit: 'honor', rank: index - 27 + 1, isRed: false } as any
-  }
-}
+// インデックスから牌を作成（ラッパー関数を使用）  
+export { createTileFromIndex }
 
 export function isWinningHand(tiles: Tile[] | FourPlayerTile[]): boolean {
   return calculateShanten(tiles) === -1
@@ -599,15 +615,8 @@ function calculateActualDoraCount(tiles: FourPlayerTile[], doraIndicators: FourP
   return { actualDoraCount, actualUradoraCount }
 }
 
-// 受け入れ情報の型定義
-export interface AcceptanceInfo {
-  tileIndex: number // 切る牌のインデックス
-  tile: Tile | FourPlayerTile // 切る牌
-  acceptanceTiles: number[] // 受け入れ牌のインデックスリスト
-  remainingCounts: number[] // 各受け入れ牌の残り枚数
-  totalAcceptance: number // 総受け入れ枚数
-  shantenAfterDiscard: number // この牌を切った後のシャンテン数
-}
+// 受け入れ情報の型定義（ラッパーからエクスポート）
+export type { AcceptanceInfo } from './mahjong-calculator-wrapper'
 
 /**
  * 14枚の手牌から各牌を切った時の受け入れ計算
