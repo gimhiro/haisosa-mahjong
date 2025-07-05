@@ -87,6 +87,7 @@
           :riichi-disabled-tiles="riichiPreviewMode ? getRiichiDisabledTiles() : getPostRiichiDisabledTiles()"
           :show-acceptance-highlight="settings.showAcceptanceHighlight" :best-acceptance-tiles="bestAcceptanceTiles"
           :show-acceptance-tooltip="settings.showAcceptance" :acceptance-infos="acceptanceInfos"
+          :is-calculating-acceptance="isCalculatingAcceptance" :is-chinitsuyo-mode="gameManagerInstance.isChinitsuyoMode"
           @tile-discarded="onHumanTileDiscard" @riichi-confirmed="confirmRiichiAndDiscard" @tile-hover="onTileHover"
           @tile-leave="onTileLeave" />
       </div>

@@ -25,21 +25,31 @@ export class EnhancedDraw {
   }
 
   /**
-   * 80%の確率で有効牌を引くツモシステム
+   * 有効牌を引く確率でのツモシステム（清一色モード対応）
    */
-  drawEnhancedTile(hand: Tile[], availableTiles: Tile[]): Tile | null {
+  drawEnhancedTile(hand: Tile[], availableTiles: Tile[], chinitsusuitFilter?: string): Tile | null {
     if (availableTiles.length === 0) return null
+
+    // 清一色モードの場合、利用可能な牌を対象の色でフィルタリング
+    let filteredTiles = availableTiles
+    if (chinitsusuitFilter) {
+      const chinitsuyTiles = availableTiles.filter(tile => tile.suit === chinitsusuitFilter)
+      if (chinitsuyTiles.length > 0) {
+        filteredTiles = chinitsuyTiles
+      }
+      // 対象の色の牌がない場合は全ての牌から選択
+    }
 
     const usefulTileIndices = getUsefulTiles(hand)
 
     // 有効牌が存在し、かつブースト確率に当選した場合
     const randomValue = this.rng()
     if (usefulTileIndices.length > 0 && randomValue < this.options.boostProbability) {
-      return this.drawUsefulTile(usefulTileIndices, availableTiles)
+      return this.drawUsefulTile(usefulTileIndices, filteredTiles)
     }
 
     // 通常のランダムドロー
-    return this.drawRandomTile(availableTiles)
+    return this.drawRandomTile(filteredTiles)
   }
 
   /**

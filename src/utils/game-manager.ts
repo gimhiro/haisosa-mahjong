@@ -39,6 +39,7 @@ export class GameManager {
   private _lastHandStates: string[] = ['', '', '', ''] // 各プレイヤーの前回の手牌状態
 
   constructor() {
+    
     // ローカルストレージから設定を読み込み
     const savedSettings = this.loadGameSettings()
     this._gameSettings = savedSettings
@@ -63,6 +64,7 @@ export class GameManager {
     this._discardOrder = 0
     this._lastDiscardedTile = null
     this._lastDiscardPlayerIndex = null
+    
   }
 
   get players(): Player[] {
@@ -541,51 +543,13 @@ export class GameManager {
     return null
   }
 
-  // 清一色モード用のツモメソッド
-  private drawChinitsuTile(playerIndex: number): Tile | null {
-    const isChinitsuMode = this._gameSettings.specialMode?.chinitsuMode || false
-    if (!isChinitsuMode || !this._chinitsuSuit) {
-      return null
-    }
-
-    // 清一色モードで対象の色の牌を探す
-    const targetSuitTiles = this._wall.filter(tile => tile.suit === this._chinitsuSuit)
-    
-    if (targetSuitTiles.length > 0) {
-      // 対象の色の牌がある場合、ランダムに選択
-      const randomIndex = Math.floor(Math.random() * targetSuitTiles.length)
-      const selectedTile = targetSuitTiles[randomIndex]
-      
-      // 山から除去
-      const wallIndex = this._wall.findIndex(t => t.id === selectedTile.id)
-      if (wallIndex !== -1) {
-        this._wall.splice(wallIndex, 1)
-      }
-      
-      return selectedTile
-    }
-    
-    // 対象の色の牌がない場合はnullを返す（通常のツモにフォールバック）
-    return null
-  }
 
   private drawTileInternal(playerIndex: number): Tile | null {
 
     // 14枚残しで終了
     if (this._wall.length <= 14) return null
 
-    // 清一色モードかつ人間プレイヤーの場合、必ず対象の色の牌を優先
-    const isChinitsuMode = this._gameSettings.specialMode?.chinitsuMode || false
-    const isHumanPlayer = playerIndex === 0
-    if (isChinitsuMode && isHumanPlayer) {
-      const chinitsutile = this.drawChinitsuTile(playerIndex)
-      if (chinitsutile) {
-        this._currentDrawnTile = chinitsutile
-        this.clearFirstTakeFlag(playerIndex)
-        return chinitsutile
-      }
-      // 対象の色の牌がない場合は通常処理にフォールバック
-    }
+    // 清一色モードの処理は通常のEnhancedDraw処理内で行う
 
     const player = this._players[playerIndex]
 
@@ -611,10 +575,14 @@ export class GameManager {
         boostProbability = 0.3 // hardAIは30%
       }
 
+      // 清一色モードの場合は対象の色を指定
+      const isChinitsuMode = this._gameSettings.specialMode?.chinitsuMode || false
+      const chinitsusuitFilter = (isChinitsuMode && playerIndex === 0) ? this._chinitsuSuit : undefined
+
       // 人間プレイヤーの場合は設定済みの牌操作率をそのまま使用
       if (playerIndex === 0) {
         // 人間プレイヤーの場合は初期化時に設定した牌操作率を使用
-        const drawnTile = this._enhancedDraw.drawEnhancedTile(player.tiles, this._wall)
+        const drawnTile = this._enhancedDraw.drawEnhancedTile(player.tiles, this._wall, chinitsusuitFilter || undefined)
         
         if (drawnTile) {
           // 山から引いた牌を除去
@@ -787,6 +755,9 @@ export class GameManager {
     // ゲーム開始時刻を記録
     this._gameStartTime = new Date()
     this._gamePhase = 'playing'
+    
+    // 親プレイヤーの第一ツモを実行
+    this.drawTileAndKeepSeparate(this._dealer)
   }
 
   resetGame(): void {
@@ -1633,10 +1604,16 @@ export class GameManager {
       return this._acceptanceCache.get(handStateKey)!
     }
     
-    // 新しい手牌状態なので計算
-    const allTiles = currentDrawnTile ? [...player.tiles, currentDrawnTile] : player.tiles
-    const visibleTiles = this.getVisibleTiles()
-    const acceptanceInfo = calculateAcceptance(allTiles, visibleTiles)
+    // キャッシュがない場合は空配列を返す（重い計算は呼び出し側で行う）
+    return []
+  }
+
+  // 受け入れ情報をキャッシュに保存
+  setCachedAcceptanceInfo(playerIndex: number, acceptanceInfo: AcceptanceInfo[]): void {
+    const player = this._players[playerIndex]
+    const currentDrawnTile = playerIndex === this._currentPlayerIndex ? this._currentDrawnTile : null
+    
+    const handStateKey = this.generateHandStateKey(playerIndex, player.tiles, currentDrawnTile)
     
     // キャッシュに保存
     this._acceptanceCache.set(handStateKey, acceptanceInfo)
@@ -1644,8 +1621,6 @@ export class GameManager {
     
     // 古いキャッシュをクリア（メモリ効率のため）
     this.cleanupOldCache()
-    
-    return acceptanceInfo
   }
 
   // 古いキャッシュをクリア
@@ -1669,5 +1644,10 @@ export class GameManager {
   clearAcceptanceCache(): void {
     this._acceptanceCache.clear()
     this._lastHandStates = ['', '', '', '']
+  }
+
+  // 清一色モードかどうかを取得
+  get isChinitsuyoMode(): boolean {
+    return this._gameSettings.specialMode?.chinitsuMode || false
   }
 }

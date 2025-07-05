@@ -1,36 +1,48 @@
-# 受け入れ計算処理の最適化
+# 受け入れ計算最適化とリーチ機能改善
 
 ## 作業計画:
-1. 受け入れ計算結果をキャッシュするシステムを実装
-2. ターンごと・手牌状態ごとに受け入れ情報を前計算して保持
-3. 二度目以降の表示では計算を行わずキャッシュから取得
-4. 手牌が変化した時のみ再計算を実行
+- 配牌時の受け入れ計算問題の修正
+- リーチボタンホバー時のパフォーマンス改善
+- リーチ後の受け入れ計算停止
+- 清一色モードでの有効牌確率設定の修正
+- ローディングマスクの表示条件調整
 
 ## 設計思想:
-- 受け入れ計算は重い処理のため、同じ手牌状態では一度だけ計算する
-- 手牌の状態をキーとしてMap構造でキャッシュを管理
-- メモリ効率を考慮し、過去のターンのキャッシュは適切にクリア
-- プレイヤーごとに独立したキャッシュを持つ
+- 受け入れ計算は14枚時（第一ツモ後）のみ実行し、13枚時（配牌直後）はスキップ
+- リーチプレビューモード時の計算結果をキャッシュ化してパフォーマンス向上
+- リーチ後は手牌変更不可のため受け入れ計算を停止
+- 清一色モードでもEnhancedDrawの有効牌確率設定を適用
+- ローディングマスクは清一色モードでのみ表示
 
 ## 作業対象ファイル:
-- ファイル名: src/utils/game-manager.ts
-- 改修内容:
-  - 受け入れ計算キャッシュシステムを追加（_acceptanceCache, _lastHandStates）
-  - generateHandStateKey()メソッドで手牌状態を一意なキーに変換
-  - getVisibleTiles()メソッドで見えている牌を取得
-  - getCachedAcceptanceInfo()メソッドでキャッシュされた受け入れ情報を取得
-  - cleanupOldCache()メソッドで古いキャッシュをクリア
-  - clearAcceptanceCache()メソッドでゲーム開始時にキャッシュをクリア
-  - startNewGame()メソッドでキャッシュクリアを追加
 
-- ファイル名: src/views/FourPlayerGameView/script.ts
-- 改修内容:
-  - calculateAcceptanceOptimized()でキャッシュを使用するように修正
-  - calculateUsefulTilesInfoOptimized()でキャッシュを優先使用するように修正
-  - 同じ牌種の重複計算を避ける最適化を追加
+### ファイル名: src/utils/game-manager.ts
+- 改修内容: 
+  - startNewGame()で親プレイヤーの第一ツモを明示的に実行
+  - 清一色モード専用のツモ処理を削除し、EnhancedDraw統合
+  - 未使用のdrawChinitsuTile()関数を削除
+  - デバッグログ削除
 
-- ファイル名: src/utils/mahjong-logic.ts
+### ファイル名: src/views/FourPlayerGameView/script.ts
 - 改修内容:
-  - calculateAcceptance()関数で同じ牌種の重複計算を避ける最適化を実装
-  - 牌種をキーとしたSet構造で計算済みの牌を記録
-  - 同じ牌種は既存の結果をコピーして牌情報のみ更新
+  - updateAcceptanceInfo()で13枚時の受け入れ計算をスキップ
+  - onMounted()で14枚時のみ受け入れ計算実行
+  - getRiichiValidTiles()とgetRiichiDisabledTiles()にキャッシュ機能追加
+  - calculateSingleTileAcceptance()関数削除（不要な重い計算除去）
+  - リーチ後の受け入れ計算停止処理追加
+  - 全デバッグログ削除
+
+### ファイル名: src/utils/enhanced-draw.ts
+- 改修内容:
+  - drawEnhancedTile()にchinitsusuitFilterパラメータ追加
+  - 清一色モード対応で指定色の牌をフィルタリング機能追加
+
+### ファイル名: src/components/PlayerArea.vue
+- 改修内容:
+  - ローディングマスク表示条件を清一色モードのみに限定
+  - デバッグ表示削除
+
+### ファイル名: src/components/LoadingMask.vue
+- 改修内容:
+  - 全デバッグログと不要な処理削除
+  - コード整理

@@ -5,7 +5,8 @@ import {
   getUsefulTilesSync,
   getTileIndex as getRustTileIndex,
   createTileFromIndex,
-  initMahjongCalculator
+  initMahjongCalculator,
+  calculateAcceptanceSync
 } from './mahjong-calculator-wrapper'
 
 // ライブラリの初期化
@@ -632,6 +633,24 @@ export function calculateAcceptance(
     return [] // 14枚でない場合は空を返す
   }
 
+  // 初期化をバックグラウンドで実行（ノンブロッキング）
+  if (!isLibraryInitialized) {
+    ensureInitialized().catch(console.error)
+  }
+  
+  // Rustライブラリが利用可能であれば高速版を使用
+  try {
+    return calculateAcceptanceSync(tiles, visibleTiles)
+  } catch (error) {
+    console.warn('Rustライブラリでエラーが発生しました。フォールバック処理を実行します。', error)
+    return fallbackCalculateAcceptance(tiles, visibleTiles)
+  }
+}
+
+function fallbackCalculateAcceptance(
+  tiles: Tile[] | FourPlayerTile[],
+  visibleTiles: Tile[] | FourPlayerTile[] = []
+): AcceptanceInfo[] {
   const results: AcceptanceInfo[] = []
   const calculatedTileTypes = new Set<string>() // 計算済みの牌種を記録
   

@@ -1,5 +1,12 @@
 <template>
   <div :class="playerAreaClasses">
+    <!-- ローディングマスク（清一色モードの人間プレイヤーエリアで受け入れ計算中に表示） -->
+    <LoadingMask 
+      v-if="position === 'bottom' && isChinitsuyoMode" 
+      :show="isCalculatingAcceptance"
+      text="シャンテン数を計算中..."
+      :delay="0"
+    />
     <!-- プレイヤー情報 -->
     <div class="player-info">
       <div class="player-name">
@@ -140,6 +147,7 @@ import type { Tile } from '../stores/fourPlayerMahjong'
 import type { GameManager } from '../utils/game-manager'
 import { getTileIndex } from '../utils/mahjong-logic'
 import MahjongTile from './MahjongTile.vue'
+import LoadingMask from './LoadingMask.vue'
 
 interface Props {
   player: Player
@@ -161,6 +169,8 @@ interface Props {
   bestAcceptanceTiles?: number[]
   showAcceptanceTooltip?: boolean
   acceptanceInfos?: Array<any>
+  isCalculatingAcceptance?: boolean
+  isChinitsuyoMode?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -176,7 +186,9 @@ const props = withDefaults(defineProps<Props>(), {
   showAcceptanceHighlight: false,
   bestAcceptanceTiles: () => [],
   showAcceptanceTooltip: false,
-  acceptanceInfos: () => []
+  acceptanceInfos: () => [],
+  isCalculatingAcceptance: false,
+  isChinitsuyoMode: false
 })
 
 const emit = defineEmits<{
@@ -351,6 +363,7 @@ function shouldTileBeBack(meld: Meld, tileIndex: number): boolean {
 
 <style scoped>
 .player-area {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;

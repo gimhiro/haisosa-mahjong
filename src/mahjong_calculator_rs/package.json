@@ -1,0 +1,15 @@
+{
+  "name": "mahjong_calculator_rs",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "mahjong_calculator_rs_bg.wasm",
+    "mahjong_calculator_rs.js",
+    "mahjong_calculator_rs.d.ts"
+  ],
+  "main": "mahjong_calculator_rs.js",
+  "types": "mahjong_calculator_rs.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

@@ -290,6 +290,83 @@ export interface AcceptanceInfo {
 }
 
 /**
+ * 同期的な受け入れ計算（初期化済みの場合）
+ * @param tiles 14枚の手牌
+ * @param visibleTiles 見えている牌
+ * @returns 各牌を切った時の受け入れ情報
+ */
+export function calculateAcceptanceSync(
+  tiles: Tile[] | FourPlayerTile[],
+  visibleTiles: Tile[] | FourPlayerTile[] = []
+): AcceptanceInfo[] {
+  if (!isInitialized) {
+    console.warn('WASM未初期化です。非同期版を使用してください。')
+    return []
+  }
+  
+  if (tiles.length !== 14) {
+    return []
+  }
+  
+  const results: AcceptanceInfo[] = []
+  const calculatedTileTypes = new Set<string>()
+  
+  const handTileIds = new Set(tiles.map(tile => tile.id))
+  const otherVisibleTiles = visibleTiles.filter(tile => !handTileIds.has(tile.id))
+  
+  for (let i = 0; i < tiles.length; i++) {
+    const tileToDiscard = tiles[i]
+    
+    const tileTypeKey = `${tileToDiscard.suit}_${tileToDiscard.rank}_${tileToDiscard.isRed || false}`
+    if (calculatedTileTypes.has(tileTypeKey)) {
+      const existingResult = results.find(r => 
+        r.tile.suit === tileToDiscard.suit && 
+        r.tile.rank === tileToDiscard.rank && 
+        (r.tile as any).isRed === tileToDiscard.isRed
+      )
+      if (existingResult) {
+        results.push({
+          ...existingResult,
+          tile: tileToDiscard
+        })
+      }
+      continue
+    }
+    
+    const remainingTiles = [...tiles]
+    remainingTiles.splice(i, 1)
+    
+    if (remainingTiles.length === 13) {
+      const currentShanten = calculateShantenSync(remainingTiles)
+      
+      if (currentShanten === 0) {
+        const acceptanceTiles = getUsefulTilesSync(remainingTiles)
+        
+        const visibleTilesAfterDiscard = [...remainingTiles, ...otherVisibleTiles]
+        
+        const remainingCounts = acceptanceTiles.map(tileIndex =>
+          getTileRemainingCount(tileIndex, visibleTilesAfterDiscard)
+        )
+        const totalAcceptance = remainingCounts.reduce((sum, count) => sum + count, 0)
+        
+        results.push({
+          tileIndex: getTileIndex(tileToDiscard),
+          tile: tileToDiscard,
+          acceptanceTiles,
+          remainingCounts,
+          totalAcceptance,
+          shantenAfterDiscard: 0
+        })
+        
+        calculatedTileTypes.add(tileTypeKey)
+      }
+    }
+  }
+  
+  return results
+}
+
+/**
  * 14枚の手牌から各牌を切った時の受け入れ計算（Rustライブラリ使用）
  * @param tiles 14枚の手牌
  * @param visibleTiles 見えている牌
