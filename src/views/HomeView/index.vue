@@ -532,11 +532,25 @@ const specialModeDisplay = computed(() => {
               <v-icon class="version-history-icon">mdi-history</v-icon>
               バージョン履歴
             </div>
-            <div class="current-version">v1.2.0</div>
+            <div class="current-version">v1.3.0</div>
           </div>
         </v-card-title>
         <v-card-text>
           <div class="version-history-content">
+            <div class="version-item">
+              <div class="version-header">
+                <div class="version-badge">v1.3.0</div>
+                <h4 class="version-title">受け入れ計算の高速化</h4>
+                <div class="version-date">2025-07-05</div>
+              </div>
+              <div class="version-description">
+                <ul class="version-features">
+                  <li>受け入れ計算をRust化して高速化</li>
+                  <li>リーチプレビューモードのパフォーマンス改善</li>
+                  <li>清一色モードの有効牌確率設定修正</li>
+                </ul>
+              </div>
+            </div>
             <div class="version-item">
               <div class="version-header">
                 <div class="version-badge">v1.2.0</div>
